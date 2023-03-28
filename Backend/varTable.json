@@ -1,0 +1,64 @@
+{"var":[
+{
+    "valuename":"Date",
+    "id":1,
+    "comment":"date"
+},
+{
+    "valuename":"Time",
+    "id":2,
+    "comment":"time"
+},
+{
+    "valuename":"Item NO.",
+    "id":7,
+    "comment":"NO"
+},        
+    {
+        "valuename":"Gross",
+        "id":8,
+        "comment":""
+    },
+    {
+        "valuename":"Tare",
+        "id":9,
+        "comment":""
+    },
+    {
+        "valuename":"Net",
+        "id":10,
+        "comment":""
+    },
+    {
+        "valuename":"Count",
+        "id":11,
+        "comment":"pcs"
+    },
+    {
+        "valuename":"Pro_UnitWeight",
+        "id":12,
+        "comment":"UnitWeight"
+    },
+    {
+        "valuename":"percent",
+        "id":13,
+        "comment":"percent"
+    },
+    {
+        "valuename":"total weight",
+        "id":14,
+        "comment":"total weight"
+    },
+    {
+        "valuename":"Weight Unit",
+        "id":15,
+        "comment":""
+    },
+    {
+        "valuename":"total count",
+        "id":16,
+        "comment":"total count"
+    }]        
+
+
+    }

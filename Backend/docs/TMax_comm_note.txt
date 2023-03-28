@@ -1,0 +1,97 @@
+To connect to TMax server with management websocket
+ws://127.0.0.1:7878/tmax?scaleid=0
+
+1. get_scale_list => {"Req": "get_scale_list", "ReqData": ""}
+    response: {"MsgType":"resp_scales_list","MsgBody":"[{\"IsOnline\":false,\"ScaleModel\":\"TScale\",\"ScaleSn\":\"123456\",\"ScaleId\":1,\"TMedia\":0,\"MediaConf\":{\"Type\":0,\"MediaInfoJson\":\"{\\\"DevPath\\\":\\\"COM6\\\",\\\"Baud\\\":9600,\\\"DataBits\\\":8,\\\"StopBits\\\":0,\\\"Parity\\\":0}\"}}]"}
+
+2. get_port_list => {"Req": "get_port_list", "ReqData": ""}
+   response: {
+	"MgrMsgType":"scales_list",
+	"MsgBody":"
+	[
+	]
+	"
+  }
+  {
+  "MgrMsgType":"ports_list",
+	  "MsgBody":"
+	  [
+		\"COM1\",
+		\"COM2\",
+		\"COM6\",
+		\"COM7\",
+		\"COM8\",
+		\"COM9\"
+	  ]
+	  "
+  }
+  	MediaType  MediaType
+	MediaConf  string
+	ScaleModel string
+	ScaleSn    string
+
+3. modify scale configuration => {"Req":"modify_scale","ReqData":"{\"ScaleId\":1,\"MediaConf\":{\"Type\":0,\"MediaInfoJson\":\"{\\\"DevPath\\\":\\\"COM6\\\",\\\"Baud\\\":9600,\\\"DataBits\\\":8,\\\"StopBits\\\":0,\\\"Parity\\\":0}\"}}"}
+    response: {"MgrMsgType":"scale_modify","MsgBody":"{\"IsAck\":true,\"AckData\":\"\"}"}
+
+4. get product list => {"Req": "get_product_list", "ReqData": ""}
+5. add product record => {"Req": "add_product",	"ReqData": "{\"Id\":\"1\",\"Product\":\"Apple\",\"WithPretare\": true,\"Pretare\":\"5.123\", \"Remarks\": \"My remark\"}"}
+6. del product record => { "Req": "del_product", "ReqData": "{\"RecId\":1}"}
+7. modify product record => {"Req": "modify_product", "ReqData": "{\"RecId\":2, \"Id\":\"1\",\"Product\":\"Banana\",\"WithPretare\": true,\"Pretare\":\"5.123\", \"Remarks\": \"My remark\"}"}
+8. get_user_list => {"Req": "get_user_list", "ReqData": ""}
+	response:
+	{"MsgType":"resp_user_list","MsgBody":"[{\"RecId\":1,\"Id\":\"2\",\"Name\":\"Ted\",\"IsFemale\":false,\"Phone\":\"123456\",\"Remarks\":\"My remark#1\",\"CreatedAt\":\"2023-02-22T11:07:32.5259104+08:00\"}]"}
+9. add user record => {"Req": "add_user","ReqData": "{\"Id\":\"1\",\"Name\":\"David\",\"IsFemale\": false,\"Phone\":\"123456\",\"Remarks\": \"My remark\"}"}
+10. del user record => {"Req": "del_user", "ReqData":"{\"RecId\":1}\"}
+11. modify user record => {"Req": "modify_user","ReqData": "{\"RecId\":1,\"Id\":\"2\",\"Name\":\"Ted\",\"IsFemale\": false,\"Phone\":\"123456\",\"Remarks\": \"My remark#1\"}"}
+12. inform application to quit => {"req":"quit_application","ReqData":""}
+    response:
+	{"MsgType":"resp_quit_application","MsgBody":""}
+13. get ui configuration => {"Req": "get_ui_conf", "ReqData": ""}
+    response:
+	{"MsgType":"resp_get_ui_config","MsgBody":"{\"RecMode\":\"auto\",\"StableTimeToRec\":\"3\",\"ZeroRange\":\"5\",\"DateFormat\":\"1\"}"}
+14. update ui configuration => {"Req": "update_ui_conf", "ReqData": "{\"RecMode\":\"auto\",\"DateFormat\":\"1\",\"ZeroRange\":\"5\", \"StableTimeToRec\":\"3\"}"}
+    response:
+	{"MsgType":"resp_update_ui_config","MsgBody":""}
+
+To connect to TMax scale with scaleId websocket
+ws://127.0.0.1:7878/tmax?scaleid=1
+
+1. To get weight of the scale
+   {"Req":"get_weight","ReqData":""}
+     response: 
+     {"ScaleId":1,"MsgType":0,"MsgBody":{"IsStable":true,"IsNet":true,"WeightVal":"5.123","WeightUnit":"kg"}}
+{"ScaleId":1,"MsgType":3,"MsgBody":"{\"IsStable\":true,\"IsNet\":true,\"WeightVal\":\"5.123\",\"WeightUnit\":\"kg\"}"}
+2. To perform Zero
+     {"Req":"zero","ReqData":""}
+   response:
+     {"ScaleId":1,"MsgType":1,"MsgBody":""}
+3. To perform Tare
+    {"Req":"tare","ReqData":""}
+	response:
+	{"ScaleId":1,"MsgType":2,"MsgBody":""}
+4. To register notification of the scale's weight data
+    {"Req":"reg_weight_data", "ReqData":""}
+    response:
+    {"ScaleId":1,"MsgType":4,"MsgBody":""}
+5. To unregister notification of the scale's weight data
+    {"Req":"unreg_weight_data", "ReqData":""}
+	response:
+	{"ScaleId":1,"MsgType":5,"MsgBody":""}
+6. To get the scale's record data
+    {"Req":"get_recs", "ReqData":""}
+	response:
+	{"MsgType":6,"MsgBody":"[{\"RecId\":3,\"ScaleModel\":\"TScale\",\"ScaleSn\":\"123456\",\"Product\":\"\",\"Weight\":\"\",\"Price\":\"\",\"CreatedAt\":\"2023-02-14T13:26:18.0470806+08:00\"},
+					         {\"RecId\":4,\"ScaleModel\":\"TScale\",\"ScaleSn\":\"123456\",\"Product\":\"Apple\",\"Weight\":\"1.230\",\"Price\":\"3.25\",\"CreatedAt\":\"2023-02-14T14:21:10.2501849+08:00\"},
+							 {\"RecId\":5,\"ScaleModel\":\"TScale\",\"ScaleSn\":\"123456\",\"Product\":\"Apple\",\"Weight\":\"1.230\",\"Price\":\"3.25\",\"CreatedAt\":\"2023-02-14T14:21:14.5414148+08:00\"},
+							 {\"RecId\":6,\"ScaleModel\":\"TScale\",\"ScaleSn\":\"123456\",\"Product\":\"Apple\",\"Weight\":\"1.230\",\"Price\":\"3.25\",\"CreatedAt\":\"2023-02-14T14:21:17.5119285+08:00\"}]",
+							 "ScaleId":1}
+
+7. To add record to the scale
+	{"Req":"add_rec","ReqData":"{\"ScaleId\": 2, \"Product\": \"Apple\", \"Weight\": \"1.230\", \"Price\": \"3.25\"}"}
+	response:
+	{"MsgType":7,"MsgBody":"ok","ScaleId":1}	
+
+8. To delete record of the scale
+	{"Req":"del_rec","ReqData":"{\"RecId\":3}"}
+	response:
+	{"MsgType":8,"MsgBody":"ok","ScaleId":1}
