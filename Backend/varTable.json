@@ -10,7 +10,7 @@
     "comment":"time"
 },
 {
-    "valuename":"Item NO.",
+    "valuename":"NO.",
     "id":7,
     "comment":"NO"
 },        
@@ -30,32 +30,32 @@
         "comment":""
     },
     {
-        "valuename":"Count",
+        "valuename":"PCS",
         "id":11,
         "comment":"pcs"
     },
     {
-        "valuename":"Pro_UnitWeight",
+        "valuename":"UnitWeight",
         "id":12,
         "comment":"UnitWeight"
     },
     {
-        "valuename":"percent",
+        "valuename":"Percent",
         "id":13,
         "comment":"percent"
     },
     {
-        "valuename":"total weight",
+        "valuename":"TotalWeight",
         "id":14,
         "comment":"total weight"
     },
     {
-        "valuename":"Weight Unit",
+        "valuename":"WeightUnit",
         "id":15,
         "comment":""
     },
     {
-        "valuename":"total count",
+        "valuename":"CotalCount",
         "id":16,
         "comment":"total count"
     }]        

@@ -38,6 +38,10 @@ const (
 	textBold       = "B"  //字体加粗
 	normal         = "N"  //字体正常
 	textSep        = "\"" //文本分割符""
+	LINE_HEAD      = "LS"
+	RECTANGLE_HEAD = "X"
+	ROTATE_ZB      = "ZB"
+	ROTATE_ZT      = "ZT"
 	BAR_CODE_EXCEL = "barcode.xlsx"
 	LANGUAGE_EPL   = "EPL"
 )
@@ -86,9 +90,12 @@ func EplLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, currentPa
 
 	case "B":
 		dataBuffer, lastvarPos = ParsEplBarcode(line, dataBuffer, lastvarPos, currentPath)
-
+	case "ROTATE":
+		dataBuffer = ParseEplRotate(line, dataBuffer)
 	case "L":
-
+		dataBuffer = ParseEplLine(line, dataBuffer)
+	case "R":
+		dataBuffer = ParseEplRectangle(line, dataBuffer)
 	case "O":
 
 	case "GP":
@@ -123,6 +130,57 @@ func ParseEplPage(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
 	dataBuffer.WriteString(eplLineEnd)
 
 	// fmt.Println(dataBuffer.String())
+	return dataBuffer
+}
+
+// L,63,133,153,133,2,0,0
+func ParseEplRotate(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
+	if tempRowArr[1] == "0" {
+		dataBuffer.WriteString(ROTATE_ZB)
+	} else if tempRowArr[1] == "2" {
+		dataBuffer.WriteString(ROTATE_ZT)
+	}
+
+	dataBuffer.WriteString(eplLineEnd)
+
+	return dataBuffer
+}
+
+// L,63,133,153,133,2,0,0
+func ParseEplLine(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
+
+	dataBuffer.WriteString(LINE_HEAD)
+	dataBuffer.WriteString(tempRowArr[1])
+	dataBuffer.WriteString(innerLineSep)
+
+	dataBuffer.WriteString(tempRowArr[2])
+	dataBuffer.WriteString(innerLineSep)
+	dataBuffer.WriteString(tempRowArr[5])
+	dataBuffer.WriteString(innerLineSep)
+	dataBuffer.WriteString(tempRowArr[3])
+	dataBuffer.WriteString(innerLineSep)
+	dataBuffer.WriteString(tempRowArr[4])
+	dataBuffer.WriteString(eplLineEnd)
+
+	return dataBuffer
+}
+
+// R,63,133,153,133,2,0,0
+func ParseEplRectangle(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
+
+	dataBuffer.WriteString(RECTANGLE_HEAD)
+	dataBuffer.WriteString(tempRowArr[1])
+	dataBuffer.WriteString(innerLineSep)
+
+	dataBuffer.WriteString(tempRowArr[2])
+	dataBuffer.WriteString(innerLineSep)
+	dataBuffer.WriteString(tempRowArr[5])
+	dataBuffer.WriteString(innerLineSep)
+	dataBuffer.WriteString(tempRowArr[3])
+	dataBuffer.WriteString(innerLineSep)
+	dataBuffer.WriteString(tempRowArr[4])
+	dataBuffer.WriteString(eplLineEnd)
+
 	return dataBuffer
 }
 
