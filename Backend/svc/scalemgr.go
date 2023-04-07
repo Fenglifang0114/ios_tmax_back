@@ -308,23 +308,23 @@ func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 	conn.MediaConf = req.MediaConf
 	// TODO: change scale's mediaConf
 	s.scales[id].ModifyMedia(req.MediaConf)
-	// client := s.srvMgr.clientScales[s.srvMgr.scales[id]]
+	client := s.srvMgr.clientScales[s.srvMgr.scales[id]]
 	// remove the conn then add new one s.conns
-	// if client != nil && client.scaleId == id {
-	// 	s.srvMgr.unregister <- client
-	// 	if client.conn != nil {
-	// 		client.conn.Close()
-	// 	} // terminate the socket that associate with the scale
-	// }
-	// s.srvMgr.removeScale <- s.scales[id]                                       // remove the old scale
-	// scale, _ := NewScale(s.srvMgr, conn, conn.ScaleModel, conn.ScaleSn, false) // TODO: check this blocks
-	// scale.Id = nextScaleId
-	// conn.ScaleId = scale.Id
-	// s.scales[scale.Id] = scale
-	// s.srvMgr.addScale <- scale // register new scale instance to srvMgr
-	// nextScaleId++
-	// s.srvMgr.scaleMgr.ModifyMediaList(id, conn.MediaConf)
-	// s.connPb.connPb.UpdateScaleConn(*conn)
+	if client != nil && client.scaleId == id {
+		s.srvMgr.unregister <- client
+		if client.conn != nil {
+			client.conn.Close()
+		} // terminate the socket that associate with the scale
+	}
+	s.srvMgr.removeScale <- s.scales[id]                                                // remove the old scale
+	scale, _ := NewScale(s.srvMgr.scaleMgr, conn, conn.ScaleModel, conn.ScaleSn, false) // TODO: check this blocks
+	scale.Id = nextScaleId
+	conn.ScaleId = scale.Id
+	s.scales[scale.Id] = scale
+	s.srvMgr.addScale <- scale // register new scale instance to srvMgr
+	nextScaleId++
+	s.srvMgr.scaleMgr.ModifyMediaList(id, conn.MediaConf)
+	s.connPb.connPb.UpdateScaleConn(*conn)
 
 	return nil
 }
