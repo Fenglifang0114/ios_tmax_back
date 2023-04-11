@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	app := exec.Command("./t_label.exe")
+	app := exec.Command("./_ui.exe")
 	go app.Run()
 
 	runMode := os.Getenv("RUN_MODE")
