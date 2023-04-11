@@ -62,7 +62,7 @@ const (
 )
 
 const (
-	SCALE_TIME_OUT_S = 10 // 10 seconds
+	SCALE_TIME_OUT_S = 3 // 3 seconds
 )
 
 type Scale struct {
@@ -98,9 +98,9 @@ type Scale struct {
 	// client that will communicate with scale
 	client *Client
 	// this channel is to inform the procScaleRespMessage goroutine, which process the data from serial port, to quit
-	quitProcScaleRespMessageCh chan struct{}
+	quitProcScaleRespMessageCh chan bool
 	// this channel is to inform the procToScaleMsg, which process the data from serial port, to quit
-	quitProcToScaleMsgCh chan struct{}
+	quitProcToScaleMsgCh chan bool
 }
 
 // NewScale creates a new scale
@@ -131,7 +131,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, model string, sn string,
 	}
 	scale := &Scale{scaleMgr: scaleMgr, Conn: conn, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
 		fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MySerial: sport,
-		quitProcScaleRespMessageCh: make(chan struct{}), quitProcToScaleMsgCh: make(chan struct{})}
+		quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1)}
 	scale.respChans = map[RespMsgType][]chan *ScaleRespMsg{}
 	scale.respChans[WEIGHT_DATA] = []chan *ScaleRespMsg{}
 	scale.respChans[ZERO_CMD_RESP] = []chan *ScaleRespMsg{}
@@ -180,17 +180,20 @@ func (s *Scale) procScaleRespMsg() {
 			break
 		}
 		select {
-		case _ = <-s.quitProcScaleRespMessageCh:
+		case <-s.quitProcScaleRespMessageCh:
 			quit = true
 		case inData := <-s.MySerial.recvCh:
 			if inData == nil { // TODO: maybe caused by closed serial port
 				continue
 			}
 			log.Log.Debugf("From sport: %v", inData)
-			if !s.isSendUnolicitedData || !s.isWaintingResp {
-				// continue // FIXME: skip this line for testing purpose
-			}
+			// if !s.isSendUnolicitedData || !s.isWaintingResp {
+			// 	// continue // FIXME: skip this line for testing purpose
+			// }
 			if comm.GcurScale == comm.SCALE_TYPE_OLD_C51 {
+				if !s.isSendUnolicitedData {
+					continue
+				}
 				if msg, err := extractMsgOldScale(inData); msg != nil && err == nil {
 					if len(s.fromScaleMsgCh) < RECV_CH_SIZE {
 						if msgStr, err := json.MarshalToString(msg); err == nil {
@@ -220,6 +223,9 @@ func (s *Scale) procScaleRespMsg() {
 						}
 					}
 					if len(s.fromScaleMsgCh) < RECV_CH_SIZE { // no use in this moment
+						if msg.MsgType == WEIGHT_DATA && !s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
+							continue
+						}
 						if msgStr, err := json.MarshalToString(msg); err == nil {
 							if s.client != nil {
 								s.client.sendCh <- []byte(msgStr)
@@ -252,7 +258,7 @@ func (s *Scale) procToScaleMsg() {
 			continue
 		}
 		select {
-		case _ = <-s.quitProcToScaleMsgCh:
+		case <-s.quitProcToScaleMsgCh:
 			quit = true
 		case userMessage, ok := <-s.client.recvCh:
 			if !ok {
@@ -303,7 +309,7 @@ func (s *Scale) procToScaleMsg() {
 // 	return &mode
 // }
 
-func (c *Scale) ModifyMedia(conf MediaConf) bool {
+func (s *Scale) ModifyMedia(conf MediaConf) bool {
 	//	c.Lock()
 	//	defer c.Unlock()
 	if conf.Type == MEDIA_COM {
@@ -313,19 +319,32 @@ func (c *Scale) ModifyMedia(conf MediaConf) bool {
 		if err := json.Unmarshal([]byte(conf.MediaInfoJson), &pcnf); err != nil {
 			log.Log.Errorf("error unmarshalling: %v", err)
 		}
-		if c.MySerial != nil {
-			c.MySerial.Close()
+		var pickFun packPickerFn = nil
+		if s.MySerial != nil {
+			s.quitProcScaleRespMessageCh <- true
+			s.quitProcToScaleMsgCh <- true
+			pickFun = s.MySerial.pickerFn
+			s.MySerial.Close()
+			s.MySerial = nil
+			if s.MySerial, err = NewSerial(pcnf, pickFun); err != nil {
+				log.Log.Error(err.Error())
+			}
+		} else {
+			log.Log.Error("no serial port is assigned before")
+			return false
 		}
-		if c.MySerial, err = NewSerial(pcnf, pickerFnOldScale); err != nil {
-			log.Log.Error(err.Error())
-		}
+
 	} else if conf.Type == MEDIA_NET {
+		return false
 
 	} else if conf.Type == MEDIA_BT {
+		return false
 
 	} else {
 
 	}
+	go s.procScaleRespMsg()
+	go s.procToScaleMsg()
 	return true
 }
 
@@ -523,14 +542,25 @@ func retreiveRespMsg(scaleId int64, data []byte) (*ScaleRespMsg, error) {
 	// checkHead, get msgid, get msgtype, check if return code is 0x06, for success
 	var err error
 	respMsg := &ScaleRespMsg{MsgType: GlastWantRespMsgType, MsgBody: "", ScaleId: scaleId}
-	if data[4] == 0x06 {
-		respMsg.MsgBody = "ok"
-		err = nil
+	if data[0] == 0x5a && data[1] == 0xa5 {
+		if data[4] == 0x06 {
+			respMsg.MsgBody = "ok"
+			err = nil
+		} else if data[4] == 0x15 {
+			respMsg.MsgBody = "fail"
+			err = nil
+		} else if data[4] == 0x7f {
+			respMsg.MsgType = ERR_SERIAL_RESP
+			respMsg.MsgBody = "serial port error"
+			err = nil
+		}
 	} else {
-		respMsg.MsgBody = "fail"
-		err = fmt.Errorf("fail")
+		var msg WeightMsg
+		if msg, err = retreiveWeightC51(data); err == nil {
+			respMsg.MsgType = WEIGHT_DATA
+			respMsg.MsgBody = msg
+		}
 	}
-
 	return respMsg, err
 }
 
@@ -616,6 +646,8 @@ func pickerFnOldScale(inData []byte, dataLen int) (packOffset uint, packLen uint
 }
 
 var RESP_OK_DATA = []byte{0x5a, 0xa5, 0x00, 0x01, 0x06, 0x7f, 0xfb, 0xf1, 0x6e, 0xa5, 0x5a}
+var RESP_NAK_DATA = []byte{0x5a, 0xa5, 0x00, 0x01, 0x15, 0x72, 0xbb, 0xd7, 0xb7, 0xa5, 0x5a}
+var RESP_SERIAL_ERROR = []byte{0x5a, 0xa5, 0x00, 0x01, 0x7f, 0xBD, 0x86, 0x1C, 0x86, 0xa5, 0x5a}
 
 func pickerFnTmaxScale(inData []byte, dataLen int) (packOffset uint, packLen uint, shouldRemoveLen uint) {
 	// TODO: // find a response package from scale resp data
@@ -627,7 +659,13 @@ func pickerFnTmaxScale(inData []byte, dataLen int) (packOffset uint, packLen uin
 	// find header
 	headPos := findHeadPos(inData, 0, dataLen)
 	if headPos == -1 {
-		return 0, 0, uint(dataLen) // not found packet
+		// try to find weight data
+		lfcrPos := findLfCrPos(inData, 0, dataLen)
+		if lfcrPos > 0 {
+			return 0, uint(lfcrPos), uint(lfcrPos) + 2
+		} else {
+			return 0, 0, 0
+		}
 	}
 
 	if len(inData) < headPos+len(RESP_OK_DATA) {
@@ -638,6 +676,11 @@ func pickerFnTmaxScale(inData []byte, dataLen int) (packOffset uint, packLen uin
 		if bytes.Equal(inData[i:len(RESP_OK_DATA)+i], RESP_OK_DATA) {
 			log.Log.Debug(fmt.Printf("from serial: %v", inData[i:len(RESP_OK_DATA)+i]))
 			return uint(i), uint(len(RESP_OK_DATA)), uint(i + len(RESP_OK_DATA))
+		} else if bytes.Equal(inData[i:len(RESP_NAK_DATA)+i], RESP_NAK_DATA) {
+			log.Log.Debug(fmt.Printf("from serial: %v", inData[i:len(RESP_NAK_DATA)+i]))
+			return uint(i), uint(len(RESP_NAK_DATA)), uint(i + len(RESP_NAK_DATA))
+		} else if bytes.Equal(inData[i:len(RESP_SERIAL_ERROR)+i], RESP_NAK_DATA) {
+			return uint(i), uint(len(RESP_SERIAL_ERROR)), uint(i + len(RESP_SERIAL_ERROR))
 		}
 	}
 
@@ -805,7 +848,7 @@ func procToScaleReq(scale *Scale, req SRequest) error {
 		if err := ReqDownPrnFmt(scale, req.ReqData); err != nil {
 			resp = &ScaleRespMsg{MsgType: DOWN_PRN_FMT_RESP, MsgBody: err.Error(), ScaleId: scale.Id}
 		} else {
-			resp = &ScaleRespMsg{MsgType: DOWN_PRN_FMT_RESP, MsgBody: "", ScaleId: scale.Id}
+			resp = &ScaleRespMsg{MsgType: DOWN_PRN_FMT_RESP, MsgBody: "ok", ScaleId: scale.Id}
 		}
 		result, _ := json.Marshal(resp)
 		scale.client.sendCh <- result
@@ -825,6 +868,7 @@ func ReqDownPrnFmt(c *Scale, csvPrnFmt string) error {
 
 		//打开工厂模式
 
+		log.Log.Debug("send enable factory mode cmd to scale")
 		cmd := enFacModeCmd()
 		if res, err := perfCmdNwaitResult(c, cmd, EN_FAC_MODE_RESP); err != nil {
 			return err
@@ -835,6 +879,7 @@ func ReqDownPrnFmt(c *Scale, csvPrnFmt string) error {
 		}
 
 		//擦除原本秤上的打印格式
+		log.Log.Debug("erase flash on scale")
 		addr := uint32(FLASH_ADDR)
 		for i := 0; i < 4; i++ {
 			cmd := eraseCmd(uint32(addr))
@@ -853,6 +898,7 @@ func ReqDownPrnFmt(c *Scale, csvPrnFmt string) error {
 		}
 
 		// 遍历所有数据包
+		log.Log.Debug("send data package to scale")
 		addr = uint32(FLASH_ADDR)
 		for i := 0; i < packetCount; i++ {
 			// 计算本包数据

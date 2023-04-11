@@ -146,6 +146,8 @@ func (c *TSerial) read() {
 		// read data from serial at least PACK_MIN_LEN or timeout (2 * 1/baud)
 		if n, err := c.readScale(); err != nil { // data will be stored in the queue
 			log.Log.Errorf("@TSerial read(), err: %v\n", err)
+			c.recvCh <- RESP_SERIAL_ERROR
+			time.Sleep(10 * time.Second) // to avoid sending error too often to UI
 			continue
 		} else if n == 0 {
 			time.Sleep(1 * time.Millisecond) // to avoid consume too much cpu time
@@ -185,6 +187,7 @@ func (s *TSerial) readScale() (int, error) {
 	}
 
 	if n > 0 {
+		log.Log.Debug(s.tmpbuf[0:n])
 		if err := s.queue.EnqueueN(s.tmpbuf[0:n], n); err != nil {
 			s.queue.Reset()
 		}

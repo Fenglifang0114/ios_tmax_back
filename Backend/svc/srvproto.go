@@ -240,6 +240,7 @@ const (
 	ERASE_FLASH_RESP                         // with RespMsg
 	WRITE_DATA_FLASH_RESP                    // with RespMsg
 	DOWN_PRN_FMT_RESP                        // with RespMsg
+	ERR_SERIAL_RESP                          // with RespMsg
 	NO_RESP                                  // use this as no response
 )
 

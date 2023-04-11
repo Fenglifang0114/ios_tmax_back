@@ -55,7 +55,7 @@ func ParseEplLines(buff string, dataBuffer *bytes.Buffer, lastvarPos int) *bytes
 	path, _ := filepath.Abs(file)
 	index := strings.LastIndex(path, string(os.PathSeparator))
 	currentPath := path[:index]
-	VarTable = ReadTableFromFile(currentPath + "\\varTable.json") //获取变量ID表
+	VarTable = ReadTableFromFile(currentPath + "/varTable.json") //获取变量ID表
 
 	//处理字符串并解析
 	buf := dataBuffer

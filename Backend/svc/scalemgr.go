@@ -301,7 +301,12 @@ func (m *ScaleMgr) DelScale(id string) error {
 // for user to update a scale
 func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 	id := req.ScaleId
-	conn := s.scales[id].Conn
+	tmpScale := s.scales[id]
+	if tmpScale == nil {
+		return fmt.Errorf("can't find scale wit id: %v", id)
+	}
+
+	conn := tmpScale.Conn
 	if conn == nil {
 		return fmt.Errorf("can't find connection associated with the scale Id")
 	}
@@ -316,13 +321,13 @@ func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 			client.conn.Close()
 		} // terminate the socket that associate with the scale
 	}
-	s.srvMgr.removeScale <- s.scales[id]                                                // remove the old scale
-	scale, _ := NewScale(s.srvMgr.scaleMgr, conn, conn.ScaleModel, conn.ScaleSn, false) // TODO: check this blocks
-	scale.Id = nextScaleId
-	conn.ScaleId = scale.Id
-	s.scales[scale.Id] = scale
-	s.srvMgr.addScale <- scale // register new scale instance to srvMgr
-	nextScaleId++
+	// s.srvMgr.removeScale <- s.scales[id]                                                // remove the old scale
+	// scale, _ := NewScale(s.srvMgr.scaleMgr, conn, conn.ScaleModel, conn.ScaleSn, false) // TODO: check this blocks
+	// scale.Id = nextScaleId
+	// conn.ScaleId = scale.Id
+	// s.scales[scale.Id] = scale
+	// s.srvMgr.addScale <- scale // register new scale instance to srvMgr
+	// nextScaleId++
 	s.srvMgr.scaleMgr.ModifyMediaList(id, conn.MediaConf)
 	s.connPb.connPb.UpdateScaleConn(*conn)
 
