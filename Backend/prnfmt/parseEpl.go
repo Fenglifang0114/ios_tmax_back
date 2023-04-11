@@ -37,6 +37,7 @@ const (
 	reverted       = "R"  //黑色背景白色字体
 	textBold       = "B"  //字体加粗
 	normal         = "N"  //字体正常
+	revertedBold   = "W"  //反白加粗
 	textSep        = "\"" //文本分割符""
 	LINE_HEAD      = "LS"
 	RECTANGLE_HEAD = "X"
@@ -267,16 +268,20 @@ func TextVarPosInfo(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer
 	dataBuffer.WriteString(tempRowArr[7]) //高度倍数
 	dataBuffer.WriteString(innerLineSep)
 
-	if tempRowArr[8] == "1" {
+	if tempRowArr[8] == "0" {
+		dataBuffer.WriteString(normal)
+		dataBuffer.WriteString(innerLineSep)
+	} else if tempRowArr[8] == "1" {
 		dataBuffer.WriteString(reverted)
 		dataBuffer.WriteString(innerLineSep)
 	} else if tempRowArr[8] == "2" {
 		dataBuffer.WriteString(textBold)
 		dataBuffer.WriteString(innerLineSep)
-	} else {
-		dataBuffer.WriteString(normal)
+	} else if tempRowArr[8] == "3" {
+		dataBuffer.WriteString(revertedBold)
 		dataBuffer.WriteString(innerLineSep)
 	}
+
 	return dataBuffer
 
 }
@@ -329,7 +334,7 @@ func ParsEplBarcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos in
 	}
 
 	if len(parseContentArr) == 0 {
-		panic("barCode data is missing ,please check barcode format")
+		fmt.Println("barCode data is missing ,please check barcode format")
 	}
 
 	dataBuffer, lastvarPos = FindVarInfo(parseContentArr, dataBuffer, lastvarPos)
@@ -378,7 +383,7 @@ func ParsEplQRcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int
 
 	sizedata, err := strconv.Atoi(tempRowArr[4])
 	if err != nil {
-		panic("change size to int error")
+		fmt.Println("change size to int error")
 	}
 	if 0 < sizedata && sizedata < 99 {
 		dataBuffer.WriteString(tempRowArr[4]) // 二维码大小
@@ -395,7 +400,7 @@ func ParsEplQRcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int
 	}
 
 	if len(parseContentArr) == 0 {
-		panic("QRcode data is missing ,please check QR format")
+		fmt.Println("QRcode data is missing ,please check QR format")
 	}
 	dataBuffer, lastvarPos = FindVarInfo(parseContentArr, dataBuffer, lastvarPos)
 
@@ -467,13 +472,13 @@ func FindVarInfo(parseContentArr []string, dataBuffer *bytes.Buffer, lastvarPos 
 					i = i + 1
 					alignData, err := strconv.Atoi(parseContentArr[i+1])
 					if err != nil {
-						panic("data alignment error,please check it")
+						fmt.Println("data alignment error,please check it")
 					}
 					tempVarData.align = uint16(alignData)
 					i = i + 1
 					maxLen, err := strconv.Atoi(parseContentArr[i+1])
 					if err != nil {
-						panic("data maxLength error,please check it")
+						fmt.Println("data maxLength error,please check it")
 					}
 					i = i + 1
 					tempVarData.maxlen = uint16(maxLen)
@@ -485,7 +490,7 @@ func FindVarInfo(parseContentArr []string, dataBuffer *bytes.Buffer, lastvarPos 
 				}
 
 			} else {
-				panic("Var name is not find ")
+				fmt.Println("Var name is not find ")
 			}
 		}
 
