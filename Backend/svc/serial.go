@@ -42,15 +42,6 @@ type TSerial struct {
 	toQuit   bool   // for informing the read/write goroutine to quit
 }
 
-// type ComInfo struct {
-// 	DevPath  string // device path of Com port, e.g. COM3
-// 	Baud     int    // e.x. 9600
-// 	DataBits int    // value: 7,8,9
-// 	StopBits int    // 0: 1 stop bit, 1: 1.5 stop bits, 2: 2 stop bits
-// 	Parity   int    // 0: no parity, 1: odd, 2: even
-// 	Flow     int    // 0: no flow control, 1: SW on/off flow control 2. HW CTS/RTS flow control
-// }
-
 // NewScale creates a new scale
 func NewSerial(pconf ComInfo, pickerFn packPickerFn) (*TSerial, error) {
 	if pickerFn == nil {
@@ -90,13 +81,14 @@ func (s *TSerial) Close() error {
 	time.Sleep(2 * time.Millisecond) // to let read/write goroutines to quit
 	// close recv/write channels
 
+	if !IsClosed(s.sendCh) {
+		close(s.sendCh)
+	}
+	// wait for goroutine quit
 	if !IsClosed(s.recvCh) {
 		close(s.recvCh)
 	}
 
-	if !IsClosed(s.sendCh) {
-		close(s.sendCh)
-	}
 	// close serial port
 	if s.port == nil {
 		return fmt.Errorf("s.comPort is nil")
@@ -146,7 +138,9 @@ func (c *TSerial) read() {
 		// read data from serial at least PACK_MIN_LEN or timeout (2 * 1/baud)
 		if n, err := c.readScale(); err != nil { // data will be stored in the queue
 			log.Log.Errorf("@TSerial read(), err: %v\n", err)
-			c.recvCh <- RESP_SERIAL_ERROR
+			if !IsClosed(c.recvCh) {
+				c.recvCh <- RESP_SERIAL_ERROR
+			}
 			time.Sleep(10 * time.Second) // to avoid sending error too often to UI
 			continue
 		} else if n == 0 {
@@ -170,7 +164,6 @@ func (c *TSerial) read() {
 				c.queue.DequeueN(int(removeLen))
 			}
 		}
-		// time.Sleep(1 * time.Millisecond)
 	}
 }
 
@@ -198,22 +191,12 @@ func (s *TSerial) readScale() (int, error) {
 
 // A goroutine running write is started for the scale. The
 func (s *TSerial) write() {
-	for {
-		if s.toQuit {
-			break // quit immediately
-		}
-		select {
-		case message, ok := <-s.sendCh:
-			if !ok {
-				// The hub closed the channel.
-				return
-			}
-			// send message to scale
-			if s.port != nil {
-				n, err := s.port.Write(message)
-				if err != nil || n != len(message) {
-					log.Log.Error("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error())
-				}
+	for message := range s.sendCh {
+		// send message to scale
+		if s.port != nil {
+			n, err := s.port.Write(message)
+			if err != nil || n != len(message) {
+				log.Log.Error("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error())
 			}
 		}
 	}
