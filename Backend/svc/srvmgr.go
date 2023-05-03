@@ -56,7 +56,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil {
 		log.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
-		gIsKeyValid = false
+		gIsKeyValid, gMachineId = lic.IsKeyValid("invalid key")
 	} else {
 		gIsKeyValid, gMachineId = lic.IsKeyValid(licKey)
 	}
