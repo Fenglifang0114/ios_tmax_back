@@ -7,3 +7,5 @@ const (
 )
 
 var GcurScale = SCALE_TYPE_TMAX
+
+const LICENSE_FILE = "tmaxlic.txt"

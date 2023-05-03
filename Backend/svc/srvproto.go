@@ -35,6 +35,7 @@ const (
 	REQ_QUIT_APPLICATION ReqType = "quit_application" // without parameter
 	REQ_GET_UI_CONF      ReqType = "get_ui_conf"      // without parameter
 	REQ_UPDATE_UI_CONF   ReqType = "update_ui_conf"   // without parameter
+	REQ_CHECK_LICENSE    ReqType = "check_license"    // without parameter
 )
 
 type ReqAddScale struct {
@@ -118,9 +119,10 @@ const (
 	SCALE_MGR_RESP_USER_ADD         ScaleMgrRespMsgType = "resp_user_add"         // with response of MgrRespMsg to indicate that status coreponding request procsssed
 	SCALE_MGR_RESP_USER_DEL         ScaleMgrRespMsgType = "resp_user_del"         // same as SCALE_MGR_RESP_SCALE_Add
 	SCALE_MGR_RESP_USER_MODIFY      ScaleMgrRespMsgType = "resp_user_modify"      // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_QUIT_APPLICATION ScaleMgrRespMsgType = "resp_quit_application" // without parameter
-	SCALE_MGR_RESP_GET_UI_CONFIG    ScaleMgrRespMsgType = "resp_get_ui_config"    // without parameter
+	SCALE_MGR_RESP_QUIT_APPLICATION ScaleMgrRespMsgType = "resp_quit_application" // without data
+	SCALE_MGR_RESP_GET_UI_CONFIG    ScaleMgrRespMsgType = "resp_get_ui_config"    // with response of UI configuration
 	SCALE_MGR_RESP_UPDATE_UI_CONFIG ScaleMgrRespMsgType = "resp_update_ui_config" // without parameter
+	SCALE_MGR_RESP_CHECK_LICENSE    ScaleMgrRespMsgType = "resp_check_license"    // with response of true or false
 )
 
 type PortsListMsg struct {

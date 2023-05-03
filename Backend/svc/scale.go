@@ -859,6 +859,10 @@ func procToScaleReq(scale *Scale, req SRequest) error {
 }
 
 func ReqDownPrnFmt(c *Scale, csvPrnFmt string) error {
+	if !gIsKeyValid {
+		return fmt.Errorf("license key is not valid")
+	}
+
 	if prnfmt.ParserFmtToFile(csvPrnFmt) {
 		// 读取bin文件
 		data, err := ioutil.ReadFile("formatBin.bin")

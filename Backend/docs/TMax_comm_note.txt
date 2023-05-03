@@ -53,6 +53,10 @@ ws://127.0.0.1:7878/tmax?scaleid=0
     response:
 	{"MsgType":"resp_update_ui_config","MsgBody":""}
 
+15. check if license is valid => {"Req": "check_license","ReqData":""}
+    response: 	{"MsgType":"resp_check_license","MsgBody":"true,e4e13e78c5"}
+
+
 To connect to TMax scale with scaleId websocket
 ws://127.0.0.1:7878/tmax?scaleid=1
 

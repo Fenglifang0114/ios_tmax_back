@@ -5,6 +5,8 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
+	"tmaxsrv/comm" // for the message types.  It is not a direct part of the code.  It is a "hel
+	"tmaxsrv/lic"
 	"tmaxsrv/log"
 )
 
@@ -42,9 +44,22 @@ type SrvMgr struct {
 	uiConfig  *UiConfig
 }
 
+var gIsKeyValid bool
+var gMachineId string
+
 func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	productPb := NewProductRecProvider()
 	userPb := NewUserRecProvider()
+
+	var licKey string
+	var err error
+
+	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil {
+		log.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
+		gIsKeyValid = false
+	} else {
+		gIsKeyValid, gMachineId = lic.IsKeyValid(licKey)
+	}
 
 	return &SrvMgr{
 		scaleMgr:           scaleMgr,
@@ -285,6 +300,16 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			}
 			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: ""}
 		}
+	case REQ_CHECK_LICENSE:
+		var isValid string
+		if gIsKeyValid {
+			isValid = "true"
+		} else {
+			isValid = "false"
+		}
+
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE, MsgBody: isValid + "," + gMachineId}
+
 		// below commented: due to UI maintains records itself
 		// 	case SREQ_GET_RECS: // TODO: should we check the input parameters?
 		// 		var recs []ScaleRec
