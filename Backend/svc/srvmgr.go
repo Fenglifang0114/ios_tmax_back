@@ -46,6 +46,7 @@ type SrvMgr struct {
 
 var gIsKeyValid bool
 var gMachineId string
+var gLicValidDate string
 
 func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	productPb := NewProductRecProvider()
@@ -56,9 +57,9 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil {
 		log.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
-		gIsKeyValid, gMachineId = lic.IsKeyValid("invalid key")
+		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid("invalid key")
 	} else {
-		gIsKeyValid, gMachineId = lic.IsKeyValid(licKey)
+		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid(licKey)
 	}
 
 	return &SrvMgr{
@@ -308,7 +309,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			isValid = "false"
 		}
 
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE, MsgBody: isValid + "," + gMachineId}
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE, MsgBody: isValid + "," + gMachineId + "," + gLicValidDate}
 
 		// below commented: due to UI maintains records itself
 		// 	case SREQ_GET_RECS: // TODO: should we check the input parameters?

@@ -863,6 +863,13 @@ func ReqDownPrnFmt(c *Scale, csvPrnFmt string) error {
 		return fmt.Errorf("license key is not valid")
 	}
 
+	layout := "2006-01-02"
+	date, err := time.Parse(layout, gLicValidDate)
+	if err != nil || time.Now().After(date) {
+		fmt.Println(err)
+		return fmt.Errorf("license expired")
+	}
+
 	if prnfmt.ParserFmtToFile(csvPrnFmt) {
 		// 读取bin文件
 		data, err := ioutil.ReadFile("formatBin.bin")
