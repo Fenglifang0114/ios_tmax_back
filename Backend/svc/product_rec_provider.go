@@ -1,12 +1,14 @@
 package svc
 
+import "tmaxsrv/comm"
+
 type ProductRecProvider struct {
 	myId  string
 	recPb *DbProductRec
 }
 
 const (
-	PRODUCT_REC_DB_FILE = "productrec.db"
+	PRODUCT_REC_DB_FILE = comm.SRV_DATA_PATH + "/" + "productrec.db"
 )
 
 func NewProductRecProvider() *ProductRecProvider {

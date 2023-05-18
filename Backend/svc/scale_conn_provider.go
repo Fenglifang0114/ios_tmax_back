@@ -1,12 +1,14 @@
 package svc
 
+import "tmaxsrv/comm"
+
 type ScaleConnProvider struct {
 	myId   string
 	connPb *DbScaleConn
 }
 
 const (
-	SCALE_CONN_DB_FILE = "scaleconn.db"
+	SCALE_CONN_DB_FILE = comm.SRV_DATA_PATH + "/" + "scaleconn.db"
 )
 
 func NewScaleConnProvider() *ScaleConnProvider {

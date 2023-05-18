@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	app := exec.Command("./_ui.exe")
+	app := exec.Command("./ui/_ui.exe")
 	go app.Run()
 
 	runMode := os.Getenv("RUN_MODE")

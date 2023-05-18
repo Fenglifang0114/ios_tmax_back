@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"tmaxsrv/comm"
 )
 
 type VarStruct struct {
@@ -56,6 +58,7 @@ func ParseEplLines(buff string, dataBuffer *bytes.Buffer, lastvarPos int) *bytes
 	path, _ := filepath.Abs(file)
 	index := strings.LastIndex(path, string(os.PathSeparator))
 	currentPath := path[:index]
+	currentPath = currentPath + "\\" + comm.SRV_DATA_PATH
 	VarTable = ReadTableFromFile(currentPath + "/varTable.json") //获取变量ID表
 
 	//处理字符串并解析
@@ -76,7 +79,7 @@ func ParseEplLines(buff string, dataBuffer *bytes.Buffer, lastvarPos int) *bytes
 	return buf
 }
 
-func EplLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, currentPath string) (*bytes.Buffer, int) {
+func EplLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, path string) (*bytes.Buffer, int) {
 
 	switch line[0] {
 	case "P":
@@ -90,7 +93,7 @@ func EplLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, currentPa
 		}
 
 	case "B":
-		dataBuffer, lastvarPos = ParsEplBarcode(line, dataBuffer, lastvarPos, currentPath)
+		dataBuffer, lastvarPos = ParsEplBarcode(line, dataBuffer, lastvarPos, path)
 	case "ROTATE":
 		dataBuffer = ParseEplRotate(line, dataBuffer)
 	case "L":
@@ -291,7 +294,7 @@ func TextVarPosInfo(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer
 */
 // content: TEXT,2,TEXT,0,TEXT,0,DATA,Net,01234567,3,8,TEXT,7,TEXT,8,DATA,Net,01234567,3,8
 
-func ParsEplBarcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int, currentPath string) (*bytes.Buffer, int) {
+func ParsEplBarcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int, path string) (*bytes.Buffer, int) {
 
 	lineHead := "B"
 	innerLineSep := ","
@@ -311,8 +314,8 @@ func ParsEplBarcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos in
 	dataBuffer.WriteString(tempRowArr[7]) //旋转
 
 	dataBuffer.WriteString(innerLineSep)
-	currentPath = currentPath + "\\" + BAR_CODE_EXCEL
-	codeType := getBarCodeTypeId(currentPath, LANGUAGE_EPL, tempRowArr[6])
+	path = path + "\\" + BAR_CODE_EXCEL
+	codeType := getBarCodeTypeId(path, LANGUAGE_EPL, tempRowArr[6])
 	dataBuffer.WriteString(codeType)
 	dataBuffer.WriteString(innerLineSep)
 

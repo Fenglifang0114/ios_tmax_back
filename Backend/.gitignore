@@ -8,6 +8,7 @@
 *.so
 *.dylib
 
+ui
 # backup file
 *.bak
 

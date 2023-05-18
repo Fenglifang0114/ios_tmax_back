@@ -9,3 +9,4 @@ const (
 var GcurScale = SCALE_TYPE_TMAX
 
 const LICENSE_FILE = "tmaxlic.txt"
+const SRV_DATA_PATH = "srvdata"

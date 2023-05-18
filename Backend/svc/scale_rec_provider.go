@@ -1,6 +1,9 @@
 package svc
 
-import "sync"
+import (
+	"sync"
+	"tmaxsrv/comm"
+)
 
 type ScaleRecProvider struct {
 	mu    sync.Mutex
@@ -9,7 +12,7 @@ type ScaleRecProvider struct {
 }
 
 const (
-	SCALE_REC_DB_FILE = "scalerec.db"
+	SCALE_REC_DB_FILE = comm.SRV_DATA_PATH + "/" + "scalerec.db"
 )
 
 func NewScaleRecProvider() *ScaleRecProvider {
