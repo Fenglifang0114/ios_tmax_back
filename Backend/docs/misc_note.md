@@ -4,3 +4,6 @@ https://regex101.com/ for golang regular expression testing
 go install github.com/akavel/rsrc
 rsrc -ico YOUR_ICON_FILE_NAME.ico
 go build
+
+icon file resources
+https://icon-icons.com/packs-of-icons&page=2
