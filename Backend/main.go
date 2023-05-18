@@ -1,17 +1,36 @@
 package main
 
 import (
+	"fmt"
+	"net"
 	_ "net/http/pprof"
 	"os"
 	"os/exec"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"tmaxsrv/log"
 	"tmaxsrv/svc"
 )
 
+const (
+	INSTANCE_PORT = 9292
+)
+
 func main() {
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", INSTANCE_PORT))
+	if err != nil {
+		if strings.Index(err.Error(), "in use") != -1 {
+			//optionally send command line arguments to the other instance
+			fmt.Fprintln(os.Stderr, "Already running.")
+			return
+		} else {
+			panic(err)
+		}
+	}
+	defer listener.Close()
+
 	app := exec.Command("./ui/_ui.exe")
 	go app.Run()
 
@@ -40,7 +59,7 @@ func main() {
 	// Wait for the process to complete
 	time.Sleep(10 * time.Second)
 
-	err := app.Wait()
+	err = app.Wait()
 	if err != nil {
 		log.Log.Errorf("Error: %v\n", err)
 	}
