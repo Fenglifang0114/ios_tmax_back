@@ -35,6 +35,7 @@ func IsKeyValid(licenseKey string) (bool, string, string) {
 		result = true
 	} else {
 		result = false
+		return result, machineIDStr[0:10], ""
 	}
 	saltedDatav := append([]byte(licenseKey[32:42]), []byte(hashStr)...) // valid date
 	hashv := md5.Sum(saltedDatav)
