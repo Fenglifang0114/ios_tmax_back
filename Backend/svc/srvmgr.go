@@ -55,9 +55,9 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	var licKey string
 	var err error
 
-	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil {
+	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil || len(licKey) != 74 {
 		log.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
-		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid("invalid key")
+		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid("d7a0a41239d92ee1724cd1a311ffffff2023-05-2594df26ebd828dbff03ede5f76effffff")
 	} else {
 		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid(licKey)
 	}
