@@ -17,7 +17,6 @@ import (
 )
 
 func IsKeyValid(licenseKey string) (bool, string, string) {
-	var result bool
 	// Get a unique machine ID based on the CPUID and Hard Disk ID
 	machineIDStr, _ := machineid.ProtectedID("")
 
@@ -31,27 +30,22 @@ func IsKeyValid(licenseKey string) (bool, string, string) {
 	saltedData := append([]byte(machineIDStr[0:10]), []byte(salt)...)
 	hash := md5.Sum(saltedData)
 	hashStr := hex.EncodeToString(hash[:])
-	if reflect.DeepEqual(licenseKey[0:32], hashStr) {
-		result = true
-	} else {
-		result = false
-		return result, machineIDStr[0:10], ""
+	if !reflect.DeepEqual(licenseKey[0:32], hashStr) {
+		return false, machineIDStr[0:10], ""
 	}
 	saltedDatav := append([]byte(licenseKey[32:42]), []byte(hashStr)...) // valid date
 	hashv := md5.Sum(saltedDatav)
 	hashStrv := hex.EncodeToString(hashv[:])
-	if reflect.DeepEqual(licenseKey[42:74], hashStrv) {
-		result = true
-	} else {
-		result = false
+	if !reflect.DeepEqual(licenseKey[42:74], hashStrv) {
+		return false, machineIDStr[0:10], ""
 	}
 	layout := "2006-01-02"
 	date, err := time.Parse(layout, licenseKey[32:42])
 	if err != nil || time.Now().After(date) {
 		fmt.Println(err)
-		result = false
+		return false, machineIDStr[0:10], licenseKey[32:42]
 	}
-	return result, machineIDStr[0:10], licenseKey[32:42]
+	return true, machineIDStr[0:10], ""
 }
 
 func decrypt(key []byte, ciphertext string) (string, error) {
