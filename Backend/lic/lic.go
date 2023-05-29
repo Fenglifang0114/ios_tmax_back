@@ -45,7 +45,7 @@ func IsKeyValid(licenseKey string) (bool, string, string) {
 		fmt.Println(err)
 		return false, machineIDStr[0:10], licenseKey[32:42]
 	}
-	return true, machineIDStr[0:10], ""
+	return true, machineIDStr[0:10], licenseKey[32:42]
 }
 
 func decrypt(key []byte, ciphertext string) (string, error) {
