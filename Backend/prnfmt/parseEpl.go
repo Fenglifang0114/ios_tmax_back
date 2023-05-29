@@ -435,7 +435,6 @@ func VarDateTime(dataBuffer *bytes.Buffer, lastvarPos int, varId int) (*bytes.Bu
 	} else {
 		for i := 4; i < 7; i++ {
 			if i == 4 {
-				dataBuffer.WriteString("  ")
 				tempVarData.maxlen = uint16(2)
 			} else {
 				dataBuffer.WriteString(":")
