@@ -7,7 +7,7 @@ import (
 
 	"tmaxsrv/comm" // for the message types.  It is not a direct part of the code.  It is a "hel
 	"tmaxsrv/lic"
-	"tmaxsrv/log"
+	l "tmaxsrv/log"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -35,7 +35,7 @@ type SrvMgr struct {
 	// ScaleId to Scale map, used to access the scale
 	scales map[int64]*Scale
 	// scale to client map, used to send message from scale to the associated client
-	clientScales map[*Scale]*Client
+	clientOfScales map[*Scale]*Client
 	// quitch channel to close this application
 	quitch chan bool
 	// productPb
@@ -56,7 +56,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	var err error
 
 	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil || len(licKey) != 74 {
-		log.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
+		l.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
 		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid("d7a0a41239d92ee1724cd1a311ffffff2023-05-2594df26ebd828dbff03ede5f76effffff")
 	} else {
 		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid(licKey)
@@ -65,7 +65,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	return &SrvMgr{
 		scaleMgr:           scaleMgr,
 		scales:             map[int64]*Scale{},
-		clientScales:       map[*Scale]*Client{},
+		clientOfScales:     map[*Scale]*Client{},
 		recvWsClientMsg:    make(chan []byte),
 		register:           make(chan *Client),
 		unregister:         make(chan *Client),
@@ -87,10 +87,15 @@ func (h *SrvMgr) Run() {
 		select {
 		case client := <-h.register:
 			scaleId := client.scaleId
+			scale := h.scales[scaleId]
+			if scale == nil {
+				l.Log.Errorf("The scale: %v is not existed", scaleId)
+				break;
+			}
 			isRegisted := false
 			for client := range h.clients {
 				if client.scaleId == scaleId {
-					log.Log.Infof("The scale: %v is already registered", scaleId)
+					l.Log.Errorf("The scale: %v is already registered", scaleId)
 					isRegisted = true
 					break
 				}
@@ -98,7 +103,7 @@ func (h *SrvMgr) Run() {
 			if !isRegisted {
 				h.clients[client] = true
 				//if scaleId != 0 { // 0 reserved for common information channel, 9999 reserved for legacy MCU scale, only support one scale with this ID
-				h.clientScales[h.scales[scaleId]] = client
+				h.clientOfScales[h.scales[scaleId]] = client
 				if scaleId != 0 { // id 0 is reserved for common information channel
 					h.scales[scaleId].SetClient(client)
 				}
@@ -115,7 +120,7 @@ func (h *SrvMgr) Run() {
 				client.Close()
 
 				delete(h.clients, client)
-				delete(h.clientScales, h.scales[client.scaleId])
+				delete(h.clientOfScales, h.scales[client.scaleId])
 				// close(client.send)
 			}
 		case scale := <-h.addScale: // from scale manager
@@ -125,14 +130,14 @@ func (h *SrvMgr) Run() {
 				if h.scales[scale.Id] == nil {
 					h.scales[scale.Id] = scale
 				} else {
-					log.Log.Warnf("scale id already registered, just ignore it")
+					l.Log.Warnf("scale id already registered, just ignore it")
 				}
 			}
 		case scale := <-h.removeScale: // from scale manager
 			if h.scales[scale.Id] != nil { // scale not existing
 				h.scales[scale.Id] = nil
 			} else {
-				log.Log.Warn("scale id not registered and can't be removed, just ignore it")
+				l.Log.Warn("scale id not registered and can't be removed, just ignore it")
 			}
 		case userMessage := <-h.recvWsClientMsg: // message from websocket client
 			var data map[string][]byte
@@ -143,14 +148,14 @@ func (h *SrvMgr) Run() {
 				// TODO: send request to scale manager to get scale list or get serial ports
 				// parse request for "get port list", "get scale list", "update scale conneciton",
 				//                   "create a new scale", delete a scale" or "close application"
-				log.Log.Infof("Got request from common channel %v\n", string(data["message"]))
-				parseMsgTrigEvt(h.scaleMgr, string(data["message"]))
+				l.Log.Infof("Got request from common channel %v\n", string(data["message"]))
+				parseMsgAndTrigEvt(h.scaleMgr, string(data["message"]))
 			} else {
 				scale := h.scales[scaleId]
 				if scale == nil { // something wrong about scale id
-					log.Log.Warnf("cannot find the scale with id: %v\n", scaleId)
+					l.Log.Warnf("cannot find the scale with id: %v\n", scaleId)
 				} else if scale.Id != scaleId { // something wrong about scale id
-					log.Log.Errorf("scale id: %v is not consistent with the id: %v recorded in the hub", scaleId, scale.Id)
+					l.Log.Errorf("scale id: %v is not consistent with the id: %v recorded in the hub", scaleId, scale.Id)
 				} else {
 					//send data to the scale
 					// if req, err := parseToScaleReq(string(data["message"])); err == nil {
@@ -161,7 +166,7 @@ func (h *SrvMgr) Run() {
 		case scaleMessage := <-h.recvScaleMsg:
 			// handle the message from the scale
 			if h.scales[scaleMessage.ScaleId] != nil {
-				client := h.clientScales[h.scales[scaleMessage.ScaleId]]
+				client := h.clientOfScales[h.scales[scaleMessage.ScaleId]]
 				if client != nil {
 					outData, _ := json.Marshal(scaleMessage)
 					client.sendCh <- outData
@@ -172,28 +177,28 @@ func (h *SrvMgr) Run() {
 			// 	time.Sleep(1 * time.Millisecond)
 		case scaleMgrMessage := <-h.recvScaleMgrMsg:
 			// handle the message from the scale
-			client := h.clientScales[h.scales[0]]
+			client := h.clientOfScales[h.scales[0]]
 			outData, _ := json.Marshal(scaleMgrMessage)
 			if client != nil {
 				client.sendCh <- outData
 			}
 		case scaleMessage := <-h.recvScaleNotifyMsg:
 			// handle the message from the scale
-			client := h.clientScales[h.scales[scaleMessage.ScaleId]]
+			client := h.clientOfScales[h.scales[scaleMessage.ScaleId]]
 			if client != nil { // handle the transient situation
 				outData, _ := json.Marshal(scaleMessage)
 				//fmt.Printf("%v\n", scaleMessage)
-				log.Log.Debugf("%v\n", string(outData))
+				l.Log.Debugf("%v\n", string(outData))
 				client.sendCh <- outData
 			}
 		}
 	}
 }
 
-func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
+func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 	var req Request
 	if err := json.UnmarshalFromString(reqJson, &req); err != nil {
-		log.Log.Error(err)
+		l.Log.Error(err)
 		return
 	}
 
@@ -206,7 +211,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqAddScale
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			ScaleAdded.Trigger(scaleAdded, data)
 		}
@@ -214,7 +219,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqDelScale
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			ScaleDeleted.Trigger(scaleDeleted, data)
 		}
@@ -222,7 +227,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqModifyScale
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			ScaleModified.Trigger(scaleModified, data)
 		}
@@ -232,7 +237,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqAddProduct
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			ProductAdded.Trigger(productAdded, scaleMgr.srvMgr, data)
 		}
@@ -240,7 +245,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqDelProduct
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			ProductDeleted.Trigger(productDeleted, scaleMgr.srvMgr, data)
 		}
@@ -248,7 +253,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqModifyProduct
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			ProductModified.Trigger(productModified, scaleMgr.srvMgr, data)
 		}
@@ -258,7 +263,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqAddUser
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			UserAdded.Trigger(userAdded, scaleMgr.srvMgr, data)
 		}
@@ -266,7 +271,7 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqDelUser
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			UserDeleted.Trigger(userDeleted, scaleMgr.srvMgr, data)
 		}
@@ -274,30 +279,30 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		jsonStr := req.ReqData
 		var data ReqModifyUser
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 		} else {
 			UserModified.Trigger(userModified, scaleMgr.srvMgr, data)
 		}
 
 	case REQ_QUIT_APPLICATION:
-		log.Log.Warn("Got quit application")
+		l.Log.Warn("Got quit application")
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_QUIT_APPLICATION, MsgBody: ""}
 		mSrvMgr.quitch <- true
 	case REQ_GET_UI_CONF:
-		log.Log.Info("Got get UI Config request")
+		l.Log.Info("Got get UI Config request")
 		config, _ := mSrvMgr.uiConfig.GetConfig()
 		configStr, _ := json.MarshalToString(config)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_UI_CONFIG, MsgBody: configStr}
 	case REQ_UPDATE_UI_CONF:
-		log.Log.Info("Got update UI Config request")
+		l.Log.Info("Got update UI Config request")
 		var config Config
 		if err := json.UnmarshalFromString(req.ReqData, &config); err != nil {
-			log.Log.Error(err)
+			l.Log.Error(err)
 			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: "failed to parse update UI Config"}
 		} else {
 			err := mSrvMgr.uiConfig.UpdateConfig(&config)
 			if err != nil {
-				log.Log.Error(err)
+				l.Log.Error(err)
 			}
 			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: ""}
 		}
@@ -431,13 +436,13 @@ func parseMsgTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 
 func (p productListedNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
-	log.Log.Debug("Handle productListedNotifier called")
+	l.Log.Debug("Handle productListedNotifier called")
 	// Do something with this event
 	products, _ := mgr.productPd.GetRecsList()
 	var productsStr string
 	var err error
 	if productsStr, err = json.MarshalToString(products); err != nil {
-		log.Log.Error(err)
+		l.Log.Error(err)
 		// TODO: error handling
 	}
 	// send products list back to requestee
@@ -446,7 +451,7 @@ func (p productListedNotifier) Handle(mgr *SrvMgr) {
 
 func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProduct) {
 	// Do something for this event
-	log.Log.Debug("Handle addProductNotifier called")
+	l.Log.Debug("Handle addProductNotifier called")
 	rec := ProductRec{Id: payload.Id, Product: payload.Product, WithPretare: payload.WithPretare, Pretare: payload.Pretare, Remarks: payload.Remarks}
 	if err := mgr.productPd.InsertRec(rec); err != nil {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: err.Error()}
@@ -457,7 +462,7 @@ func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProduct) {
 
 func (p delProductNotifier) Handle(mgr *SrvMgr, payload ReqDelProduct) {
 	// Do something for this event
-	log.Log.Debug("Handle delProductNotifier called")
+	l.Log.Debug("Handle delProductNotifier called")
 	if err := NewProductRecProvider().DeleteRec(uint(payload.RecId)); err != nil {
 		// TODO: error handling
 	}
@@ -478,14 +483,14 @@ func (p modifyProductNotifier) Handle(mgr *SrvMgr, payload ReqModifyProduct) {
 
 func (p userListedNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
-	log.Log.Debug("Handle userListedNotifier called")
+	l.Log.Debug("Handle userListedNotifier called")
 	// Do something with this event
 	users, _ := NewUserRecProvider().GetRecsList()
 
 	var userStr string
 	var err error
 	if userStr, err = json.MarshalToString(users); err != nil {
-		log.Log.Error(err)
+		l.Log.Error(err)
 		// TODO: error handling
 	}
 	// send users list back to requestee
@@ -494,7 +499,7 @@ func (p userListedNotifier) Handle(mgr *SrvMgr) {
 
 func (p addUserNotifier) Handle(mgr *SrvMgr, payload ReqAddUser) {
 	// Do something for this event
-	log.Log.Debug("Handle addUserNotifier called")
+	l.Log.Debug("Handle addUserNotifier called")
 	var rec UserRec = UserRec{Id: payload.Id, Name: payload.Name, Phone: payload.Phone, IsFemale: payload.IsFemale, Remarks: payload.Remarks}
 	if err := NewUserRecProvider().InsertRec(rec); err != nil {
 		// TODO: error handling
@@ -505,7 +510,7 @@ func (p addUserNotifier) Handle(mgr *SrvMgr, payload ReqAddUser) {
 
 func (p delUserNotifier) Handle(mgr *SrvMgr, payload ReqDelUser) {
 	// Do something for this event
-	log.Log.Debug("Handle delUserNotifier called")
+	l.Log.Debug("Handle delUserNotifier called")
 	if err := NewUserRecProvider().DeleteRec(uint(payload.RecId)); err != nil {
 		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_USER_DEL, MsgBody: err.Error()}
@@ -515,7 +520,7 @@ func (p delUserNotifier) Handle(mgr *SrvMgr, payload ReqDelUser) {
 
 func (p modifyUserNotifier) Handle(mgr *SrvMgr, payload ReqModifyUser) {
 	// Do something for this event
-	log.Log.Debug("Handle modifyUserNotifier called")
+	l.Log.Debug("Handle modifyUserNotifier called")
 	var rec UserRec = UserRec{RecId: uint(payload.RecId), Id: payload.Id, Name: payload.Name, Phone: payload.Phone, IsFemale: payload.IsFemale, Remarks: payload.Remarks}
 	if err := mgr.userPd.ModifyRec(rec); err != nil {
 		// TODO: error handling

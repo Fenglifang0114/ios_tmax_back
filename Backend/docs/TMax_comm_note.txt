@@ -66,7 +66,7 @@ ws://127.0.0.1:7878/tmax?scaleid=1
      {"ScaleId":1,"MsgType":0,"MsgBody":{"IsStable":true,"IsNet":true,"WeightVal":"5.123","WeightUnit":"kg"}}
 {"ScaleId":1,"MsgType":3,"MsgBody":"{\"IsStable\":true,\"IsNet\":true,\"WeightVal\":\"5.123\",\"WeightUnit\":\"kg\"}"}
 2. To perform Zero
-     {"Req":"zero","ReqData":""}
+{"Req":"zero","ReqData":""}     
    response:
      {"ScaleId":1,"MsgType":1,"MsgBody":""}
 3. To perform Tare
@@ -99,3 +99,86 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 	{"Req":"del_rec","ReqData":"{\"RecId\":3}"}
 	response:
 	{"MsgType":8,"MsgBody":"ok","ScaleId":1}
+
+To configure scale's wifi to connect to specific AP
+ws://127.0.0.1:7878/tmax?scaleid=1
+
+1. To get APs list
+    {"Req":"get_ap_list", "ReqData":""}
+    response:
+	{ "ScaleId":1, "MsgType":"get_ap_list_resp","MsgBody":"[{\"ssid\":\"T-Scale\",\"rssi\":1,\"mac\":\"11:22:33:44:55:66\",\"enccryptType\":\"WEP\"},
+										   {\"ssid\":\"guest1\",\"rssi\":2,\"mac\":\"11:22:33:44:55:77\",\"encryptType\":\"WPA\"}],
+										   {\"ssid\":\"guest2\",\"rssi\":2,\"mac\":\"11:22:33:44:55:78\",\"encryptType\":\"WPA2-PSK\"},
+										   {\"ssid\":\"guest3\",\"rssi\":3,\"mac\":\"11:22:33:44:55:79\",\"encryptType\":\"WPA-WPA2-PSK\"},
+				 					       {''\"ssid\":\"test\",\"rssi\":4,\"mac\":\"11:22:33:44:55:88\",\"encryptType\":\"WPA\"}
+										   ]"
+	}
+2. Rescan APs
+   {"Req":"rescan_ap_list", "ReqData":""}
+    response:
+	{ "ScaleId":1, "MsgType":16, "MsgBody":""}
+3. Connect to Specific wifi AP with dynamic IP
+    {"Req":"connect_ap_dynmic_ip", "ReqData":"{
+		"id": "3", 
+        "ssid": "test",
+        "password": "mypassword",
+	}
+	}
+		
+	response:
+	{ "ScaleId":1, "MsgType":17, "MsgBody":"ok"}
+
+4. Connect to Specific wifi AP with static IP
+    {"Req":"connect_ap_static_ip", "ReqData":"{
+		"id": "3", 
+        "ssid": "test",
+        "password": "mypassword",
+        "addresses": [
+            {
+                "address": "192.168.1.22",
+                "mask": 24,
+                "family": "ipv4"
+            },
+            {
+                "address": "192.168.110.22",
+                "mask": 16,
+                "family": "ipv4"
+            }
+        ],
+        "gateway": "192.168.1.1",
+        "dns": "8.8.8.8"
+      }
+	}
+
+	response:
+	{ "ScaleId":1, "MsgType":18, "MsgBody":"ok"}
+5. GetIpInfo
+   {"Req":"get_ip_info", "ReqData":""}
+
+   response
+   { "ScaleId":1, "MsgType":19, "MsgBody":"{
+        "addresses": [
+            {
+                "address": "192.168.1.22",
+                "mask": 24,
+                "proto": "manual",
+                "family": "ipv4"
+            },
+            {
+                "address": "192.168.1.22",
+                "mask": 24,
+                "proto": "manual",
+                "family": "ipv4"
+            }
+        ],
+        "gateway": "192.168.1.1",
+        "dns": ["114.114.114.114", "8.8.8.8"]，
+        "mac": "11:22:33:44:55:FF"
+    }
+   }"
+
+To configure scale's BT configuration
+ws://127.0.0.1:7878/tmax?scaleid=1
+
+1. ModifyBTName
+   {"Req":"modify_bt_name", "ReqData":"Test"}

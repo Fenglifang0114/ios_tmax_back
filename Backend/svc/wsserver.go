@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -72,7 +73,7 @@ func (s *WsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			rqScaleId, err = strconv.ParseInt(strings.TrimSpace(qs[1]), 10, 64)
 			if err != nil {
-				log.Log.Error("convert http request scale id string to int64 failed: %v", err)
+				log.Log.Error(fmt.Sprintf("convert http request scale id string to int64 failed: %v", err))
 			}
 			log.Log.Infof("ScaleId:%v\n", rqScaleId)
 		}

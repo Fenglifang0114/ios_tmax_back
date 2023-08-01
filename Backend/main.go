@@ -10,15 +10,22 @@ import (
 	"strings"
 	"time"
 
+	"tmaxsrv/build"
 	"tmaxsrv/log"
 	"tmaxsrv/svc"
 )
+
+var Version = "1.0.0"
 
 const (
 	INSTANCE_PORT = 9292
 )
 
 func main() {
+	fmt.Println("Version:\t", Version)
+	fmt.Println("build.Time:\t", build.Time)
+	fmt.Println("build.User:\t", build.User)
+
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", INSTANCE_PORT))
 	if err != nil {
 		if strings.Index(err.Error(), "in use") != -1 {

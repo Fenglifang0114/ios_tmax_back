@@ -3,6 +3,7 @@ package svc
 import (
 	"errors"
 	"sync"
+
 	"tmaxsrv/log"
 )
 
@@ -105,7 +106,7 @@ func (s *CircularBuffer) DequeueN(size int) ([]byte, error) {
 	s.full = false
 	for i := 0; i < size; i++ {
 		result = append(result, s.taskQueue[idx])
-		idx = (s.head + i) % s.capacity
+		idx = (idx + 1) % s.capacity
 	}
 	s.head = (s.head + size) % s.capacity
 

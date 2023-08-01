@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
 	"github.com/gorilla/websocket"
 
-	"tmaxsrv/log"
+	l "tmaxsrv/log"
 )
 
 const (
@@ -80,12 +79,12 @@ func (c *Client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Log.Errorf("error: %v", err)
+				l.Log.Errorf("error: %v", err)
 			}
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		log.Log.Debugf("%v\n", string(message))
+		l.Log.Debugf("%v\n", string(message))
 		data := map[string][]byte{
 			"message": message,
 			"id":      []byte(c.ID),
@@ -126,10 +125,10 @@ func (c *Client) writePump() {
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				log.Log.Errorf("To client error: %v", err.Error())
+				l.Log.Errorf("To client error: %v", err.Error())
 				return
 			}
-			log.Log.Debugf("To client: %v", string(message))
+			l.Log.Debugf("To client: %v", string(message))
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.

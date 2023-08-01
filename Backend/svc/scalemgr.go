@@ -313,7 +313,7 @@ func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 	conn.MediaConf = req.MediaConf
 	// TODO: change scale's mediaConf
 	s.scales[id].ModifyMedia(req.MediaConf)
-	client := s.srvMgr.clientScales[s.srvMgr.scales[id]]
+	client := s.srvMgr.clientOfScales[s.srvMgr.scales[id]]
 	// remove the conn then add new one s.conns
 	if client != nil && client.scaleId == id {
 		s.srvMgr.unregister <- client

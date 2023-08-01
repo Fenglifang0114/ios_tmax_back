@@ -17,6 +17,8 @@ const (
 	QUEUE_SIZE    = 1024
 )
 
+var RESP_SERIAL_ERROR = []byte{0x5a, 0xa5, 0x00, 0x01, 0x7f, 0xBD, 0x86, 0x1C, 0x86, 0xa5, 0x5a}
+
 // this function should try to scan the input buffer to find the first packet,
 // and return the package start position, the package len and how many bytes should be removed from the buffer,
 // if no package is found then the returned packLen should be zero and the shouldRemoveLen may be not zero,
@@ -27,14 +29,14 @@ const (
 // packageOffset: the package start position
 // packLen: the number of bytes in the package that scanned
 // shouldRemoveLen: the number of bytes should be removed, containing the no use data in the buffer
-type packPickerFn func(buf []byte, dataLen int) (packOffset uint, packLen uint, shouldRemoveLen uint)
+type packPickerFn func(buf []byte, dataLen int) (packOffset uint, packLen uint, shouldRemoveLen uint, pack Packet)
 
 type TSerial struct {
 	// com port
 	port serial.Port
 	// send to scale channel, message will be json string
 	sendCh   chan []byte
-	recvCh   chan []byte
+	recvCh   chan Packet
 	queue    *CircularBuffer
 	pickerFn packPickerFn
 	baud     int    // for calculating time out
@@ -61,7 +63,7 @@ func NewSerial(pconf ComInfo, pickerFn packPickerFn) (*TSerial, error) {
 	s := &TSerial{
 		port:     port,
 		sendCh:   make(chan []byte, SEND_CH_SIZE),
-		recvCh:   make(chan []byte, RECV_CH_SIZE),
+		recvCh:   make(chan Packet, RECV_CH_SIZE),
 		queue:    NewCircularBuffer(QUEUE_SIZE),
 		pickerFn: pickerFn,
 		baud:     pconf.Baud,
@@ -85,7 +87,7 @@ func (s *TSerial) Close() error {
 		close(s.sendCh)
 	}
 	// wait for goroutine quit
-	if !IsClosed(s.recvCh) {
+	if !IsPacketChClosed(s.recvCh) {
 		close(s.recvCh)
 	}
 
@@ -100,6 +102,16 @@ func (s *TSerial) Close() error {
 }
 
 func IsClosed(ch <-chan []byte) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+
+	return false
+}
+
+func IsPacketChClosed(ch <-chan Packet) bool {
 	select {
 	case <-ch:
 		return true
@@ -138,8 +150,8 @@ func (c *TSerial) read() {
 		// read data from serial at least PACK_MIN_LEN or timeout (2 * 1/baud)
 		if n, err := c.readScale(); err != nil { // data will be stored in the queue
 			log.Log.Errorf("@TSerial read(), err: %v\n", err)
-			if !IsClosed(c.recvCh) {
-				c.recvCh <- RESP_SERIAL_ERROR
+			if !IsPacketChClosed(c.recvCh) {
+				c.recvCh <- Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
 			}
 			time.Sleep(10 * time.Second) // to avoid sending error too often to UI
 			continue
@@ -149,12 +161,12 @@ func (c *TSerial) read() {
 		if c.queue.GetDataLen() > MIN_PACK_SIZE {
 			// call the packet picker function
 			data := c.queue.PeekAll()
-			packOff, packLen, removeLen := c.pickerFn(data, c.queue.GetDataLen())
+			_, packLen, removeLen, pack := c.pickerFn(data, c.queue.GetDataLen())
 			if packLen > 0 {
 				if len(c.recvCh) >= RECV_CH_SIZE {
 					log.Log.Errorf("recvCh full, size: %v", len(c.recvCh))
 				} else {
-					c.recvCh <- data[packOff : packOff+packLen]
+					c.recvCh <- pack
 				}
 				packCnt++
 			} else {
@@ -181,6 +193,7 @@ func (s *TSerial) readScale() (int, error) {
 
 	if n > 0 {
 		log.Log.Debug(s.tmpbuf[0:n])
+		fmt.Printf("data:%x\n", string(s.tmpbuf[0:n]))
 		if err := s.queue.EnqueueN(s.tmpbuf[0:n], n); err != nil {
 			s.queue.Reset()
 		}
@@ -195,8 +208,9 @@ func (s *TSerial) write() {
 		// send message to scale
 		if s.port != nil {
 			n, err := s.port.Write(message)
+			fmt.Printf("out:%x\n", message)
 			if err != nil || n != len(message) {
-				log.Log.Error("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error())
+				log.Log.Error(fmt.Sprintf("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error()))
 			}
 		}
 	}

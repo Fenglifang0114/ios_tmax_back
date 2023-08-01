@@ -25,7 +25,7 @@ func TestQueue(t *testing.T) {
 	assert.Error(t, q.Enqueue(0))
 	assert.Equal(t, errFull, q.Enqueue(0))
 
-	assert.Equal(t, size, q.DataLen())
+	assert.Equal(t, size, q.GetDataLen())
 	for i := 0; i < size; i++ {
 		v, _ := q.Peek(i)
 		assert.Equal(t, byte(i), v)
