@@ -87,10 +87,12 @@ func (h *SrvMgr) Run() {
 		select {
 		case client := <-h.register:
 			scaleId := client.scaleId
-			scale := h.scales[scaleId]
-			if scale == nil {
-				l.Log.Errorf("The scale: %v is not existed", scaleId)
-				break;
+			if scaleId > 0 {
+				scale := h.scales[scaleId]
+				if scale == nil {
+					l.Log.Errorf("The scale: %v is not existed", scaleId)
+					break
+				}
 			}
 			isRegisted := false
 			for client := range h.clients {
