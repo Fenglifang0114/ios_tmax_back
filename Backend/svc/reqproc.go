@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"tmaxsrv/log"
+	"tmaxsrv/utils"
 )
 
 type reqProcFun func(scale *Scale, req SRequest) error
@@ -13,21 +14,23 @@ var handlers map[SReqType]reqProcFun
 
 func init() {
 	handlers = map[SReqType]reqProcFun{
-		SREQ_GET_WEIGHT:            procGetWeight,
-		SREQ_ZERO:                  procZero,
-		SREQ_TARE:                  procTare,
-		SREQ_REG_WEIGHT_DATA:       procRegWeight,
-		SREQ_UNREG_WEIGHT_DATA:     procUnRegWeight,
-		SREQ_GET_RECS:              procGetRecs,
-		SREQ_ADD_REC:               procAddRec,
-		SREQ_DEL_REC:               procDelRec,
-		SREQ_DOWN_PRN_FMT:          procDownPrnFmt,
-		SREQ_GET_AP_LIST:           procGetApList,
-		SREQ_RESCAN_AP_LIST:        procRescanAp,
-		SREQ_CONNECT_AP_DYNAMIC_IP: procConnectApDynamicIp,
-		SREQ_CONNECT_AP_STATIC_IP:  procConnectApStaticIp,
-		SREQ_GET_IP_INFO:           procGetIpInfo,
-		SREQ_MODIFY_BT_NAME:        procModifyBTName,
+		SREQ_GET_WEIGHT:          procGetWeight,
+		SREQ_ZERO:                procZero,
+		SREQ_TARE:                procTare,
+		SREQ_REG_WEIGHT_DATA:     procRegWeight,
+		SREQ_UNREG_WEIGHT_DATA:   procUnRegWeight,
+		SREQ_GET_RECS:            procGetRecs,
+		SREQ_ADD_REC:             procAddRec,
+		SREQ_DEL_REC:             procDelRec,
+		SREQ_DOWN_PRN_FMT:        procDownPrnFmt,
+		SREQ_GET_AP_LIST:         procGetApList,
+		SREQ_RESCAN_AP_LIST:      procRescanAp,
+		SREQ_CONNECT_AP:          procConnectAp,
+		SREQ_SET_WIFI_DYNAMIC_IP: procSetWifiDynamicIp,
+		SREQ_SET_WIFI_STATIC_IP:  procSetWifiStaticIp,
+		SREQ_GET_IP_INFO:         procGetIpInfo,
+		SREQ_MODIFY_BT_NAME:      procModifyBTName,
+		SREQ_SEND_DATA_TO_BT:     procSendDataToBT,
 	}
 }
 
@@ -120,15 +123,41 @@ func procRescanAp(scale *Scale, req SRequest) error {
 	return nil
 }
 
-func procConnectApDynamicIp(scale *Scale, req SRequest) error {
-	msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: CONNECT_AP_DYNAMIC_IP_RESP, MsgBody: "ok"}
+func procConnectAp(scale *Scale, req SRequest) error {
+	data := utils.JsonToMap(req.ReqData)
+	if err := ReqConnectAp(scale, data["ssid"].(string), data["bssid"].(string), data["password"].(string)); err != nil {
+		err = fmt.Errorf("connect AP error")
+		msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: SET_WIFI_DYNAMIC_IP_RESP, MsgBody: err.Error()}
+		msgStr, _ := json.MarshalToString(msg)
+		scale.client.sendCh <- []byte(msgStr)
+		return nil
+	}
+	msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "ok"} // TODO: restrieve AP list
 	msgStr, _ := json.MarshalToString(msg)
 	scale.client.sendCh <- []byte(msgStr)
 	return nil
 }
 
-func procConnectApStaticIp(scale *Scale, req SRequest) error {
-	msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: CONNECT_AP_STATIC_IP_RESP, MsgBody: "ok"}
+func procSetWifiDynamicIp(scale *Scale, req SRequest) error {
+	data := utils.JsonToMap(req.ReqData)
+	// "id": "3",
+	// "ssid": "test",
+	// "password": "mypassword",
+	if err := ConnectWifiAp(scale, data["ssid"].(string), data["bssid"].(string), data["password"].(string)); err != nil {
+		err = fmt.Errorf("get AP list error")
+		msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: SET_WIFI_DYNAMIC_IP_RESP, MsgBody: err.Error()}
+		msgStr, _ := json.MarshalToString(msg)
+		scale.client.sendCh <- []byte(msgStr)
+		return nil
+	}
+	msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "ok"} // TODO: restrieve AP list
+	msgStr, _ := json.MarshalToString(msg)
+	scale.client.sendCh <- []byte(msgStr)
+	return nil
+}
+
+func procSetWifiStaticIp(scale *Scale, req SRequest) error {
+	msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: SET_WIFI_STATIC_IP_RESP, MsgBody: "ok"}
 	msgStr, _ := json.MarshalToString(msg)
 	scale.client.sendCh <- []byte(msgStr)
 	return nil
@@ -163,6 +192,21 @@ func procGetIpInfo(scale *Scale, req SRequest) error {
 
 func procModifyBTName(scale *Scale, req SRequest) error {
 	if err := ReqModifyBTName(scale, req.ReqData); err != nil {
+		err = fmt.Errorf("modify BT name error")
+		msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: MODIFY_BT_NAME_RESP, MsgBody: err.Error()}
+		msgStr, _ := json.MarshalToString(msg)
+		scale.client.sendCh <- []byte(msgStr)
+		return nil
+	}
+	msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: MODIFY_BT_NAME_RESP, MsgBody: "ok"}
+	msgStr, _ := json.MarshalToString(msg)
+	scale.client.sendCh <- []byte(msgStr)
+	return nil
+}
+
+
+func procSendDataToBT(scale *Scale, req SRequest) error {
+	if err := ReqSendDataToBT(scale, req.ReqData); err != nil {
 		err = fmt.Errorf("modify BT name error")
 		msg := ScaleRespMsg{ScaleId: scale.Id, MsgType: MODIFY_BT_NAME_RESP, MsgBody: err.Error()}
 		msgStr, _ := json.MarshalToString(msg)

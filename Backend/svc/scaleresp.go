@@ -14,11 +14,11 @@ func convToMspType(inChar []byte) RespMsgType {
 		return REG_WEIGHT_RESP // FIXME:
 	case 0xF2:
 		if inChar[4] == 0x01 {
-			return BT_PASSTH_DATA
+			return BT_PASSTH_DATA_RESP
 		} else if inChar[4] == 0x02 {
-			return WIFI_PASSTH_DATA
+			return WIFI_PASSTH_DATA_RESP
 		} else if inChar[4] == 0x03 {
-			return PRT_PASSTH_DATA
+			return PRT_PASSTH_DATA_RESP
 		} else {
 			return REG_WEIGHT_RESP // FIXME:
 		}

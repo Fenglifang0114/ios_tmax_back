@@ -364,7 +364,6 @@ func parseToScaleReq(reqStr string) (SRequest, error) {
 }
 
 func ReqModifyBTName(s *Scale, name string) error {
-
 	if err := EnFacMode(s); err != nil {
 		return err
 	}
@@ -374,6 +373,26 @@ func ReqModifyBTName(s *Scale, name string) error {
 	}
 	time.Sleep(100 * time.Millisecond)
 	if err := ModifyBTName(s, name); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := DisPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	return nil
+}
+
+func ReqSendDataToBT(s *Scale, data string) error {
+	if err := EnFacMode(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := EnPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := SendDataToBT(s, data); err != nil {
 		return err
 	}
 	time.Sleep(100 * time.Millisecond)
@@ -404,6 +423,28 @@ func ReqGetApList(s *Scale) error {
 	time.Sleep(100 * time.Millisecond)
 	return nil
 }
+
+func ReqConnectAp(s *Scale, ssid string, password string, bssid string) error {
+
+	if err := EnFacMode(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := EnPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := ConnectWifiAp(s, ssid, password, bssid); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := DisPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	return nil
+}
+
 
 func ReqDownPrnFmt(c *Scale, csvPrnFmt string) error {
 	if !gIsKeyValid {

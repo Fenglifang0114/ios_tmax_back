@@ -19,8 +19,10 @@ var DIS_CONT_MODE_CMD []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x08, 0x00, 
 var EN_PASSTH_MODE_CMD []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf3, 0x00, 0x59, 0xE4, 0xC9, 0x51, 0xa5, 0x5a}
 var DIS_PASSTH_MODE_CMD []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf4, 0x00, 0x6E, 0x2B, 0xB7, 0x2B, 0xa5, 0x5a}
 var GET_AP_LIST_CMD []byte = []byte("AT+CWLAP\r\n")
+var CONNECT_AP_CMD []byte = []byte("AT+CWJAP=%s,%s,%s\r\n") // ssid, password, bssid
 
 var GExpectWifiResp string
+var GExpectBTResp string
 
 func (c *Scale) PerfZero() bool {
 	if c.isOldC51Scale {
@@ -108,107 +110,11 @@ const (
 	CMD_TYPE_IDX     = 3
 )
 
-// // 打开工厂模式命令
-// func EnFacModeCmd() []byte {
-// 	// 构建包头
-// 	packet := make([]byte, OPEN_FAC_CHUNK_SIZE)
-// 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
-
-// 	// 构建命令ID与命令类型
-// 	packet[2] = 0x05
-// 	packet[3] = 0xF1
-
-// 	// 添加包尾
-// 	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE-2:], PACKET_TAIL)
-
-// 	return packet
-// }
-
-// // 关闭工厂模式命令
-// func DisFacModeCmd() []byte {
-// 	// 构建包头
-// 	packet := make([]byte, CLOSE_FAC_CHUNK_SIZE)
-// 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
-
-// 	// 构建命令ID与命令类型
-// 	packet[2] = 0x05
-// 	packet[3] = 0xF2
-
-// 	// 添加包尾
-// 	binary.BigEndian.PutUint16(packet[CLOSE_FAC_CHUNK_SIZE-2:], PACKET_TAIL)
-
-// 	return packet
-// }
-
-// func EnPassthCmd() []byte {
-// 	// 构建包头
-// 	packet := make([]byte, EN_PASSTH_CHUNK_SIZE)
-// 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
-
-// 	// 构建命令ID与命令类型
-// 	packet[2] = uint8(EN_PASSTH_CHUNK_SIZE - HEADER_LEN)
-// 	packet[3] = 0x05
-// 	packet[4] = 0xF3
-
-// 	// 添加包尾
-// 	binary.BigEndian.PutUint16(packet[EN_PASSTH_CHUNK_SIZE-2:], PACKET_TAIL)
-
-// 	return packet
-// }
-
-// func DisPassthCmd() []byte {
-// 	// 构建包头
-// 	packet := make([]byte, DIS_PASSTH_CHUNK_SIZE)
-// 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
-
-// 	// 构建命令ID与命令类型
-// 	packet[2] = uint8(DIS_PASSTH_CHUNK_SIZE - HEADER_LEN)
-// 	packet[3] = 0x05
-// 	packet[4] = 0xF4
-
-// 	// 添加包尾
-// 	binary.BigEndian.PutUint16(packet[DIS_PASSTH_CHUNK_SIZE-2:], PACKET_TAIL)
-
-// 	return packet
-// }
-
 // 修改BT名称
 func ModifyBTNameCmd(name string) []byte {
 	// MODIFY_BT_NAME_CHUNK_SIZE should include all data except BT name
-	CMD := "TTM:REN-"
-	// 构建包头
-	var packLen uint16 = uint16(MODIFY_BT_NAME_CHUNK_SIZE + len(name))
-	packet := make([]byte, packLen)
-	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
-	// 构建命令ID与命令类型
-	binary.BigEndian.PutUint16(packet[2:4], packLen-2)
-	var i uint16 = 4
-	packet[i] = 0xF2 // packet length without header
-	i += 1
-	packet[i] = 0x01
-	i += 1
-	packet[i] = 0x00
-	i += 1
-	copy(packet[i:], CMD)
-	i += uint16(len(CMD))
-	copy(packet[i:], name)
-	i += uint16(len(name))
-	packet[i] = 0x0d
-	i += 1
-	packet[i] = 0x0a
-	i += 1
-	packet[i] = 0x00
-	i += 1
-	if i != packLen-6 {
-		panic("packet len error!")
-	}
-	// 计算与添加校验码
-	checksum := utils.Crc32MPEG2(packet[2 : packLen-6])
-	binary.BigEndian.PutUint32(packet[packLen-6:], checksum)
-	// 添加包尾
-	binary.BigEndian.PutUint16(packet[packLen-2:], PACKET_TAIL)
-
-	return packet
+	data := "TTM:REN-" + name
+	return ComposeToBTPassthData(data)
 }
 
 // 修改BT名称
@@ -230,6 +136,51 @@ func ComposeToWifiPassthData(dataStr string) []byte {
 	i += 1
 	copy(packet[i:], data)
 	i += uint16(len(data))
+	if i != packLen-6 {
+		panic("packet len error!")
+	}
+	// 计算与添加校验码
+	checksum := utils.Crc32MPEG2(packet[2 : packLen-6])
+	binary.BigEndian.PutUint32(packet[packLen-6:], checksum)
+	// 添加包尾
+	binary.BigEndian.PutUint16(packet[packLen-2:], PACKET_TAIL)
+
+	return packet
+}
+
+// BT 透传命令
+func ComposeToBTPassthData(data string) []byte {
+	// 5A A5 00 1C F2 01 00 54 54 4D 3A 52 45 4E 2D 41 41 42 42 43 43 0d 0a 00 CB 15 25 F6 A5 5A
+	// data portion: TTM:REN-AABBCC
+	var packLen uint16 = uint16(16 + len(data)) // 16: includes 5A A5 00 1C F2 01 00 0d 0a 00 CB 15 25 F6 A5 5A,
+	// excludes 54 54 4D 3A 52 45 4E 2D 41 41 42 42 43 43
+	packet := make([]byte, packLen)
+	// 构建包头
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+	// 构建命令ID与命令类型
+	binary.BigEndian.PutUint16(packet[2:4], packLen-2)
+	var i uint16 = 4
+	packet[i] = 0xF2 // packet length without header
+	i += 1
+	packet[i] = 0x01
+	i += 1
+	packet[i] = 0x00
+	i += 1
+	copy(packet[i:], []byte(data))
+	i += uint16(len(data))
+	packet[i] = 0x0d
+	i += 1
+	packet[i] = 0x0a
+	i += 1
+	packet[i] = 0x00
+	copy(packet[i:], data)
+	i += uint16(len(data))
+	packet[i] = 0x0d
+	i += 1
+	packet[i] = 0x0a
+	i += 1
+	packet[i] = 0x00
+	i += 1
 	if i != packLen-6 {
 		panic("packet len error!")
 	}
@@ -386,6 +337,39 @@ func GetApList(s *Scale) error {
 
 	return nil
 }
+
+// Send data to BT
+func SendDataToBT(s *Scale, BT string) error {
+	l.Log.Debug("Send data to BT")
+	GExpectBTResp = "send_data_to_bt"
+	cmd := ComposeToBTPassthData(string(GET_AP_LIST_CMD))
+	if res, err := perfCmdNwaitResult(s, cmd, BT_PASSTH_DATA_RESP); err != nil {
+		return err
+	} else if res.MsgBody != "ok" {
+		return fmt.Errorf("modify BT name fail")
+	} else {
+		// do nothing
+	}
+
+	return nil
+}
+
+// Connect to specifi AP
+func ConnectWifiAp(s *Scale, ssid string, bssid string, passwd string) error {
+	l.Log.Debug("Connect to Wifi AP")
+	GExpectWifiResp = "connect_ap"
+	cmd := ComposeToWifiPassthData(fmt.Sprintf(string(CONNECT_AP_CMD), ssid, passwd, bssid))
+	if res, err := perfCmdNwaitResult(s, cmd, CONNECT_AP_RESP, 30); err != nil { // TODO:change 30 as constant
+		return err
+	} else if res.MsgBody != "ok" {
+		return fmt.Errorf("connect to wifi AP fail")
+	} else {
+		// do nothing
+	}
+
+	return nil
+}
+
 func perfCmd(c *Scale, cmd []byte) bool {
 	if err := writeScale(c, cmd); err != nil {
 		l.Log.Error(err.Error())
@@ -394,7 +378,12 @@ func perfCmd(c *Scale, cmd []byte) bool {
 	return true
 }
 
-func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType RespMsgType) (*ScaleRespMsg, error) {
+func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType RespMsgType, timeout ...int) (*ScaleRespMsg, error) {
+	defTimeout := 3
+	if len(timeout) > 0 {
+		defTimeout = timeout[0]
+	}
+
 	ch := make(chan *ScaleRespMsg, 10)
 	c.RegisterNotif(waitMsgType, ch)
 	defer func() {
@@ -412,7 +401,7 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType RespMsgType) (*ScaleRe
 	var ret *ScaleRespMsg
 	select {
 	case ret = <-ch:
-	case <-time.After(SCALE_TIME_OUT_S * time.Second):
+	case <-time.After(time.Duration(defTimeout) * time.Second):
 		ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "timeout"}
 		return ret, fmt.Errorf("no response, time out")
 	}

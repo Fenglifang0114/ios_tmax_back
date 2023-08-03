@@ -87,7 +87,7 @@ func (h *SrvMgr) Run() {
 		select {
 		case client := <-h.register:
 			scaleId := client.scaleId
-			if scaleId > 0 {
+			if scaleId > 0 { // scaleId 0 is for management
 				scale := h.scales[scaleId]
 				if scale == nil {
 					l.Log.Errorf("The scale: %v is not existed", scaleId)

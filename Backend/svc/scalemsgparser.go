@@ -41,42 +41,42 @@ func init() {
 		0xff12: ERR_SERIAL_RESP,
 		0xff13: GET_AP_LIST_RESP,
 		0xff14: RESCAN_AP_LIST_RESP,
-		0xff15: CONNECT_AP_DYNAMIC_IP_RESP,
-		0xff16: CONNECT_AP_STATIC_IP_RESP,
+		0xff15: SET_WIFI_DYNAMIC_IP_RESP,
+		0xff16: SET_WIFI_STATIC_IP_RESP,
 		0xff17: GET_IP_INFO_RESP,
 		0xf201: MODIFY_BT_NAME_RESP,
 		0xff19: NO_RESP,
-		0xff20: BT_PASSTH_DATA,
-		0xf202: WIFI_PASSTH_DATA,
-		0xff22: PRT_PASSTH_DATA,
+		0xff20: BT_PASSTH_DATA_RESP,
+		0xf202: WIFI_PASSTH_DATA_RESP,
+		0xff22: PRT_PASSTH_DATA_RESP,
 		0xff23: UNKNOWN_DATA,
 	}
 
 	responseHandlerMap = map[RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
-		WEIGHT_DATA:                handleWeightDataMsg,
-		ZERO_CMD_RESP:              handleZeroCmdResp,
-		TARE_CMD_RESP:              handleTareCmdResp,
-		WEIGHT_DATA_RESP:           handleWeightDataResp,
-		REG_WEIGHT_RESP:            handleRegWeightResp,
-		UNREG_WEIGHT_RESP:          handleUnregWeightResp,
-		GET_RECS_RESP:              handleGetRecsResp,
-		ADD_REC_RESP:               handleAddRecResp,
-		DEL_REC_RESP:               handleDelRecResp,
-		EN_FAC_MODE_RESP:           handleEnFacModeResp,
-		DIS_FAC_MODE_RESP:          handleDisFacModeResp,
-		EN_PASSTH_MODE_RESP:        handleEnPassthModeResp,
-		DIS_PASSTH_MODE_RESP:       handleDisPassthModeResp,
-		ERASE_FLASH_RESP:           handleEraseFlashResp,
-		WRITE_DATA_FLASH_RESP:      handleWriteDataFlashResp,
-		DOWN_PRN_FMT_RESP:          handleDownPrnFmtResp,
-		ERR_SERIAL_RESP:            handleErrSerialResp,
-		GET_AP_LIST_RESP:           handleGetApListResp,
-		RESCAN_AP_LIST_RESP:        handleRescanApListResp,
-		CONNECT_AP_DYNAMIC_IP_RESP: handleConnectApDynamicIpResp,
-		CONNECT_AP_STATIC_IP_RESP:  handleConnectApStaticIpResp,
-		GET_IP_INFO_RESP:           handleGetIpInfoResp,
-		MODIFY_BT_NAME_RESP:        handleModifyBtNameResp,
-		WIFI_PASSTH_DATA:           handleWifiPassthResp,
+		WEIGHT_DATA:              handleWeightDataMsg,
+		ZERO_CMD_RESP:            handleZeroCmdResp,
+		TARE_CMD_RESP:            handleTareCmdResp,
+		WEIGHT_DATA_RESP:         handleWeightDataResp,
+		REG_WEIGHT_RESP:          handleRegWeightResp,
+		UNREG_WEIGHT_RESP:        handleUnregWeightResp,
+		GET_RECS_RESP:            handleGetRecsResp,
+		ADD_REC_RESP:             handleAddRecResp,
+		DEL_REC_RESP:             handleDelRecResp,
+		EN_FAC_MODE_RESP:         handleEnFacModeResp,
+		DIS_FAC_MODE_RESP:        handleDisFacModeResp,
+		EN_PASSTH_MODE_RESP:      handleEnPassthModeResp,
+		DIS_PASSTH_MODE_RESP:     handleDisPassthModeResp,
+		ERASE_FLASH_RESP:         handleEraseFlashResp,
+		WRITE_DATA_FLASH_RESP:    handleWriteDataFlashResp,
+		DOWN_PRN_FMT_RESP:        handleDownPrnFmtResp,
+		ERR_SERIAL_RESP:          handleErrSerialResp,
+		GET_AP_LIST_RESP:         handleGetApListResp,
+		RESCAN_AP_LIST_RESP:      handleRescanApListResp,
+		SET_WIFI_DYNAMIC_IP_RESP: handleSetWifiDynamicIpResp,
+		SET_WIFI_STATIC_IP_RESP:  handleSetWifiStaticIpResp,
+		GET_IP_INFO_RESP:         handleGetIpInfoResp,
+		MODIFY_BT_NAME_RESP:      handleModifyBtNameResp,
+		WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -389,12 +389,14 @@ func convertResponsesToInfos(responses []CWLAPResponse) []APInfo {
 }
 
 func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	if GExpectWifiResp == "get_ap_list" {
+	switch GExpectWifiResp {
+	case "get_ap_list":
 		return handleGetApListResp(scaleId, data)
-	} else {
+	case "connect_ap":
+		return handleConnectApResp(scaleId, data)
+	default:
 		return ScaleRespMsg{}, 0
 	}
-
 }
 
 func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
@@ -418,17 +420,27 @@ func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	return ScaleRespMsg{ScaleId: scaleId, MsgType: GET_AP_LIST_RESP, MsgBody: jsonData}, len(data)
 }
 
+func handleConnectApResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), "WIFI CONNECTED") { // success
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: CONNECT_AP_RESP, MsgBody: "ok"}, len(data)
+	} else if strings.Contains(string(data), "WIFI DISCONNECTED") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: CONNECT_AP_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
 func handleRescanApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
 }
 
-func handleConnectApDynamicIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+func handleSetWifiDynamicIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
 }
 
-func handleConnectApStaticIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+func handleSetWifiStaticIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
 }

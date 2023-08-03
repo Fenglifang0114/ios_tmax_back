@@ -117,16 +117,15 @@ ws://127.0.0.1:7878/tmax?scaleid=1
    {"Req":"rescan_ap_list", "ReqData":""}
     response:
 	{ "ScaleId":1, "MsgType":16, "MsgBody":""}
-3. Connect to Specific wifi AP with dynamic IP
-    {"Req":"connect_ap_dynmic_ip", "ReqData":"{
-		"id": "3", 
+3. Connect to Specific wifi AP
+    {"Req":"connect_ap", "ReqData":"{
         "ssid": "test",
         "password": "mypassword",
-	}
+		"bssid": "11:22:33:44:55:66",}
 	}
 		
 	response:
-	{ "ScaleId":1, "MsgType":17, "MsgBody":"ok"}
+	{ "ScaleId":1, "MsgType":"resp_connect_ap", "MsgBody":"ok"}
 
 4. Connect to Specific wifi AP with static IP
     {"Req":"connect_ap_static_ip", "ReqData":"{
@@ -182,3 +181,10 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 
 1. ModifyBTName
    {"Req":"modify_bt_name", "ReqData":"Test"}
+    response:
+    	{ "ScaleId":1, "MsgType":"resp_modify_bt_name", "MsgBody":"ok"}
+
+2. Send command to BT on scale
+   {"Req":"send_data_to_bt", "ReqData":"cmd"}
+    response:
+    	{ "ScaleId":1, "MsgType":"resp_send_data_to_bt", "MsgBody":"response from BT"}
