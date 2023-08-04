@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	SEND_CH_SIZE  = 100
-	RECV_CH_SIZE  = 100
+	SEND_CH_SIZE  = 1000
+	RECV_CH_SIZE  = 1000
 	MIN_PACK_SIZE = 3
-	TMP_BUF_SIZE  = 512
-	QUEUE_SIZE    = 1024
+	TMP_BUF_SIZE  = 102400
+	QUEUE_SIZE    = 102400
 )
 
 var RESP_SERIAL_ERROR = []byte{0x5a, 0xa5, 0x00, 0x01, 0x7f, 0xBD, 0x86, 0x1C, 0x86, 0xa5, 0x5a}

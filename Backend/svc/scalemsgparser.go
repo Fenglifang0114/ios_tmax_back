@@ -13,6 +13,14 @@ import (
 const (
 	MODIFY_BT_OK_RESP string = "TTM:OK\r\n"
 )
+
+const (
+	CONNECT_AP_OK_RESP          string = "\r\nOK\r\n"
+	SET_WIFI_DYNAMIC_IP_OK_RESP string = "\r\nOK\r\n"
+	SET_WIFI_STATIC_IP_OK_RESP  string = "\r\nOK\r\n"
+	GET_IP_INFO_OK_RESP         string = "\r\nOK\r\n"
+)
+
 const (
 	RSSI_MAX = -50  // maximum strength of signal in dBm
 	RSSI_MIN = -100 // minimum strength of signal in dBm
@@ -44,9 +52,9 @@ func init() {
 		0xff15: SET_WIFI_DYNAMIC_IP_RESP,
 		0xff16: SET_WIFI_STATIC_IP_RESP,
 		0xff17: GET_IP_INFO_RESP,
-		0xf201: MODIFY_BT_NAME_RESP,
+		0xff18: MODIFY_BT_NAME_RESP,
 		0xff19: NO_RESP,
-		0xff20: BT_PASSTH_DATA_RESP,
+		0xf201: BT_PASSTH_DATA_RESP,
 		0xf202: WIFI_PASSTH_DATA_RESP,
 		0xff22: PRT_PASSTH_DATA_RESP,
 		0xff23: UNKNOWN_DATA,
@@ -76,6 +84,7 @@ func init() {
 		SET_WIFI_STATIC_IP_RESP:  handleSetWifiStaticIpResp,
 		GET_IP_INFO_RESP:         handleGetIpInfoResp,
 		MODIFY_BT_NAME_RESP:      handleModifyBtNameResp,
+		BT_PASSTH_DATA_RESP:      handleBTPassthResp,
 		WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
 	}
 
@@ -390,10 +399,29 @@ func convertResponsesToInfos(responses []CWLAPResponse) []APInfo {
 
 func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	switch GExpectWifiResp {
-	case "get_ap_list":
+	case GET_AP_LIST_RESP:
 		return handleGetApListResp(scaleId, data)
-	case "connect_ap":
+	case CONNECT_AP_RESP:
 		return handleConnectApResp(scaleId, data)
+	case SET_WIFI_DYNAMIC_IP_RESP:
+		return handleSetWifiDynamicIpResp(scaleId, data)
+	case SEND_DATA_TO_WIFI_RESP:
+		return handleSendDataToWifiResp(scaleId, data)
+	case GET_IP_INFO_RESP:
+		return handleGetIpInfoResp(scaleId, data)
+	case SET_WIFI_STATIC_IP_RESP:
+		return handleSetWifiStaticIpResp(scaleId, data)
+	default:
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleBTPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	switch GExpectBTResp {
+	case MODIFY_BT_NAME_RESP:
+		return handleModifyBtNameResp(scaleId, data)
+	case SEND_DATA_TO_BT_RESP:
+		return handleSendDataToBTResp(scaleId, data)
 	default:
 		return ScaleRespMsg{}, 0
 	}
@@ -421,9 +449,9 @@ func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleConnectApResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	if strings.Contains(string(data), "WIFI CONNECTED") { // success
+	if strings.Contains(string(data), CONNECT_AP_OK_RESP) { // success
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: CONNECT_AP_RESP, MsgBody: "ok"}, len(data)
-	} else if strings.Contains(string(data), "WIFI DISCONNECTED") { // fail
+	} else if strings.Contains(string(data), "+CWJAP:") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: CONNECT_AP_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
 		return ScaleRespMsg{}, 0
@@ -436,18 +464,65 @@ func handleRescanApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleSetWifiDynamicIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
+	if strings.Contains(string(data), SET_WIFI_DYNAMIC_IP_OK_RESP) { // success
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "ok"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "fail"}, len(data)
+	}
 }
 
 func handleSetWifiStaticIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
+	if strings.Contains(string(data), SET_WIFI_STATIC_IP_OK_RESP) { // success
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: SET_WIFI_STATIC_IP_RESP, MsgBody: "ok"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: SET_WIFI_STATIC_IP_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+type IPInfo struct {
+	IP      string
+	Gateway string
+	Netmask string
+}
+
+func extractIPInfo(response string) (IPInfo, error) {
+	var info IPInfo
+
+	// 根据字符串中的换行符分割字符串
+	lines := strings.Split(response, "\r\n")
+
+	// 遍历每一行字符串，提取 IP、网关和子网掩码的值
+	for _, line := range lines {
+		if strings.HasPrefix(line, "+CIPSTA_CUR:ip:") {
+			info.IP = strings.Trim(line[len("+CIPSTA_CUR:ip:\""):], "\"")
+		} else if strings.HasPrefix(line, "+CIPSTA_CUR:gateway:") {
+			info.Gateway = strings.Trim(line[len("+CIPSTA_CUR:gateway:\""):], "\"")
+		} else if strings.HasPrefix(line, "+CIPSTA_CUR:netmask:") {
+			info.Netmask = strings.Trim(line[len("+CIPSTA_CUR:netmask:\""):], "\"")
+		}
+	}
+
+	// 检查是否成功提取了所有值
+	if info.IP == "" || info.Gateway == "" || info.Netmask == "" {
+		return info, fmt.Errorf("Failed to extract IP information")
+	}
+
+	return info, nil
 }
 
 func handleGetIpInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
+	if strings.Contains(string(data), GET_IP_INFO_OK_RESP) { // success
+		ipInfo, err := extractIPInfo(string(data))
+		if err != nil {
+			return ScaleRespMsg{}, len(data)
+		}
+		ipInfoStr, _ := json.MarshalToString(ipInfo)
+		return ScaleRespMsg{GET_IP_INFO_RESP, ipInfoStr, scaleId}, len(data)
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: GET_IP_INFO_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
 }
 
 func handleModifyBtNameResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
@@ -458,27 +533,10 @@ func handleModifyBtNameResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	}
 }
 
-func handleNoResponse(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
+func handleSendDataToBTResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	return ScaleRespMsg{SEND_DATA_TO_BT_RESP, string(data), scaleId}, len(data)
 }
 
-func handleBtPassthData(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
-}
-
-func handleWifiPassthData(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
-}
-
-func handlePrtPassthData(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
-}
-
-func handleUnknownData(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
+func handleSendDataToWifiResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	return ScaleRespMsg{SEND_DATA_TO_WIFI_RESP, string(data), scaleId}, len(data)
 }

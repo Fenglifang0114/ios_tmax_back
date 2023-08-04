@@ -18,11 +18,17 @@ var EN_CONT_MODE_CMD []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x07, 0x00, 0
 var DIS_CONT_MODE_CMD []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x08, 0x00, 0xf4, 0x75, 0x8c, 0x8d, 0xa5, 0x5a}
 var EN_PASSTH_MODE_CMD []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf3, 0x00, 0x59, 0xE4, 0xC9, 0x51, 0xa5, 0x5a}
 var DIS_PASSTH_MODE_CMD []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf4, 0x00, 0x6E, 0x2B, 0xB7, 0x2B, 0xa5, 0x5a}
-var GET_AP_LIST_CMD []byte = []byte("AT+CWLAP\r\n")
-var CONNECT_AP_CMD []byte = []byte("AT+CWJAP=%s,%s,%s\r\n") // ssid, password, bssid
-
-var GExpectWifiResp string
-var GExpectBTResp string
+var GET_AP_LIST_CMD []byte = []byte("AT+CWLAP")
+var CONNECT_AP_CMD []byte = []byte("AT+CWJAP_DEF=\"%s\",\"%s\"") // ssid, password, bssid
+var GET_IP_INFO_CMD []byte = []byte("AT+CIPSTA_CUR?")            // ssid, password, bssid
+var SET_WIFI_DYNAMIC_IP_CUR_CMD []byte = []byte("AT+CWDHCP_CUR=1,1")
+var SET_WIFI_DYNAMIC_IP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,1")
+var DIS_DHCP_CUR_CMD []byte = []byte("AT+CWDHCP_CUR=1,0")
+var DIS_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,0")
+var SET_WIFI_STATIC_IP_CUR_CMD []byte = []byte("AT+CIPSTA_CUR=%s,%s,%s") // ip, gateway, netmask
+var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=%s,%s,%s") // ip, gateway, netmask
+var GExpectWifiResp RespMsgType
+var GExpectBTResp RespMsgType
 
 func (c *Scale) PerfZero() bool {
 	if c.isOldC51Scale {
@@ -53,12 +59,14 @@ func (c *Scale) ReadWeight() bool {
 
 func (c *Scale) RegWeightData() bool {
 	// enable scale sending weighing info continually
+	//DisFacMode(c)
 	_, err := perfCmdNwaitResult(c, EN_CONT_MODE_CMD, REG_WEIGHT_RESP)
 	c.isSendUnolicitedData = true
 	return err == nil
 }
 
 func (c *Scale) UnRegWeightData() bool {
+	EnFacMode(c)
 	// enable scale sending weighing info continually
 	msg, err := perfCmdNwaitResult(c, DIS_CONT_MODE_CMD, UNREG_WEIGHT_RESP)
 	msgStr, _ := json.MarshalToString(msg)
@@ -122,7 +130,7 @@ func ComposeToWifiPassthData(dataStr string) []byte {
 	// MODIFY_BT_NAME_CHUNK_SIZE should include all data except BT name
 	data := []byte(dataStr)
 	// 构建包头
-	var packLen uint16 = uint16(13 + len(dataStr)) // 13: Head: 2 + len:2 + CmdId: 1 + SubCmdId: 1 + SeqNo:1 + CRC:4 + Tail:2
+	var packLen uint16 = uint16(13 + len(dataStr) + 2) // 13: Head: 2 + len:2 + CmdId: 1 + SubCmdId: 1 + SeqNo:1 + \r\n + CRC:4 + Tail:2
 	packet := make([]byte, packLen)
 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
 	// 构建命令ID与命令类型
@@ -136,6 +144,10 @@ func ComposeToWifiPassthData(dataStr string) []byte {
 	i += 1
 	copy(packet[i:], data)
 	i += uint16(len(data))
+	packet[i] = 0x0d
+	i += 1
+	packet[i] = 0x0a
+	i += 1
 	if i != packLen-6 {
 		panic("packet len error!")
 	}
@@ -167,13 +179,6 @@ func ComposeToBTPassthData(data string) []byte {
 	packet[i] = 0x00
 	i += 1
 	copy(packet[i:], []byte(data))
-	i += uint16(len(data))
-	packet[i] = 0x0d
-	i += 1
-	packet[i] = 0x0a
-	i += 1
-	packet[i] = 0x00
-	copy(packet[i:], data)
 	i += uint16(len(data))
 	packet[i] = 0x0d
 	i += 1
@@ -310,6 +315,7 @@ func DisPassthrough(s *Scale) error {
 // 修改蓝牙名称
 func ModifyBTName(s *Scale, name string) error {
 	l.Log.Debug("modify BT name")
+	GExpectBTResp = MODIFY_BT_NAME_RESP
 	cmd := ModifyBTNameCmd(name)
 	if res, err := perfCmdNwaitResult(s, cmd, MODIFY_BT_NAME_RESP); err != nil {
 		return err
@@ -325,28 +331,22 @@ func ModifyBTName(s *Scale, name string) error {
 // Get AP list
 func GetApList(s *Scale) error {
 	l.Log.Debug("Get AP list")
-	GExpectWifiResp = "get_ap_list"
+	GExpectWifiResp = GET_AP_LIST_RESP
 	cmd := ComposeToWifiPassthData(string(GET_AP_LIST_CMD))
-	if res, err := perfCmdNwaitResult(s, cmd, GET_AP_LIST_RESP); err != nil {
+	if _, err := perfCmdNwaitResult(s, cmd, GET_AP_LIST_RESP, 30); err != nil {
 		return err
-	} else if res.MsgBody != "ok" {
-		return fmt.Errorf("modify BT name fail")
-	} else {
-		// do nothing
 	}
 
 	return nil
 }
 
 // Send data to BT
-func SendDataToBT(s *Scale, BT string) error {
+func SendDataToBT(s *Scale, data string) error {
 	l.Log.Debug("Send data to BT")
-	GExpectBTResp = "send_data_to_bt"
-	cmd := ComposeToBTPassthData(string(GET_AP_LIST_CMD))
-	if res, err := perfCmdNwaitResult(s, cmd, BT_PASSTH_DATA_RESP); err != nil {
-		return err
-	} else if res.MsgBody != "ok" {
-		return fmt.Errorf("modify BT name fail")
+	GExpectBTResp = SEND_DATA_TO_BT_RESP
+	cmd := ComposeToBTPassthData(data)
+	if _, err := perfCmdNwaitResult(s, cmd, BT_PASSTH_DATA_RESP); err != nil {
+		return nil
 	} else {
 		// do nothing
 	}
@@ -354,17 +354,91 @@ func SendDataToBT(s *Scale, BT string) error {
 	return nil
 }
 
+// Send data to Wifi
+func SendDataToWifi(s *Scale, data string) error {
+	l.Log.Debug("Send data to Wifi")
+	GExpectWifiResp = SEND_DATA_TO_WIFI_RESP
+	cmd := ComposeToWifiPassthData(data)
+	if _, err := perfCmdNwaitResult(s, cmd, WIFI_PASSTH_DATA_RESP); err != nil {
+		return nil
+	} else {
+		// do nothing
+	}
+
+	return nil
+}
+
+func SetWifiDynamicIp(s *Scale) error {
+	l.Log.Debug("set wifi to dynamic IP")
+	GExpectWifiResp = SET_WIFI_DYNAMIC_IP_RESP
+	cmd := ComposeToWifiPassthData(string(SET_WIFI_DYNAMIC_IP_CUR_CMD))
+	_, _ = perfCmdNwaitResult(s, cmd, SET_WIFI_DYNAMIC_IP_RESP, 2) // TODO:change 1 as constant
+	cmd = ComposeToWifiPassthData(string(SET_WIFI_DYNAMIC_IP_DEF_CMD))
+	_, _ = perfCmdNwaitResult(s, cmd, SET_WIFI_DYNAMIC_IP_RESP, 1) // TODO:change 1 as constant
+	return nil
+}
+
+func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) error {
+	l.Log.Debug("set wifi to static IP")
+	GExpectWifiResp = SET_WIFI_STATIC_IP_RESP
+	cmd := ComposeToWifiPassthData(string(DIS_DHCP_CUR_CMD))
+	if res, err := perfCmdNwaitResult(s, cmd, SET_WIFI_STATIC_IP_RESP, 1); err != nil { // TODO:change 10 as constant
+		return err
+	} else if res.MsgBody != "ok" {
+		return fmt.Errorf("set wifi dynamic IP fail")
+	} else {
+		// do nothing
+	}
+	cmd = ComposeToWifiPassthData(string(DIS_DHCP_DEF_CMD))
+	if res, err := perfCmdNwaitResult(s, cmd, SET_WIFI_STATIC_IP_RESP, 10); err != nil { // TODO:change 10 as constant
+		return err
+	} else if res.MsgBody != "ok" {
+		return fmt.Errorf("set wifi static IP fail")
+	} else {
+		// do nothing
+	}
+	cmd = ComposeToWifiPassthData(fmt.Sprintf(string(SET_WIFI_STATIC_IP_CUR_CMD), ip, gateway, netmask))
+	if res, err := perfCmdNwaitResult(s, cmd, SET_WIFI_STATIC_IP_RESP, 10); err != nil { // TODO:change 10 as constant
+		return err
+	} else if res.MsgBody != "ok" {
+		return fmt.Errorf("set wifi static IP fail")
+	} else {
+		// do nothing
+	}
+	cmd = ComposeToWifiPassthData(fmt.Sprintf(string(SET_WIFI_STATIC_IP_DEF_CMD), ip, gateway, netmask))
+	if res, err := perfCmdNwaitResult(s, cmd, SET_WIFI_STATIC_IP_RESP, 10); err != nil { // TODO:change 10 as constant
+		return err
+	} else if res.MsgBody != "ok" {
+		return fmt.Errorf("set wifi static IP fail")
+	} else {
+		// do nothing
+	}
+	return nil
+}
+
 // Connect to specifi AP
 func ConnectWifiAp(s *Scale, ssid string, bssid string, passwd string) error {
 	l.Log.Debug("Connect to Wifi AP")
-	GExpectWifiResp = "connect_ap"
-	cmd := ComposeToWifiPassthData(fmt.Sprintf(string(CONNECT_AP_CMD), ssid, passwd, bssid))
+	GExpectWifiResp = CONNECT_AP_RESP
+	cmd := ComposeToWifiPassthData(fmt.Sprintf(string(CONNECT_AP_CMD), ssid, passwd))
 	if res, err := perfCmdNwaitResult(s, cmd, CONNECT_AP_RESP, 30); err != nil { // TODO:change 30 as constant
 		return err
 	} else if res.MsgBody != "ok" {
 		return fmt.Errorf("connect to wifi AP fail")
 	} else {
 		// do nothing
+	}
+
+	return nil
+}
+
+// Get IP info from scale
+func GetIpInfo(s *Scale) error {
+	l.Log.Debug("Get IP info from Scale")
+	GExpectWifiResp = GET_IP_INFO_RESP
+	cmd := ComposeToWifiPassthData(fmt.Sprintf(string(GET_IP_INFO_CMD)))
+	if _, err := perfCmdNwaitResult(s, cmd, GET_IP_INFO_RESP, 3); err != nil { // TODO:change 3 as constant
+		return err
 	}
 
 	return nil

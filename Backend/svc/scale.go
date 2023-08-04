@@ -228,6 +228,7 @@ func (s *Scale) procScaleRespMsg() {
 						}
 						if msgStr, err := json.MarshalToString(msg); err == nil {
 							if s.client != nil {
+								fmt.Println("%%%%%%%%%%%%%%: " + msgStr)
 								s.client.sendCh <- []byte(msgStr)
 							}
 							//s.fromScaleMsgCh <- msgStr
@@ -403,6 +404,26 @@ func ReqSendDataToBT(s *Scale, data string) error {
 	return nil
 }
 
+func ReqSendDataToWifi(s *Scale, data string) error {
+	if err := EnFacMode(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := EnPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := SendDataToWifi(s, data); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := DisPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	return nil
+}
+
 func ReqGetApList(s *Scale) error {
 
 	if err := EnFacMode(s); err != nil {
@@ -445,6 +466,46 @@ func ReqConnectAp(s *Scale, ssid string, password string, bssid string) error {
 	return nil
 }
 
+func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) error {
+	if err := EnFacMode(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := EnPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := SetWifiStaticIp(s, ip, gateway, netmask); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := DisPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	return nil
+}
+
+func ReqGetIpInfo(s *Scale) error {
+
+	if err := EnFacMode(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := EnPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := GetIpInfo(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	if err := DisPassthrough(s); err != nil {
+		return err
+	}
+	time.Sleep(100 * time.Millisecond)
+	return nil
+}
 
 func ReqDownPrnFmt(c *Scale, csvPrnFmt string) error {
 	if !gIsKeyValid {

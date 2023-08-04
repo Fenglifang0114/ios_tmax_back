@@ -119,62 +119,39 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 	{ "ScaleId":1, "MsgType":16, "MsgBody":""}
 3. Connect to Specific wifi AP
     {"Req":"connect_ap", "ReqData":"{
-        "ssid": "test",
-        "password": "mypassword",
-		"bssid": "11:22:33:44:55:66",}
+        \"ssid\": \"T-Scale\",
+        \"password\": \"TL@8888!\",
+		\"bssid\": \"54:75:95:2d:2e:0d\"}"
 	}
 		
 	response:
 	{ "ScaleId":1, "MsgType":"resp_connect_ap", "MsgBody":"ok"}
 
-4. Connect to Specific wifi AP with static IP
-    {"Req":"connect_ap_static_ip", "ReqData":"{
-		"id": "3", 
-        "ssid": "test",
-        "password": "mypassword",
-        "addresses": [
-            {
-                "address": "192.168.1.22",
-                "mask": 24,
-                "family": "ipv4"
-            },
-            {
-                "address": "192.168.110.22",
-                "mask": 16,
-                "family": "ipv4"
-            }
-        ],
-        "gateway": "192.168.1.1",
-        "dns": "8.8.8.8"
-      }
-	}
+4.1 Set wifi with static IP
+    {"Req":"set_wifi_static_ip", "ReqData":"{
+        \"ip\": \"192.168.1.22\",
+        \"gateway\": \"192.168.1.1\",
+        \"netmask\": \"255.255.255.0\"
+    }"}
 
 	response:
-	{ "ScaleId":1, "MsgType":18, "MsgBody":"ok"}
+	{ "ScaleId":1, "MsgType":"resp_set_wifi_static_ip, "MsgBody":"ok"}
+4.2 Set wifi with dynamic IP
+   {"Req":"set_wifi_dynamic_ip", "ReqData":""}
+
+   response:
+   	{ "ScaleId":1, "MsgType":"resp_set_wifi_dynamic_ip, "MsgBody":"ok"}
+
 5. GetIpInfo
    {"Req":"get_ip_info", "ReqData":""}
 
    response
-   { "ScaleId":1, "MsgType":19, "MsgBody":"{
-        "addresses": [
-            {
-                "address": "192.168.1.22",
-                "mask": 24,
-                "proto": "manual",
-                "family": "ipv4"
-            },
-            {
-                "address": "192.168.1.22",
-                "mask": 24,
-                "proto": "manual",
-                "family": "ipv4"
-            }
-        ],
-        "gateway": "192.168.1.1",
-        "dns": ["114.114.114.114", "8.8.8.8"]，
-        "mac": "11:22:33:44:55:FF"
-    }
-   }"
+   {"MsgType":"resp_get_ip_info","MsgBody":"{\"IP\":\"10.5.100.98\",\"Gateway\":\"10.5.100.1\",\"Netmask\":\"255.255.255.0\"}","ScaleId":1}
+
+6. send commnad to wifi on scale with passthrough mode
+   {"Req":"send_data_to_wifi", "ReqData":"cmd"}
+    response:
+    	{ "ScaleId":1, "MsgType":"resp_send_data_to_wifi", "MsgBody":"response from wifi"}
 
 To configure scale's BT configuration
 ws://127.0.0.1:7878/tmax?scaleid=1
@@ -184,7 +161,7 @@ ws://127.0.0.1:7878/tmax?scaleid=1
     response:
     	{ "ScaleId":1, "MsgType":"resp_modify_bt_name", "MsgBody":"ok"}
 
-2. Send command to BT on scale
+2. Send command to BT on scale with passthrough mode
    {"Req":"send_data_to_bt", "ReqData":"cmd"}
     response:
     	{ "ScaleId":1, "MsgType":"resp_send_data_to_bt", "MsgBody":"response from BT"}

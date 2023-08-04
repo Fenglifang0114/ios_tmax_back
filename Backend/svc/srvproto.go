@@ -210,6 +210,7 @@ const (
 	SREQ_GET_IP_INFO         SReqType = "get_ip_info"
 	SREQ_MODIFY_BT_NAME      SReqType = "modify_bt_name"
 	SREQ_SEND_DATA_TO_BT     SReqType = "send_data_to_bt"
+	SREQ_SEND_DATA_TO_WIFI   SReqType = "send_data_to_wifi"
 )
 
 type ReqScaleRec struct {
@@ -261,9 +262,11 @@ const (
 	GET_IP_INFO_RESP         RespMsgType = "resp_get_ip_info"
 	MODIFY_BT_NAME_RESP      RespMsgType = "resp_modify_bt_name"
 	NO_RESP                  RespMsgType = "resp_no_response"
-	BT_PASSTH_DATA_RESP      RespMsgType = "bt_passth_data_resp"
-	WIFI_PASSTH_DATA_RESP    RespMsgType = "wifi_passth_data_resp"
-	PRT_PASSTH_DATA_RESP     RespMsgType = "prt_passth_data_resp"
+	BT_PASSTH_DATA_RESP      RespMsgType = "resp_bt_passth_data"
+	WIFI_PASSTH_DATA_RESP    RespMsgType = "resp_wifi_passth_data"
+	PRT_PASSTH_DATA_RESP     RespMsgType = "resp_prt_passth_data"
+	SEND_DATA_TO_BT_RESP     RespMsgType = "resp_send_data_to_bt"
+	SEND_DATA_TO_WIFI_RESP   RespMsgType = "resp_send_data_to_wifi"
 	UNKNOWN_DATA             RespMsgType = "unknown_data"
 )
 
