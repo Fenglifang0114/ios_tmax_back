@@ -401,7 +401,7 @@ func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) error 
 func ConnectWifiAp(s *Scale, ssid string, bssid string, passwd string) error {
 	l.Log.Debug("Connect to Wifi AP")
 	GExpectWifiResp = CONNECT_AP_RESP
-	perfCmd(s, []byte()"AT+CWQAP")
+	perfCmd(s, []byte("AT+CWQAP"))
 	cmd := ComposeToWifiPassthData(fmt.Sprintf(string(CONNECT_AP_CMD), ssid, passwd))
 	if res, err := perfCmdNwaitResult(s, cmd, CONNECT_AP_RESP, 30); err != nil { // TODO:change 30 as constant
 		return err
