@@ -100,7 +100,7 @@ func (d *DbScaleConn) UpdateScaleConn(conn ScaleConnMedia) error {
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
-	rowAffected := db.Model(&conn).Where("scale_model=?", conn.ScaleModel).Where("scale_sn=?", conn.ScaleSn).Updates(&conn).RowsAffected
+	rowAffected := db.Model(&conn).Where("scale_sn=?", conn.ScaleSn).Updates(&conn).RowsAffected
 	if rowAffected == 0 {
 		return errors.New("@UpdateScaleConn failed, mybe record not existing")
 	}

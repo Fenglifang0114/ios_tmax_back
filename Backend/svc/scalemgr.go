@@ -329,6 +329,8 @@ func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 	// s.srvMgr.addScale <- scale // register new scale instance to srvMgr
 	// nextScaleId++
 	s.srvMgr.scaleMgr.ModifyMediaList(id, conn.MediaConf)
+	conn.ScaleCat = scale.ScaleCat
+	conn.ScaleModel = scale.Model
 	s.connPb.connPb.UpdateScaleConn(*conn)
 
 	return nil

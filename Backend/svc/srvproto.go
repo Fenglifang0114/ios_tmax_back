@@ -147,6 +147,7 @@ type UsersListMsg struct {
 type ScaleConnMedia struct { // connection information will be stored in database
 	IsOnline   bool
 	ScaleModel string
+	ScaleCat   comm.ScaleCat
 	ScaleSn    string
 	ScaleId    int64
 	TMedia     MediaType
