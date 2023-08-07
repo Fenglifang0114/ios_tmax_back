@@ -57,9 +57,10 @@ func (c *Scale) ReadWeight() bool {
 
 func (c *Scale) RegWeightData() bool {
 	// enable scale sending weighing info continually
-	//DisFacMode(c)
+	DisFacMode(c)
 	_, err := perfCmdNwaitResult(c, EN_CONT_MODE_CMD, REG_WEIGHT_RESP)
 	c.isSendUnolicitedData = true
+	EnFacMode(c)
 	return err == nil
 }
 

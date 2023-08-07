@@ -80,16 +80,22 @@ type Packet struct {
 	Payload    []byte
 }
 
-const TMAX_MSG_MIN_LEN = 13 // head:2, len: 2, mcd: 1, subtype: 1, seqno: 1, nodata: 0, crc: 4, tail: 2
+const TMAX_MSG_MIN_LEN = 13   // head:2, len: 2, mcd: 1, subtype: 1, seqno: 1, nodata: 0, crc: 4, tail: 2
+const TMAX_MSG_MAX_LEN = 2048 // TODO: check if this is correct
+
 func pickerFnTmaxScale(inData []byte, dataLen int) (packOffset uint, packLen uint, shouldRemoveLen uint, pack Packet) {
 	if len(inData) < TMAX_MSG_MIN_LEN {
 		return 0, 0, 0, Packet{}
 	}
 
+	if len(inData) > TMAX_MSG_MAX_LEN {
+		return 0, 0, uint(dataLen), Packet{}
+	}
 	lastHeadPos := -1
+	curpos := 0
 	for {
 		// find header
-		headPos := findHeadPos(inData, 0, dataLen)
+		headPos := findHeadPos(inData, curpos, dataLen)
 		if headPos == -1 && lastHeadPos == -1 { // no head ever found
 			return 0, 0, uint(dataLen), Packet{}
 		}
@@ -104,6 +110,7 @@ func pickerFnTmaxScale(inData []byte, dataLen int) (packOffset uint, packLen uin
 		if state == NOT_ENOUGH_DATA {
 			return 0, 0, 0, Packet{}
 		} else if state == NOT_FOUND {
+			curpos += 2 // skip current header
 			continue
 		}
 		if !verifyCrc(inData, headPos, tailPos) {
@@ -171,16 +178,27 @@ func pickerFnAutoWeight(inData []byte, dataLen int) (packOffset uint, packLen ui
 
 func findHeadPos(buf []byte, offset int, len int) int {
 	foundPos := bytes.Index(buf[offset:], []byte{CMD_HEAD1, CMD_HEAD2})
-	return foundPos
+	if foundPos == -1 {
+		return -1
+	}
+
+	return foundPos + offset
 }
 
 func verifyTail(buf []byte, headPos int, len int) (int, State) {
+	if len < headPos+4 { // to prevent index out of bounds
+		return -1, NOT_ENOUGH_DATA
+	}
+
 	end := headPos + int(binary.BigEndian.Uint16(buf[headPos+2:headPos+2+2])) + HEAD_SIZE
 	if end > len { // not enough data entering
 		return -1, NOT_ENOUGH_DATA
 	}
 	if !bytes.Equal(buf[end-TAIL_SIZE:end], []byte{CMD_TAIL1, CMD_TAIL2}) {
 		fmt.Println("Invalid footer")
+		for _, b := range buf { // print the data
+			fmt.Printf("%02x ", b)
+		}
 		return -1, NOT_FOUND
 	}
 	return end - TAIL_SIZE, FOUND
