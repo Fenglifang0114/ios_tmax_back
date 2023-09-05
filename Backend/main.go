@@ -64,7 +64,7 @@ func main() {
 	go ws.Start(&h)
 	// <-quitch // wait for user to quit this application
 	// Wait for the process to complete
-	time.Sleep(1000 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	err = app.Wait()
 	if err != nil {
