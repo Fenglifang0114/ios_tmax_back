@@ -104,6 +104,7 @@ const (
 	SET_WIFI_DYNAMIC_IP_RESP RespMsgType = "resp_set_wifi_dynamic_ip"
 	SET_WIFI_STATIC_IP_RESP  RespMsgType = "resp_set_wifi_static_ip"
 	GET_IP_INFO_RESP         RespMsgType = "resp_get_ip_info"
+	GET_IP_MODE_RESP         RespMsgType = "resp_get_ip_mode"
 	MODIFY_BT_NAME_RESP      RespMsgType = "resp_modify_bt_name"
 	NO_RESP                  RespMsgType = "resp_no_response"
 	BT_PASSTH_DATA_RESP      RespMsgType = "resp_bt_passth_data"

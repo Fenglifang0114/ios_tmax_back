@@ -87,17 +87,14 @@ func DisFacMode(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func excuteSimpCmd(s *Scale, cmdType m.CmdType, respType m.RespMsgType) (*ScaleRespMsg, error) {
-	composer := cmdComposerFuncMap[s.ScaleCat]
-	scaleCmdExtractorFn := composer.ComposeCmd
-	cmd, timeoutMs, err := scaleCmdExtractorFn(&composer, cmdType, m.CmdData{})
+	scaleCmdExtractorFn := s.composer.ComposeCmd
+	cmd, timeoutMs, err := scaleCmdExtractorFn(s.composer, cmdType, m.CmdData{})
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
 
 	if res, err := perfCmdNwaitResult(s, cmd, respType, timeoutMs); err != nil {
 		return &ScaleRespMsg{}, err
-	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{}, fmt.Errorf("fail")
 	} else {
 		return res, nil
 	}
@@ -129,6 +126,7 @@ var GExpectWifiResp m.RespMsgType
 
 // Get AP list
 func GetApList(c *Scale) (*ScaleRespMsg, error) {
+	GExpectWifiResp = m.GET_AP_LIST_RESP
 	return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_LIST, m.GET_AP_LIST_RESP)
 }
 
@@ -188,6 +186,12 @@ func GetIpInfo(s *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO, m.GET_IP_INFO_RESP)
 }
 
+func GetIpMode(s *Scale) (*ScaleRespMsg, error) {
+	l.Log.Debug("Get IP mode from Scale")
+	GExpectWifiResp = m.GET_IP_MODE_RESP
+	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_MODE, m.GET_IP_MODE_RESP)
+}
+
 func perfCmd(c *Scale, cmd []byte) bool {
 	if err := writeScale(c, cmd); err != nil {
 		l.Log.Error(err.Error())
@@ -225,13 +229,14 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 	}
 
 	var ret *ScaleRespMsg
+	fmt.Printf("================wait: %v\n", waitMsgType)
 	select {
 	case ret = <-ch:
 	case <-time.After(time.Duration(curTimeoutMs) * time.Millisecond):
 		ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "timeout"}
 		return ret, fmt.Errorf("no response, time out")
 	}
-
+	fmt.Printf("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
 	return ret, nil
 }
 

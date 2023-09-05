@@ -103,7 +103,7 @@ func procConnectAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func procSetWifiDynamicIp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return SetWifiDynamicIp(scale)
+	return ReqSetWifiDynamicIp(scale)
 }
 
 func procSetWifiStaticIp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -124,8 +124,7 @@ func procSendDataToBT(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func procGetIpMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	//IpMode { TODO:
-	return nil, nil // TODO:
+	return ReqGetIpMode(scale)
 }
 
 func procGetWifiInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {

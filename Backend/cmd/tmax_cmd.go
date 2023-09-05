@@ -61,34 +61,34 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return DIS_PASSTH_MODE_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil
 	case m.CMD_ERASE_FLASH:
 		addr := cmdData.Data.(int)
-		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WRITE_FLASH:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
-		return wrDataCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return wrDataCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_DATA_PASSTH:
-		return sendDataToWifiCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return sendDataToWifiCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_GET_AP_LIST:
-		return getApListCmdTMAX(), CMD_TIMEOUT_LONG_5000_MS, nil
+		return getApListCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_EN_DHCP:
-		return EnWifiDhcpCmdTMAX(), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return EnWifiDhcpCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_DIS_DHCP:
-		return DisWifiDhcpCmdTMAX(), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return DisWifiDhcpCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_SET_STATIC_IP:
 		fields := strings.Split(cmdData.Data.(string), ",")
-		return setWifiStaticIpCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return setWifiStaticIpCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_GET_IP_INFO:
-		return getIpInfoCmdTMAX(), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return getIpInfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_GET_IP_MODE:
-		return getIpModCmdTMAX(), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return getIpModCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_CONN_AP:
 		fields := strings.Split(cmdData.Data.(string), ",")
-		return connectWifiApCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_LONG_5000_MS, nil
+		return connectWifiApCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_DISCONN_AP:
-		return disconnectWifiApCmdTMAX(), CMD_TIMEOUT_LONG_5000_MS, nil
+		return disconnectWifiApCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_BT_DATA_PASSTH:
-		return sendDataToBTCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return sendDataToBTCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_MODIFY_BT_NAME:
-		return modifyBTNameCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_500_MS, nil
+		return modifyBTNameCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	}
 	return nil, CMD_TIMEOUT_IMMEDIATE, nil
 }
@@ -101,7 +101,7 @@ var GET_IP_INFO_CMD []byte = []byte("AT+CIPSTA_CUR?\r\n")            // ssid, pa
 var GET_IP_MODE_CMD []byte = []byte("AT+CWDHCP_CUR?\r\n")            // FIXME:
 var EN_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,1\r\n")
 var DIS_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,0")
-var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=%s,%s,%s\r\n") // ip, gateway, netmask
+var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=\"%s\",\"%s\",\"%s\"\r\n") // ip, gateway, netmask
 
 const (
 	FLASH_ADDR                     = 0x08003000
@@ -139,7 +139,7 @@ func composeCmd(cmdID uint16, seqNo byte, data []byte) []byte {
 	binary.BigEndian.PutUint16(cmd[4:6], cmdID)
 	cmd[6] = seqNo
 	if len(data) > 0 {
-		copy(cmd[8:], data)
+		copy(cmd[7:], data)
 	}
 	// 计算与添加校验码
 	checksum := util.Crc32MPEG2(cmd[2 : packLen-6])

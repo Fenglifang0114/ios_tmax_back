@@ -154,6 +154,8 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 		quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
 	}
 	scale.respChansMap = map[m.RespMsgType][]chan *ScaleRespMsg{}
+	composer := cmdComposerFuncMap[scale.ScaleCat]
+	scale.composer = &composer
 
 	var respTypes []string
 	for _, respType := range utils.CmdsRespMap {
@@ -429,10 +431,7 @@ func ReqGetApList(s *Scale) (*ScaleRespMsg, error) {
 		return msg, err
 	}
 
-	if _, err := GetApList(s); err != nil {
-		return &ScaleRespMsg{}, err
-	}
-	return &ScaleRespMsg{m.GET_AP_LIST_RESP, "ok", s.Id}, nil
+	return GetApList(s)
 }
 
 func ReqConnectAp(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
@@ -448,6 +447,16 @@ func ReqConnectAp(s *Scale, ssid string, password string, bssid string) (*ScaleR
 	return &ScaleRespMsg{m.CONNECT_AP_RESP, "ok", s.Id}, nil
 }
 
+func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
+	}
+
+	return SetWifiDynamicIp(s)
+}
+
 func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
@@ -455,10 +464,7 @@ func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*S
 		return msg, err
 	}
 
-	if _, err := SetWifiStaticIp(s, ip, gateway, netmask); err != nil {
-		return &ScaleRespMsg{}, err
-	}
-	return &ScaleRespMsg{m.SET_WIFI_STATIC_IP_RESP, "ok", s.Id}, nil
+	return SetWifiStaticIp(s, ip, gateway, netmask)
 }
 
 func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
@@ -468,10 +474,17 @@ func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
 		return msg, err
 	}
 
-	if _, err := GetIpInfo(s); err != nil {
-		return &ScaleRespMsg{}, err
+	return GetIpInfo(s)
+}
+
+func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.GET_IP_MODE_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
 	}
-	return &ScaleRespMsg{m.GET_IP_INFO_RESP, "ok", s.Id}, nil
+
+	return GetIpMode(s)
 }
 
 // func ReqDownPrnFmt(c *Scale, csvPrnFmt string, seqno string) error {
@@ -510,9 +523,9 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			// 打开工厂模式
 
 			l.Log.Debug("send enable factory mode cmd to scale")
-			composer := cmdComposerFuncMap[c.ScaleCat]
+			composer := c.composer
 			fn := composer.ComposeCmd
-			cmd, timeoutMs, err := fn(&composer, m.CMD_EN_FAC_MODE, m.CmdData{})
+			cmd, timeoutMs, err := fn(composer, m.CMD_EN_FAC_MODE, m.CmdData{})
 			if err != nil {
 				return &ScaleRespMsg{}, err
 			}
@@ -534,12 +547,12 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			addr, size := mycmd.GetPrnFmtAddrNSize(c.ScaleCat, no)
 			loopCnt := size / 2048
 			addrInLoop := addr
-			for i:=0; i < loopCnt; i++ {
-				cmd, timeoutMs, err = composer.ComposeCmd(&composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addr})
+			for i := 0; i < loopCnt; i++ {
+				cmd, timeoutMs, err = composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addr})
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-	
+
 				if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -569,7 +582,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				// 构建数据包
 				// dataPackCmd := buildSendDataPacket(addr, packetData)
 				packDataHexStr := hex.EncodeToString(packetData)
-				cmd, timeoutMs, err = fn(&composer, m.CMD_WRITE_FLASH, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+				cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_FLASH, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}

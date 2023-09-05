@@ -22,6 +22,7 @@ const (
 	SET_WIFI_DYNAMIC_IP_OK_RESP string = "\r\nOK\r\n"
 	SET_WIFI_STATIC_IP_OK_RESP  string = "\r\nOK\r\n"
 	GET_IP_INFO_OK_RESP         string = "\r\nOK\r\n"
+	GET_IP_MODE_OK_RESP         string = "\r\nOK\r\n"
 )
 
 const (
@@ -86,6 +87,7 @@ func init() {
 		m.SET_WIFI_DYNAMIC_IP_RESP: handleSetWifiDynamicIpResp,
 		m.SET_WIFI_STATIC_IP_RESP:  handleSetWifiStaticIpResp,
 		m.GET_IP_INFO_RESP:         handleGetIpInfoResp,
+		m.GET_IP_MODE_RESP:         handleGetIpModeResp,
 		m.MODIFY_BT_NAME_RESP:      handleModifyBtNameResp,
 		m.BT_PASSTH_DATA_RESP:      handleBTPassthResp,
 		m.WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
@@ -413,6 +415,8 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return handleSendDataToWifiResp(scaleId, data)
 	case m.GET_IP_INFO_RESP:
 		return handleGetIpInfoResp(scaleId, data)
+	case m.GET_IP_MODE_RESP:
+		return handleGetIpModeResp(scaleId, data)
 	case m.SET_WIFI_STATIC_IP_RESP:
 		return handleSetWifiStaticIpResp(scaleId, data)
 	default:
@@ -514,6 +518,32 @@ func extractIPInfo(response string) (IPInfo, error) {
 	return info, nil
 }
 
+func extractIPMode(response string) (bool, error) {
+	var mode bool
+	var err error = nil
+
+	// 根据字符串中的换行符分割字符串
+	lines := strings.Split(response, "\r\n")
+
+	// 遍历每一行字符串，提取 IP mode
+	for _, line := range lines {
+		if strings.HasPrefix(line, "+CWDHCP_CUR:") {
+			modeNo := line[len("+CWDHCP_CUR:"):]
+			if modeNo == "2" || modeNo == "3" {
+				mode = true
+			} else if modeNo == "0" || modeNo == "1" {
+				mode = false
+			} else {
+				mode = false
+				err = fmt.Errorf("invalid response")
+			}
+			break;
+		}
+	}
+
+	return mode, err
+}
+
 func handleGetIpInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_IP_INFO_OK_RESP) { // success
 		ipInfo, err := extractIPInfo(string(data))
@@ -524,6 +554,27 @@ func handleGetIpInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{m.GET_IP_INFO_RESP, ipInfoStr, scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_IP_INFO_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleGetIpModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_IP_MODE_OK_RESP) { // success
+		isDhcpEnabled, err := extractIPMode(string(data))
+		if err != nil {
+			return ScaleRespMsg{}, len(data)
+		}
+		var dhcpStr string
+		if isDhcpEnabled {
+			dhcpStr = "dhcp"
+		} else {
+			dhcpStr = "static"
+		}
+
+		return ScaleRespMsg{m.GET_IP_MODE_RESP, dhcpStr, scaleId}, len(data)
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_IP_MODE_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
 		return ScaleRespMsg{}, 0
 	}

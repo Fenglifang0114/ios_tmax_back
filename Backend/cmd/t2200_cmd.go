@@ -164,7 +164,7 @@ func wrDataCmdT2200(addr uint32, data []byte) ([]byte, int, error) {
 	// 添加包尾
 	binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE-2:], PACKET_TAIL)
 	fmt.Printf("%x\n", packet)
-	return packet, CMD_TIMEOUT_MEDIUM_500_MS, nil
+	return packet, CMD_TIMEOUT_MEDIUM_2000_MS, nil
 }
 
 // 擦除原本秤上的打印格式
@@ -190,5 +190,5 @@ func eraseCmdT2200(addr uint32) ([]byte, int, error) { // erase size will 2K
 	binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE-2:], PACKET_TAIL)
 
 	fmt.Printf("%x\n", packet)
-	return packet, CMD_TIMEOUT_LONG_5000_MS, nil
+	return packet, CMD_TIMEOUT_LONG_20000_MS, nil
 }
