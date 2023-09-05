@@ -2,6 +2,7 @@ package svc
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"go.bug.st/serial"
@@ -290,12 +291,22 @@ func (m *ScaleMgr) DelScale(id string) error {
 // for user to update a scale
 func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 	id := req.ScaleId
-	tmpScale := s.scales[id]
-	if tmpScale == nil {
-		return fmt.Errorf("can't find scale wit id: %v", id)
+	scale := s.scales[id]
+	if scale == nil {
+		return fmt.Errorf("can't find scale with id: %v", id)
 	}
 
-	conn := tmpScale.Conn
+	if scale.Model != req.ScaleModel {
+		scale.Model = req.ScaleModel
+		if strings.Contains(strings.ToLower(scale.Model), "tmax") {
+			scale.ScaleCat = comm.SCALE_TMAX
+		} else {
+			scale.ScaleCat = comm.SCALE_T2200
+		}
+		composer := cmdComposerFuncMap[scale.ScaleCat]
+		scale.composer = &composer
+	}
+	conn := scale.Conn
 	if conn == nil {
 		return fmt.Errorf("can't find connection associated with the scale Id")
 	}
