@@ -17,7 +17,6 @@ import (
 )
 
 func IsKeyValid(licenseKey string) (bool, string, string) {
-	return true, "1223", "2024-01-01"
 	// Get a unique machine ID based on the CPUID and Hard Disk ID
 	machineIDStr, _ := machineid.ProtectedID("")
 
