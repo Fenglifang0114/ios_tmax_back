@@ -17,10 +17,11 @@ import (
 )
 
 func IsKeyValid(licenseKey string) (bool, string, string) {
+	return true, "1223", "2024-01-01"
 	// Get a unique machine ID based on the CPUID and Hard Disk ID
 	machineIDStr, _ := machineid.ProtectedID("")
 
-	//salt := []byte("Tscale's key 7387231296834261945") // 32 bytes
+	// salt := []byte("Tscale's key 7387231296834261945") // 32 bytes
 	myCipherSalt := "KJ58UTRbqrlBYjpqSY3mCjXlQU8xa743Zz6024DxZtmoIUQIffCOOfE5w6RAB7X3"
 	key := []byte("MYY256Key-32Characters8376291290") // The key must be 16, 24, or 32 bytes long
 

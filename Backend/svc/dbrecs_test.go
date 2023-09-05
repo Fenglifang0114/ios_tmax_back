@@ -146,7 +146,8 @@ func TestDbScaleRec_GetScaleRecsList(t *testing.T) {
 		{name: "GetScaleRecsList", d: db, args: args{model: "QTP", sn: "1234"}, want: []ScaleRec{
 			{RecId: 1, ScaleModel: "QTP", ScaleSn: "1234", Product: "Banana", Weight: "1.230", Price: "3.25"},
 			{RecId: 2, ScaleModel: "QTP", ScaleSn: "1234", Product: "Apple", Weight: "1.230", Price: "3.25"},
-			{RecId: 3, ScaleModel: "QTP", ScaleSn: "1234", Product: "Banana", Weight: "1.230", Price: "3.25"}}, wantErr: false},
+			{RecId: 3, ScaleModel: "QTP", ScaleSn: "1234", Product: "Banana", Weight: "1.230", Price: "3.25"},
+		}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -155,7 +156,7 @@ func TestDbScaleRec_GetScaleRecsList(t *testing.T) {
 				t.Errorf("DbScaleRec.GetScaleRecsList() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			//for i := 0; i < len(got); i++ {
+			// for i := 0; i < len(got); i++ {
 			for i := 0; i < 2; i++ {
 				if !compare(&got[i], &tt.want[i]) {
 					t.Errorf("DbScaleRec.GetScaleRecsList() = %v, want %v", got, tt.want)

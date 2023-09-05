@@ -30,7 +30,7 @@ ws://127.0.0.1:7878/tmax?scaleid=0
 	ScaleModel string
 	ScaleSn    string
 
-3. modify scale configuration => {"Req":"modify_scale","ReqData":"{\"ScaleId\":1,\"MediaConf\":{\"Type\":0,\"MediaInfoJson\":\"{\\\"DevPath\\\":\\\"COM6\\\",\\\"Baud\\\":9600,\\\"DataBits\\\":8,\\\"StopBits\\\":0,\\\"Parity\\\":0}\"}}"}
+3. modify scale configuration => {"Req":"modify_scale","ReqData":"{\"ScaleId\":1,\"ScaleModel\":\"T2200P\",\"MediaConf\":{\"Type\":0,\"MediaInfoJson\":\"{\\\"DevPath\\\":\\\"COM6\\\",\\\"Baud\\\":9600,\\\"DataBits\\\":8,\\\"StopBits\\\":0,\\\"Parity\\\":0}\"}}"}
     response: {"MgrMsgType":"scale_modify","MsgBody":"{\"IsAck\":true,\"AckData\":\"\"}"}
 
 4. get product list => {"Req": "get_product_list", "ReqData": ""}
@@ -55,7 +55,6 @@ ws://127.0.0.1:7878/tmax?scaleid=0
 
 15. check if license is valid => {"Req": "check_license","ReqData":""}
     response: 	{"MsgType":"resp_check_license","MsgBody":"true,e4e13e78c5,2023-11-17"}
-
 
 To connect to TMax scale with scaleId websocket
 ws://127.0.0.1:7878/tmax?scaleid=1
@@ -99,6 +98,12 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 	{"Req":"del_rec","ReqData":"{\"RecId\":3}"}
 	response:
 	{"MsgType":8,"MsgBody":"ok","ScaleId":1}
+
+9. download printer format to scale =>{
+	"Req": "down_print_format_to_scale",
+	"ReqData": "{ \"ScaleModel\": \"t2200\", \"PrinterModel\": \"lp50\", \"FilePaths\": [\"./1.fmt\", \"./2.fmt\", \"./3.fmt\", \"./4.fmt\"]}"
+}
+	response: {"MsgType":"resp_down_prn_fmt","MsgBody":"ok", "ScaleId":1}
 
 To configure scale's wifi to connect to specific AP
 ws://127.0.0.1:7878/tmax?scaleid=1
@@ -152,6 +157,21 @@ ws://127.0.0.1:7878/tmax?scaleid=1
    {"Req":"send_data_to_wifi", "ReqData":"cmd"}
     response:
     	{ "ScaleId":1, "MsgType":"resp_send_data_to_wifi", "MsgBody":"response from wifi"}
+
+7. GetIpMode
+   {"Req":"get_ip_mode", "ReqData":""}
+
+   response
+   {"MsgType":"resp_get_ip_mode","MsgBody":"{\"IPMode\":\"dynamic\"}","ScaleId":1}
+or   {"MsgType":"resp_get_ip_mode","MsgBody":"{\"IPMode\":\"static\"}","ScaleId":1}
+
+8. GetWifiInfo
+   {"Req":"get_wifi_info", "ReqData":""}
+
+   response
+   {"MsgType":"resp_get_wifi_info","MsgBody":"{\"ssid\":\"guest1\",\"rssi\":2,\"bssid\":\"11:22:33:44:55:66\"}","ScaleId":1}
+
+9. SetWifiInfo
 
 To configure scale's BT configuration
 ws://127.0.0.1:7878/tmax?scaleid=1

@@ -1,8 +1,10 @@
-package svc
+package picker
 
 import (
 	"reflect"
 	"testing"
+
+	"tmaxsrv/comm"
 )
 
 func Test_pickerFnTmaxScale(t *testing.T) {
@@ -16,13 +18,13 @@ func Test_pickerFnTmaxScale(t *testing.T) {
 		wantPackOffset      uint
 		wantPackLen         uint
 		wantShouldRemoveLen uint
-		wantPack            Packet
+		wantPack            comm.Packet
 	}{
-		{name: "test tmax picker fun #1", args: args{inData: []byte{0x5a, 0xa5, 0x00, 0x14, 0xf2, 0x01, 0x00, 0x54, 0x54, 0x4d, 0x3a, 0x4f, 0x4b, 0x0d, 0x0a, 0x00, 0xce, 0x4c, 0x35, 0x01, 0xa5, 0x5a}, dataLen: 22}, wantPackOffset: 0, wantPackLen: 22, wantShouldRemoveLen: 22, wantPack: Packet{0x09, 0xf2, 0x01, 0x00, []byte{0x54, 0x54, 0x4d, 0x3a, 0x4f, 0x4b, 0x0d, 0x0a, 0x00}}},
+		{name: "test tmax picker fun #1", args: args{inData: []byte{0x5a, 0xa5, 0x00, 0x14, 0xf2, 0x01, 0x00, 0x54, 0x54, 0x4d, 0x3a, 0x4f, 0x4b, 0x0d, 0x0a, 0x00, 0xce, 0x4c, 0x35, 0x01, 0xa5, 0x5a}, dataLen: 22}, wantPackOffset: 0, wantPackLen: 22, wantShouldRemoveLen: 22, wantPack: comm.Packet{0x09, 0xf2, 0x01, 0x00, []byte{0x54, 0x54, 0x4d, 0x3a, 0x4f, 0x4b, 0x0d, 0x0a, 0x00}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotPackOffset, gotPackLen, gotShouldRemoveLen, gotPack := pickerFnTmaxScale(tt.args.inData, tt.args.dataLen)
+			gotPackOffset, gotPackLen, gotShouldRemoveLen, gotPack := pickerFnTmax(tt.args.inData, tt.args.dataLen)
 			if gotPackOffset != tt.wantPackOffset {
 				t.Errorf("pickerFnTmaxScale() gotPackOffset = %v, want %v", gotPackOffset, tt.wantPackOffset)
 			}

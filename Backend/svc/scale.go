@@ -1,20 +1,44 @@
 package svc
 
 import (
-	"encoding/binary"
+	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"math/big"
+	"os"
+	"path"
+	"strconv"
 	"sync"
 	"time"
 
-	"tmaxsrv/comm"
+	mycmd "tmaxsrv/cmd"
+	m "tmaxsrv/comm"
 	l "tmaxsrv/log"
+	"tmaxsrv/picker"
 	"tmaxsrv/prnfmt"
-	utils "tmaxsrv/utils"
+	utils "tmaxsrv/util"
 )
 
-var GlastWantRespMsgType RespMsgType = NO_RESP
+const (
+	FLASH_ADDR_TMAX                = 0x08003000
+	PACKET_HEAD_TMAX               = 0x5AA5
+	CMD_IDENTIFY_TMAX              = 0xA0
+	CMD_TYPE_TMAX                  = 0xB0
+	PACKET_TAIL_TMAX               = 0xA55A
+	DATA_LENGTH_TMAX               = 256
+	FILE_CHUNK_SIZE_TMAX           = 272
+	OPEN_FAC_CHUNK_SIZE_TMAX       = 6
+	CLOSE_FAC_CHUNK_SIZE_TMAX      = 6
+	EN_PASSTH_CHUNK_SIZE_TMAX      = 6
+	DIS_PASSTH_CHUNK_SIZE_TMAX     = 6
+	MODIFY_BT_NAME_CHUNK_SIZE_TMAX = 24
+	REC_CHUNK_SIZE_TMAX            = 11
+	EARSE_CHUNK_SIZE_TMAX          = 0x10
+	CMD_ERASE_TMAX                 = 0xA2
+	CMD_ERASE_SIZE_TMAX            = 0x800
+	CMD_FLASH_TMAX                 = 0xB0
+)
+
+var GlastWantRespMsgType m.RespMsgType = m.NO_RESP
 
 const RECV_MAX_BUF_LEN = 2048
 
@@ -41,6 +65,12 @@ type APInfo struct {
 	encryptType string `json:"security"`
 }
 
+type WifiInfo struct {
+	Ssid  string `json:"ssid"`
+	Rssi  int    `json:"rssi"`
+	Bssid string `json:"mac"`
+}
+
 type MsgBuf struct {
 	CurIdx int
 	Buf    [RECV_MAX_BUF_LEN]byte
@@ -65,29 +95,30 @@ type Scale struct {
 	// connectivity Media interface
 	Conn *ScaleConnMedia
 	// media config, this is a json string that will be unmarshaled to specific structure typed value
-	//MediaConf string
+	// MediaConf string
 	// com port
 	MySerial *TSerial
 	// Network socket
-	//tcpSocket net.Socket
+	// tcpSocket net.Socket
 	// Bluetooth
-	//btConn BtCom
+	// btConn BtCom
 	// scale Id
 	Id int64
 	// scale Model, if not supported then the default Model is "legacy"
 	Model string
 	// scale serial number, if not supported then the default serial number is "123456789"
-	Sn string
+	ScaleCat m.ScaleCat // scale type: C51, T2200, JWP, TMAX
+	Sn       string
 	// send to scale channel, message will be json string
 	toScaleMsgCh chan string
 	// receive from scale channel, message will be json string
 	fromScaleMsgCh chan string
 	// added time
 	EnterAt      time.Time
-	respChansMap map[RespMsgType][]chan *ScaleRespMsg
-	//recvMsgBufsMap   map[RespMsgType][]MsgBuf // should be removed
-	bufs          RingBuffers
-	isOldC51Scale bool
+	respChansMap map[m.RespMsgType][]chan *ScaleRespMsg
+	// recvMsgBufsMap   map[RespMsgType][]MsgBuf // should be removed
+	bufs utils.RingBuffers
+	//isOldC51Scale bool
 	// if client needs unsolicited data from scale
 	isSendUnolicitedData bool
 	// to scale command is issued and waiting response
@@ -98,50 +129,43 @@ type Scale struct {
 	quitProcScaleRespMessageCh chan bool
 	// this channel is to inform the procToScaleMsg, which process the data from serial port, to quit
 	quitProcToScaleMsgCh chan bool
+
+	// function pointer to handle message from scale
+	// composer object
+	composer *m.CmdComposer
 }
 
 // NewScale creates a new scale
-func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, model string, sn string, isTest bool) (*Scale, error) {
+func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, model string, sn string, isTest bool) (*Scale, error) {
 	var pcnf ComInfo
 	var sport *TSerial
-	var err error
 	if conn.TMedia == MEDIA_COM {
 		// open COM connection
 		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &pcnf); err != nil {
 			l.Log.Errorf("error unmarshalling: %v", err)
 		}
-		// mode := mediaInfoToMode(pcnf)
-		if comm.GcurScale == comm.SCALE_TYPE_TMAX {
-			sport, err = NewSerial(pcnf, pickerFnTmaxScale)
-			if err != nil {
-				sport = nil
-			}
-		} else if comm.GcurScale == comm.SCALE_TYPE_OLD_C51 {
-			sport, err = NewSerial(pcnf, pickerFnOldScale)
-			if err != nil {
-				sport = nil
-			}
-		} else {
-			l.Log.Error("not support scale type")
-			return nil, fmt.Errorf("not support scale type")
-		}
+
+		picker := picker.GetPickerFn(scaleCat)
+		sport, _ = NewSerial(pcnf, picker)
 	}
-	scale := &Scale{scaleMgr: scaleMgr, Conn: conn, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
+	scale := &Scale{
+		scaleMgr: scaleMgr, Conn: conn, ScaleCat: scaleCat, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
 		fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MySerial: sport,
-		quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1)}
-	scale.respChansMap = map[RespMsgType][]chan *ScaleRespMsg{}
+		quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
+	}
+	scale.respChansMap = map[m.RespMsgType][]chan *ScaleRespMsg{}
 
 	var respTypes []string
-	for _, respType := range cmdsRespMap {
+	for _, respType := range utils.CmdsRespMap {
 		respTypes = append(respTypes, string(respType))
 	}
 
 	// create buffer for each message
-	scale.bufs = NewRingBuffers(respTypes...)
+	scale.bufs = utils.NewRingBuffers(respTypes...)
 
-	responseChannels := make(map[RespMsgType]chan interface{})
+	responseChannels := make(map[m.RespMsgType]chan interface{})
 
-	for _, respType := range cmdsRespMap {
+	for _, respType := range utils.CmdsRespMap {
 		if _, ok := responseChannels[respType]; !ok {
 			responseChannels[respType] = make(chan interface{})
 		}
@@ -150,8 +174,6 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, model string, sn string,
 	// example usage: send a message to the WEIGHT_DATA_RESP channel
 	// weightDataRespCh := responseChannels[WEIGHT_DATA_RESP]
 	// weightDataRespCh <- "some message"
-
-	scale.isOldC51Scale = false // in this moment we use this software for old C51 scales, for T-Max scales should set this to false
 
 	scale.isSendUnolicitedData = false
 	scale.isWaintingResp = false
@@ -202,45 +224,28 @@ func (s *Scale) procScaleRespMsg() {
 			// if !s.isSendUnolicitedData || !s.isWaintingResp {
 			// 	// continue // FIXME: skip this line for testing purpose
 			// }
-			if comm.GcurScale == comm.SCALE_TYPE_OLD_C51 {
+			if s.ScaleCat == m.SCALE_C51 {
+			} else if s.ScaleCat == m.SCALE_T2200 {
 				// TODO:
-			} else if comm.GcurScale == comm.SCALE_TYPE_TMAX {
+				msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
+				if err != nil {
+					continue
+				}
+				sendMsgIntoChsOrWeightToClient(s, msg)
+			} else if s.ScaleCat == m.SCALE_TMAX {
 				// find message buffer that associate to the message
 				var cmdHex uint16 = (uint16(inPack.CmdID) << 8) | uint16(inPack.CmdSubId)
-				bufName := cmdsRespMap[CmdID(cmdHex)]
+				bufName := utils.CmdsRespMap[utils.CmdID(cmdHex)]
 				if bufName == "" {
 					l.Log.Errorf("error on getting bufName for the cmd: %v", cmdHex)
 					continue
 				}
 				fmt.Println(bufName)
 				s.bufs.Write(string(bufName), inPack.Payload)
-				msg := extractMessage(s.Id, s.bufs[string(bufName)], bufName)
-				if (msg != ScaleRespMsg{}) {
-					chs := s.respChansMap[msg.MsgType]
-					for _, ch := range chs {
-						if len(ch) == 0 { // to avoid blocking, this kind of channel should only be used once
-							ch <- &msg
-						}
-					}
-					if len(s.fromScaleMsgCh) < RECV_CH_SIZE { // no use in this moment
-						if msg.MsgType == WEIGHT_DATA && !s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
-							continue
-						}
-						if msgStr, err := json.MarshalToString(msg); err == nil {
-							if s.client != nil {
-								fmt.Println("%%%%%%%%%%%%%%: " + msgStr)
-								s.client.sendCh <- []byte(msgStr)
-							}
-							//s.fromScaleMsgCh <- msgStr
-						} else {
-							l.Log.Errorf("marshal msg err: %v", err.Error())
-						}
-					} else {
-						l.Log.Error("fromScaleMsgCh full")
-					}
-				} else {
-					l.Log.Errorf("extractMsgTmaxScale error")
-				}
+				msg := extractMessageTMAX(s.Id, s.bufs[string(bufName)], bufName)
+				sendMsgIntoChsOrWeightToClient(s, &msg)
+			} else {
+
 			}
 		}
 	}
@@ -293,7 +298,7 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 		if err := json.Unmarshal([]byte(conf.MediaInfoJson), &pcnf); err != nil {
 			l.Log.Errorf("error unmarshalling: %v", err)
 		}
-		var pickFun packPickerFn = nil
+		var pickFun picker.PickerFunc = nil
 		if s.MySerial != nil {
 			s.quitProcScaleRespMessageCh <- true
 			s.quitProcToScaleMsgCh <- true
@@ -310,12 +315,9 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 
 	} else if conf.Type == MEDIA_NET {
 		return false
-
 	} else if conf.Type == MEDIA_BT {
 		return false
-
 	} else {
-
 	}
 	go s.procScaleRespMsg()
 	go s.procToScaleMsg()
@@ -324,21 +326,21 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 
 var mu sync.Mutex
 
-func (c *Scale) RegisterNotif(msgType RespMsgType, inCh chan *ScaleRespMsg) {
+func (c *Scale) RegisterNotif(msgType m.RespMsgType, inCh chan *ScaleRespMsg) {
 	addNotif(c, msgType, inCh)
 }
 
-func (c *Scale) UnRegisterNotif(msgType RespMsgType, inCh chan *ScaleRespMsg) {
+func (c *Scale) UnRegisterNotif(msgType m.RespMsgType, inCh chan *ScaleRespMsg) {
 	removeNotif(c, msgType, inCh)
 }
 
-func addNotif(s *Scale, msgType RespMsgType, inCh chan *ScaleRespMsg) {
+func addNotif(s *Scale, msgType m.RespMsgType, inCh chan *ScaleRespMsg) {
 	mu.Lock()
 	defer mu.Unlock()
 	s.respChansMap[msgType] = append(s.respChansMap[msgType], inCh)
 }
 
-func removeNotif(s *Scale, msgType RespMsgType, inCh chan *ScaleRespMsg) {
+func removeNotif(s *Scale, msgType m.RespMsgType, inCh chan *ScaleRespMsg) {
 	mu.Lock()
 	defer mu.Unlock()
 	s.respChansMap[msgType] = remove(s.respChansMap[msgType], inCh)
@@ -364,253 +366,293 @@ func parseToScaleReq(reqStr string) (SRequest, error) {
 	return req, nil
 }
 
-func ReqModifyBTName(s *Scale, name string) error {
-	if err := EnFacMode(s); err != nil {
-		return err
+func enablePassthrough(s *Scale, respType m.RespMsgType) (*ScaleRespMsg, error) {
+	msg, err := EnFacMode(s)
+	if err != nil {
+		return &ScaleRespMsg{respType, "fail", s.Id}, err
+	}
+	if msg.MsgBody != "ok" {
+		return &ScaleRespMsg{respType, "fail", s.Id}, nil
 	}
 	time.Sleep(100 * time.Millisecond)
-	if err := EnPassthrough(s); err != nil {
-		return err
+	if _, err := EnPassthrough(s); err != nil {
+		return &ScaleRespMsg{respType, "fail", s.Id}, err
 	}
 	time.Sleep(100 * time.Millisecond)
-	if err := ModifyBTName(s, name); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := DisPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	return nil
+	return &ScaleRespMsg{respType, "ok", s.Id}, nil
 }
 
-func ReqSendDataToBT(s *Scale, data string) error {
-	if err := EnFacMode(s); err != nil {
-		return err
+func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.MODIFY_BT_NAME_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := EnPassthrough(s); err != nil {
-		return err
+
+	if _, err := s.ModifyBTName(name); err != nil {
+		return &ScaleRespMsg{}, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := SendDataToBT(s, data); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := DisPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	return nil
+	return &ScaleRespMsg{m.MODIFY_BT_NAME_RESP, "ok", s.Id}, nil
 }
 
-func ReqSendDataToWifi(s *Scale, data string) error {
-	if err := EnFacMode(s); err != nil {
-		return err
+func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.SEND_DATA_TO_BT_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := EnPassthrough(s); err != nil {
-		return err
+
+	if _, err := SendDataToBT(s, data); err != nil {
+		return &ScaleRespMsg{}, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := SendDataToWifi(s, data); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := DisPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	return nil
+
+	return &ScaleRespMsg{m.SEND_DATA_TO_BT_RESP, "ok", s.Id}, nil
 }
 
-func ReqGetApList(s *Scale) error {
+func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.SEND_DATA_TO_WIFI_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
+	}
 
-	if err := EnFacMode(s); err != nil {
-		return err
+	if _, err := SendDataToWifi(s, data); err != nil {
+		return &ScaleRespMsg{}, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := EnPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := GetApList(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := DisPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	return nil
+	return &ScaleRespMsg{m.SEND_DATA_TO_WIFI_RESP, "ok", s.Id}, nil
 }
 
-func ReqConnectAp(s *Scale, ssid string, password string, bssid string) error {
+func ReqGetApList(s *Scale) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.GET_AP_LIST_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
+	}
 
-	if err := EnFacMode(s); err != nil {
-		return err
+	if _, err := GetApList(s); err != nil {
+		return &ScaleRespMsg{}, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := EnPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := ConnectWifiAp(s, ssid, password, bssid); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := DisPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	return nil
+	return &ScaleRespMsg{m.GET_AP_LIST_RESP, "ok", s.Id}, nil
 }
 
-func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) error {
-	if err := EnFacMode(s); err != nil {
-		return err
+func ReqConnectAp(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := EnPassthrough(s); err != nil {
-		return err
+
+	if _, err := ConnectWifiAp(s, ssid, password, bssid); err != nil {
+		return &ScaleRespMsg{}, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := SetWifiStaticIp(s, ip, gateway, netmask); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := DisPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	return nil
+	return &ScaleRespMsg{m.CONNECT_AP_RESP, "ok", s.Id}, nil
 }
 
-func ReqGetIpInfo(s *Scale) error {
+func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
+	}
 
-	if err := EnFacMode(s); err != nil {
-		return err
+	if _, err := SetWifiStaticIp(s, ip, gateway, netmask); err != nil {
+		return &ScaleRespMsg{}, err
 	}
-	time.Sleep(100 * time.Millisecond)
-	if err := EnPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := GetIpInfo(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	if err := DisPassthrough(s); err != nil {
-		return err
-	}
-	time.Sleep(100 * time.Millisecond)
-	return nil
+	return &ScaleRespMsg{m.SET_WIFI_STATIC_IP_RESP, "ok", s.Id}, nil
 }
 
-func ReqDownPrnFmt(c *Scale, csvPrnFmt string) error {
+func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
+	defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
+	}
+
+	if _, err := GetIpInfo(s); err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	return &ScaleRespMsg{m.GET_IP_INFO_RESP, "ok", s.Id}, nil
+}
+
+// func ReqDownPrnFmt(c *Scale, csvPrnFmt string, seqno string) error {
+func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	// TODO: add a api for UI to send download printer format request
 	if !gIsKeyValid {
-		return fmt.Errorf("license key is not valid")
+		return &ScaleRespMsg{}, fmt.Errorf("license key is not valid")
 	}
 
 	layout := "2006-01-02"
 	date, err := time.Parse(layout, gLicValidDate)
 	if err != nil || time.Now().After(date) {
 		fmt.Println(err)
-		return fmt.Errorf("license expired")
+		return &ScaleRespMsg{}, fmt.Errorf("license expired")
 	}
 
-	if prnfmt.ParserFmtToFile(csvPrnFmt) {
-		// 读取bin文件
-		data, err := ioutil.ReadFile("formatBin.bin")
+	var reqData ReqPrnData
+	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
+		return &ScaleRespMsg{}, err
+	}
+
+	for _, file := range reqData.FilePaths {
+		fileName := path.Base(file)
+		fileOrderNo := fileName[0:1]
+		csvFmtContent, err := os.ReadFile(file)
 		if err != nil {
-			l.Log.Fatal(err)
+			return &ScaleRespMsg{}, err
 		}
+		if prnfmt.ParserFmtToFile(string(csvFmtContent)) { //FIXME: ("csvPrnFmt") is incorrect
+			// 读取bin文件
+			data, err := os.ReadFile("formatBin.bin")
+			if err != nil {
+				l.Log.Fatal(err)
+			}
 
-		//打开工厂模式
+			// 打开工厂模式
 
-		l.Log.Debug("send enable factory mode cmd to scale")
-		cmd := EN_ENG_CMD
-		if res, err := perfCmdNwaitResult(c, cmd, EN_FAC_MODE_RESP); err != nil {
-			return err
-		} else if res.MsgBody != "ok" {
-			return fmt.Errorf("enable factory mode fail")
-		} else {
-			// do nothing
-		}
-
-		//擦除原本秤上的打印格式
-		l.Log.Debug("erase flash on scale")
-		addr := uint32(FLASH_ADDR)
-		for i := 0; i < 4; i++ {
-			cmd := eraseCmd(uint32(addr))
-			if res, err := perfCmdNwaitResult(c, cmd, ERASE_FLASH_RESP); err != nil {
-				return err
+			l.Log.Debug("send enable factory mode cmd to scale")
+			composer := cmdComposerFuncMap[c.ScaleCat]
+			fn := composer.ComposeCmd
+			cmd, timeoutMs, err := fn(&composer, m.CMD_EN_FAC_MODE, m.CmdData{})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			if res, err := perfCmdNwaitResult(c, cmd, m.EN_FAC_MODE_RESP, timeoutMs); err != nil {
+				return &ScaleRespMsg{}, err
 			} else if res.MsgBody != "ok" {
-				return fmt.Errorf("erase fail")
-			}
-			addr += CMD_ERASE_SIZE
-		}
-
-		// 计算数据包数量
-		packetCount := len(data) / DATA_LENGTH
-		if len(data)%DATA_LENGTH != 0 {
-			packetCount += 1
-		}
-
-		// 遍历所有数据包
-		l.Log.Debug("send data package to scale")
-		addr = uint32(FLASH_ADDR)
-		for i := 0; i < packetCount; i++ {
-			// 计算本包数据
-			start := i * DATA_LENGTH
-			end := start + DATA_LENGTH
-			if end > len(data) {
-				end = len(data)
-			}
-			packetData := data[start:end]
-
-			// 构建数据包
-			dataPackCmd := buildSendDataPacket(addr, packetData)
-
-			// 发送数据包
-			if res, err := perfCmdNwaitResult(c, dataPackCmd, WRITE_DATA_FLASH_RESP); err != nil {
-				return err
-			} else if res.MsgBody != "ok" {
-				return fmt.Errorf("enable factory mode fail")
+				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+			} else {
+				// do nothing
 			}
 
-			// 地址自增
-			addr += 0x100
+			// 擦除原本秤上的打印格式
+			l.Log.Debug("erase flash on scale")
+			no, err := strconv.Atoi(fileOrderNo)
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+
+			addr, size := mycmd.GetPrnFmtAddrNSize(c.ScaleCat, no)
+			loopCnt := size / 2048
+			addrInLoop := addr
+			for i:=0; i < loopCnt; i++ {
+				cmd, timeoutMs, err = composer.ComposeCmd(&composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addr})
+				if err != nil {
+					return &ScaleRespMsg{}, err
+				}
+	
+				if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
+					return &ScaleRespMsg{}, err
+				} else if res.MsgBody != "ok" {
+					return &ScaleRespMsg{}, fmt.Errorf("erase fail")
+				}
+
+				addrInLoop += 2048
+			}
+
+			// 计算数据包数量
+			packetCount := len(data) / DATA_LENGTH_TMAX
+			if len(data)%DATA_LENGTH_TMAX != 0 {
+				packetCount += 1
+			}
+
+			// 遍历所有数据包
+			l.Log.Debug("send data package to scale")
+			for i := 0; i < packetCount; i++ {
+				// 计算本包数据
+				start := i * DATA_LENGTH_TMAX
+				end := start + DATA_LENGTH_TMAX
+				if end > len(data) {
+					end = len(data)
+				}
+				packetData := data[start:end]
+
+				// 构建数据包
+				// dataPackCmd := buildSendDataPacket(addr, packetData)
+				packDataHexStr := hex.EncodeToString(packetData)
+				cmd, timeoutMs, err = fn(&composer, m.CMD_WRITE_FLASH, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+				if err != nil {
+					return &ScaleRespMsg{}, err
+				}
+
+				// 发送数据包
+				if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+					return &ScaleRespMsg{}, err
+				} else if res.MsgBody != "ok" {
+					return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+				}
+
+				// 地址自增
+				addr += 0x100
+			}
+			l.Log.Info("send bin ok")
 		}
-		l.Log.Info("send bin ok")
 	}
-	return nil
+
+	return &ScaleRespMsg{m.DOWN_PRN_FMT_RESP, "ok", c.Id}, nil
 }
 
-func buildSendDataPacket(addr uint32, data []byte) []byte {
-	// 构建包头
-	packet := make([]byte, FILE_CHUNK_SIZE)
-	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+func retreiveRespMsgT2200(scaleId int64, data []byte) (*ScaleRespMsg, error) {
+	// checkHead, get msgid, get msgtype, check if return code is 0x06, for success
+	var err error
+	respMsg := &ScaleRespMsg{MsgType: GlastWantRespMsgType, MsgBody: "", ScaleId: scaleId}
+	if len(data) == 1 {
+		if data[0] == 0x06 {
+			respMsg.MsgBody = "ok"
+			err = nil
+		} else if data[0] == 0x15 {
+			respMsg.MsgBody = "fail"
+			err = nil
+		} else {
+			return respMsg, fmt.Errorf("unknown response")
+		}
+	} else { // weight data, same as C51 scale
+		var msg WeightMsg
+		if msg, err = retreiveWeightC51(data); err == nil {
+			respMsg.MsgType = m.WEIGHT_DATA
+			respMsg.MsgBody = msg
+		}
+	}
+	return respMsg, err
+}
 
-	// 构建命令ID与命令类型
-	packet[2] = CMD_IDENTIFY
-	packet[3] = CMD_TYPE
+func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
+	if (*msg == ScaleRespMsg{}) {
+		l.Log.Errorf("extractMsgTmaxScale error")
+		return
+	}
 
-	// 构建地址
-	binary.BigEndian.PutUint32(packet[4:8], addr)
+	chs := s.respChansMap[msg.MsgType]
+	for _, ch := range chs {
+		if len(ch) == 0 { // to avoid blocking, this kind of channel should only be used once
+			ch <- msg
+		}
+	}
+	if msg.MsgType == m.WEIGHT_DATA && s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
+		sendRespMsgClient(s, msg)
+		return
+	}
+}
 
-	// 构建数据长度
-	binary.BigEndian.PutUint16(packet[8:10], uint16(len(data)))
+func sendRespMsgClient(s *Scale, msg *ScaleRespMsg) {
+	if (*msg == ScaleRespMsg{}) {
+		l.Log.Warnf("msg is ScaleRespMsg{}")
+		return
+	}
 
-	// 复制数据
-	copy(packet[10:], data)
+	if len(s.fromScaleMsgCh) < RECV_CH_SIZE { // no use in this moment
+		if msgStr, err := json.MarshalToString(msg); err == nil {
+			if s.client == nil {
+				l.Log.Errorf("s.client is nil")
+				return
+			}
 
-	// 计算与添加校验码
-	checksum := utils.Crc32MPEG2(packet[2 : FILE_CHUNK_SIZE-6])
-	binary.BigEndian.PutUint32(packet[FILE_CHUNK_SIZE-6:], checksum)
-
-	// 添加包尾
-	binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE-2:], PACKET_TAIL)
-
-	return packet
+			l.Log.Tracef("%%%%%%%%%%%%%%: " + msgStr)
+			s.client.sendCh <- []byte(msgStr)
+		} else {
+			l.Log.Errorf("marshal msg err: %v", err.Error())
+		}
+	} else {
+		l.Log.Error("fromScaleMsgCh full")
+	}
+	return
 }

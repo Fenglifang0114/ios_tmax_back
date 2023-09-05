@@ -98,7 +98,7 @@ func (c *Client) readPump() {
 				c.recvCh <- userMessage
 			}
 		}
-		//log.Log.Debugf("got user message: %v", userMessage)
+		// log.Log.Debugf("got user message: %v", userMessage)
 	}
 }
 

@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"github.com/gitteamer/log"
+
+	m "tmaxsrv/comm"
+	"tmaxsrv/util"
 )
 
 const (
@@ -26,79 +29,80 @@ const (
 	RSSI_MIN = -100 // minimum strength of signal in dBm
 )
 
-var responseHandlerMap map[RespMsgType]func(int64, []byte) (ScaleRespMsg, int)
+var responseHandlerMap map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int)
 
 func init() {
-	cmdsRespMap = CmdMap{
-		0xe107: WEIGHT_DATA,
-		0xe103: ZERO_CMD_RESP,
-		0xe105: TARE_CMD_RESP,
-		0xe101: WEIGHT_DATA_RESP,
-		0xfff3: REG_WEIGHT_RESP,
-		0xe108: UNREG_WEIGHT_RESP,
-		0xfff6: GET_RECS_RESP,
-		0xfff7: ADD_REC_RESP,
-		0xfff8: DEL_REC_RESP,
-		0x05f1: EN_FAC_MODE_RESP,
-		0x05f2: DIS_FAC_MODE_RESP,
-		0x05f3: EN_PASSTH_MODE_RESP,
-		0x05f4: DIS_PASSTH_MODE_RESP,
-		0xfff9: ERASE_FLASH_RESP,
-		0xff10: WRITE_DATA_FLASH_RESP,
-		0xff11: DOWN_PRN_FMT_RESP,
-		0xff12: ERR_SERIAL_RESP,
-		0xff13: GET_AP_LIST_RESP,
-		0xff14: RESCAN_AP_LIST_RESP,
-		0xff15: SET_WIFI_DYNAMIC_IP_RESP,
-		0xff16: SET_WIFI_STATIC_IP_RESP,
-		0xff17: GET_IP_INFO_RESP,
-		0xff18: MODIFY_BT_NAME_RESP,
-		0xff19: NO_RESP,
-		0xf201: BT_PASSTH_DATA_RESP,
-		0xf202: WIFI_PASSTH_DATA_RESP,
-		0xff22: PRT_PASSTH_DATA_RESP,
-		0xff23: UNKNOWN_DATA,
+	util.CmdsRespMap = util.CmdMap{
+		0xe107: m.WEIGHT_DATA,
+		0xe103: m.ZERO_CMD_RESP,
+		0xe105: m.TARE_CMD_RESP,
+		0xe101: m.WEIGHT_DATA_RESP,
+		0xfff3: m.REG_WEIGHT_RESP,
+		0xe108: m.UNREG_WEIGHT_RESP,
+		0xfff6: m.GET_RECS_RESP,
+		0xfff7: m.ADD_REC_RESP,
+		0xfff8: m.DEL_REC_RESP,
+		0x05f1: m.EN_FAC_MODE_RESP,
+		0x05f2: m.DIS_FAC_MODE_RESP,
+		0x05f3: m.EN_PASSTH_MODE_RESP,
+		0x05f4: m.DIS_PASSTH_MODE_RESP,
+		0xfff9: m.ERASE_FLASH_RESP,
+		0xff10: m.WRITE_DATA_FLASH_RESP,
+		0xff11: m.DOWN_PRN_FMT_RESP,
+		0xff12: m.ERR_SERIAL_RESP,
+		0xff13: m.GET_AP_LIST_RESP,
+		0xff14: m.RESCAN_AP_LIST_RESP,
+		0xff15: m.SET_WIFI_DYNAMIC_IP_RESP,
+		0xff16: m.SET_WIFI_STATIC_IP_RESP,
+		0xff17: m.GET_IP_INFO_RESP,
+		0xff18: m.MODIFY_BT_NAME_RESP,
+		0xff19: m.NO_RESP,
+		0xf201: m.BT_PASSTH_DATA_RESP,
+		0xf202: m.WIFI_PASSTH_DATA_RESP,
+		0xff22: m.PRT_PASSTH_DATA_RESP,
+		0xff23: m.UNKNOWN_DATA,
 	}
 
-	responseHandlerMap = map[RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
-		WEIGHT_DATA:              handleWeightDataMsg,
-		ZERO_CMD_RESP:            handleZeroCmdResp,
-		TARE_CMD_RESP:            handleTareCmdResp,
-		WEIGHT_DATA_RESP:         handleWeightDataResp,
-		REG_WEIGHT_RESP:          handleRegWeightResp,
-		UNREG_WEIGHT_RESP:        handleUnregWeightResp,
-		GET_RECS_RESP:            handleGetRecsResp,
-		ADD_REC_RESP:             handleAddRecResp,
-		DEL_REC_RESP:             handleDelRecResp,
-		EN_FAC_MODE_RESP:         handleEnFacModeResp,
-		DIS_FAC_MODE_RESP:        handleDisFacModeResp,
-		EN_PASSTH_MODE_RESP:      handleEnPassthModeResp,
-		DIS_PASSTH_MODE_RESP:     handleDisPassthModeResp,
-		ERASE_FLASH_RESP:         handleEraseFlashResp,
-		WRITE_DATA_FLASH_RESP:    handleWriteDataFlashResp,
-		DOWN_PRN_FMT_RESP:        handleDownPrnFmtResp,
-		ERR_SERIAL_RESP:          handleErrSerialResp,
-		GET_AP_LIST_RESP:         handleGetApListResp,
-		RESCAN_AP_LIST_RESP:      handleRescanApListResp,
-		SET_WIFI_DYNAMIC_IP_RESP: handleSetWifiDynamicIpResp,
-		SET_WIFI_STATIC_IP_RESP:  handleSetWifiStaticIpResp,
-		GET_IP_INFO_RESP:         handleGetIpInfoResp,
-		MODIFY_BT_NAME_RESP:      handleModifyBtNameResp,
-		BT_PASSTH_DATA_RESP:      handleBTPassthResp,
-		WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
+	responseHandlerMap = map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
+		m.WEIGHT_DATA:              handleWeightDataMsg,
+		m.ZERO_CMD_RESP:            handleZeroCmdResp,
+		m.TARE_CMD_RESP:            handleTareCmdResp,
+		m.WEIGHT_DATA_RESP:         handleWeightDataResp,
+		m.REG_WEIGHT_RESP:          handleRegWeightResp,
+		m.UNREG_WEIGHT_RESP:        handleUnregWeightResp,
+		m.GET_RECS_RESP:            handleGetRecsResp,
+		m.ADD_REC_RESP:             handleAddRecResp,
+		m.DEL_REC_RESP:             handleDelRecResp,
+		m.EN_FAC_MODE_RESP:         handleEnFacModeResp,
+		m.DIS_FAC_MODE_RESP:        handleDisFacModeResp,
+		m.EN_PASSTH_MODE_RESP:      handleEnPassthModeResp,
+		m.DIS_PASSTH_MODE_RESP:     handleDisPassthModeResp,
+		m.ERASE_FLASH_RESP:         handleEraseFlashResp,
+		m.WRITE_DATA_FLASH_RESP:    handleWriteDataFlashResp,
+		m.DOWN_PRN_FMT_RESP:        handleDownPrnFmtResp,
+		m.ERR_SERIAL_RESP:          handleErrSerialResp,
+		m.GET_AP_LIST_RESP:         handleGetApListResp,
+		m.RESCAN_AP_LIST_RESP:      handleRescanApListResp,
+		m.SET_WIFI_DYNAMIC_IP_RESP: handleSetWifiDynamicIpResp,
+		m.SET_WIFI_STATIC_IP_RESP:  handleSetWifiStaticIpResp,
+		m.GET_IP_INFO_RESP:         handleGetIpInfoResp,
+		m.MODIFY_BT_NAME_RESP:      handleModifyBtNameResp,
+		m.BT_PASSTH_DATA_RESP:      handleBTPassthResp,
+		m.WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
 	// msg := "some message"
 	// responseHandlerMap[WEIGHT_DATA](msg)
 }
-func extractMessage(scaleId int64, bufs *CircularBuffer, msgType RespMsgType) ScaleRespMsg {
+
+func extractMessageTMAX(scaleId int64, bufs *util.CircularBuffer, msgType m.RespMsgType) ScaleRespMsg {
 	data := bufs.PeekAll()
 	handler := responseHandlerMap[msgType]
 	if handler == nil {
 		log.Error("handler not found, msgType: %v", msgType)
 	}
-	resp, shouldRemoveLen := responseHandlerMap[msgType](scaleId, data)
+	resp, shouldRemoveLen := handler(scaleId, data)
 	bufs.DequeueN(shouldRemoveLen)
 
 	return resp
@@ -113,7 +117,7 @@ func handleWeightDataMsg(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if err == nil {
 		fmt.Printf("%v", weightStr)
 	}
-	respMsg := ScaleRespMsg{MsgType: WEIGHT_DATA, MsgBody: weightStr, ScaleId: scaleId}
+	respMsg := ScaleRespMsg{MsgType: m.WEIGHT_DATA, MsgBody: weightStr, ScaleId: scaleId}
 
 	return respMsg, len(data)
 }
@@ -147,13 +151,13 @@ func retreiveWeight(data []byte) (pack WeightMsg, err error) {
 }
 
 func handleZeroCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	var msg = ScaleRespMsg{}
+	msg := ScaleRespMsg{}
 	if data[0] == 0x06 {
-		msg.MsgType = ZERO_CMD_RESP
+		msg.MsgType = m.ZERO_CMD_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "ok"
 	} else {
-		msg.MsgType = ZERO_CMD_RESP
+		msg.MsgType = m.ZERO_CMD_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "fail"
 	}
@@ -161,13 +165,13 @@ func handleZeroCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleTareCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	var msg = ScaleRespMsg{}
+	msg := ScaleRespMsg{}
 	if data[0] == 0x06 {
-		msg.MsgType = TARE_CMD_RESP
+		msg.MsgType = m.TARE_CMD_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "ok"
 	} else {
-		msg.MsgType = TARE_CMD_RESP
+		msg.MsgType = m.TARE_CMD_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "fail"
 	}
@@ -180,13 +184,13 @@ func handleWeightDataResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleRegWeightResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	var msg = ScaleRespMsg{}
+	msg := ScaleRespMsg{}
 	if data[0] == 0x06 {
-		msg.MsgType = REG_WEIGHT_RESP
+		msg.MsgType = m.REG_WEIGHT_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "ok"
 	} else {
-		msg.MsgType = REG_WEIGHT_RESP
+		msg.MsgType = m.REG_WEIGHT_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "fail"
 	}
@@ -194,13 +198,13 @@ func handleRegWeightResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleUnregWeightResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	var msg = ScaleRespMsg{}
+	msg := ScaleRespMsg{}
 	if data[0] == 0x06 {
-		msg.MsgType = UNREG_WEIGHT_RESP
+		msg.MsgType = m.UNREG_WEIGHT_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "ok"
 	} else {
-		msg.MsgType = UNREG_WEIGHT_RESP
+		msg.MsgType = m.UNREG_WEIGHT_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "fail"
 	}
@@ -224,33 +228,33 @@ func handleDelRecResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleEnFacModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: EN_FAC_MODE_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_FAC_MODE_RESP, MsgBody: "ok"}, len(data)
 	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: EN_FAC_MODE_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_FAC_MODE_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
 func handleDisFacModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: DIS_FAC_MODE_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_FAC_MODE_RESP, MsgBody: "ok"}, len(data)
 	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: DIS_FAC_MODE_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_FAC_MODE_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
 func handleEnPassthModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: EN_PASSTH_MODE_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_PASSTH_MODE_RESP, MsgBody: "ok"}, len(data)
 	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: EN_PASSTH_MODE_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_PASSTH_MODE_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
 func handleDisPassthModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: DIS_PASSTH_MODE_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_PASSTH_MODE_RESP, MsgBody: "ok"}, len(data)
 	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: DIS_PASSTH_MODE_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_PASSTH_MODE_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
@@ -329,7 +333,7 @@ func dBmtoPercentage(rssiDbm int) int { // -50 - -100dbm
 	}
 
 	return quality
-} //dBmtoPercentage
+} // dBmtoPercentage
 
 func getEncryptType(security int) string {
 	switch security {
@@ -399,17 +403,17 @@ func convertResponsesToInfos(responses []CWLAPResponse) []APInfo {
 
 func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	switch GExpectWifiResp {
-	case GET_AP_LIST_RESP:
+	case m.GET_AP_LIST_RESP:
 		return handleGetApListResp(scaleId, data)
-	case CONNECT_AP_RESP:
+	case m.CONNECT_AP_RESP:
 		return handleConnectApResp(scaleId, data)
-	case SET_WIFI_DYNAMIC_IP_RESP:
+	case m.SET_WIFI_DYNAMIC_IP_RESP:
 		return handleSetWifiDynamicIpResp(scaleId, data)
-	case SEND_DATA_TO_WIFI_RESP:
+	case m.SEND_DATA_TO_WIFI_RESP:
 		return handleSendDataToWifiResp(scaleId, data)
-	case GET_IP_INFO_RESP:
+	case m.GET_IP_INFO_RESP:
 		return handleGetIpInfoResp(scaleId, data)
-	case SET_WIFI_STATIC_IP_RESP:
+	case m.SET_WIFI_STATIC_IP_RESP:
 		return handleSetWifiStaticIpResp(scaleId, data)
 	default:
 		return ScaleRespMsg{}, 0
@@ -418,9 +422,9 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleBTPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	switch GExpectBTResp {
-	case MODIFY_BT_NAME_RESP:
+	case m.MODIFY_BT_NAME_RESP:
 		return handleModifyBtNameResp(scaleId, data)
-	case SEND_DATA_TO_BT_RESP:
+	case m.SEND_DATA_TO_BT_RESP:
 		return handleSendDataToBTResp(scaleId, data)
 	default:
 		return ScaleRespMsg{}, 0
@@ -445,14 +449,14 @@ func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		fmt.Println("Error:", err)
 		return ScaleRespMsg{}, 0
 	}
-	return ScaleRespMsg{ScaleId: scaleId, MsgType: GET_AP_LIST_RESP, MsgBody: jsonData}, len(data)
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_AP_LIST_RESP, MsgBody: jsonData}, len(data)
 }
 
 func handleConnectApResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), CONNECT_AP_OK_RESP) { // success
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: CONNECT_AP_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "ok"}, len(data)
 	} else if strings.Contains(string(data), "+CWJAP:") { // fail
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: CONNECT_AP_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
 		return ScaleRespMsg{}, 0
 	}
@@ -465,17 +469,17 @@ func handleRescanApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleSetWifiDynamicIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), SET_WIFI_DYNAMIC_IP_OK_RESP) { // success
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "ok"}, len(data)
 	} else { // unkown
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
 func handleSetWifiStaticIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), SET_WIFI_STATIC_IP_OK_RESP) { // success
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: SET_WIFI_STATIC_IP_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_STATIC_IP_RESP, MsgBody: "ok"}, len(data)
 	} else { // unkown
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: SET_WIFI_STATIC_IP_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_STATIC_IP_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
@@ -517,9 +521,9 @@ func handleGetIpInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 			return ScaleRespMsg{}, len(data)
 		}
 		ipInfoStr, _ := json.MarshalToString(ipInfo)
-		return ScaleRespMsg{GET_IP_INFO_RESP, ipInfoStr, scaleId}, len(data)
+		return ScaleRespMsg{m.GET_IP_INFO_RESP, ipInfoStr, scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: GET_IP_INFO_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_IP_INFO_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
 		return ScaleRespMsg{}, 0
 	}
@@ -527,16 +531,16 @@ func handleGetIpInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleModifyBtNameResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if bytes.Contains(data, []byte(MODIFY_BT_OK_RESP)) {
-		return ScaleRespMsg{MODIFY_BT_NAME_RESP, "ok", scaleId}, len(data)
+		return ScaleRespMsg{m.MODIFY_BT_NAME_RESP, "ok", scaleId}, len(data)
 	} else {
-		return ScaleRespMsg{MODIFY_BT_NAME_RESP, "fail", scaleId}, len(data)
+		return ScaleRespMsg{m.MODIFY_BT_NAME_RESP, "fail", scaleId}, len(data)
 	}
 }
 
 func handleSendDataToBTResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	return ScaleRespMsg{SEND_DATA_TO_BT_RESP, string(data), scaleId}, len(data)
+	return ScaleRespMsg{m.SEND_DATA_TO_BT_RESP, string(data), scaleId}, len(data)
 }
 
 func handleSendDataToWifiResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	return ScaleRespMsg{SEND_DATA_TO_WIFI_RESP, string(data), scaleId}, len(data)
+	return ScaleRespMsg{m.SEND_DATA_TO_WIFI_RESP, string(data), scaleId}, len(data)
 }

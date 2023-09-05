@@ -6,7 +6,10 @@ import (
 
 	"go.bug.st/serial"
 
+	"tmaxsrv/comm"
 	"tmaxsrv/log"
+	"tmaxsrv/picker"
+	"tmaxsrv/util"
 )
 
 const (
@@ -29,23 +32,24 @@ var RESP_SERIAL_ERROR = []byte{0x5a, 0xa5, 0x00, 0x01, 0x7f, 0xBD, 0x86, 0x1C, 0
 // packageOffset: the package start position
 // packLen: the number of bytes in the package that scanned
 // shouldRemoveLen: the number of bytes should be removed, containing the no use data in the buffer
-type packPickerFn func(buf []byte, dataLen int) (packOffset uint, packLen uint, shouldRemoveLen uint, pack Packet)
+// type packPickerFn func(buf []byte, dataLen int) (packOffset uint, packLen uint, shouldRemoveLen uint, pack comm.Packet)
 
 type TSerial struct {
 	// com port
 	port serial.Port
 	// send to scale channel, message will be json string
-	sendCh   chan []byte
-	recvCh   chan Packet
-	queue    *CircularBuffer
-	pickerFn packPickerFn
-	baud     int    // for calculating time out
-	tmpbuf   []byte // for storing temporary data read from scale
-	toQuit   bool   // for informing the read/write goroutine to quit
+	sendCh     chan []byte
+	recvCh     chan comm.Packet
+	queue      *util.CircularBuffer
+	pickerFn   picker.PickerFunc
+	baud       int    // for calculating time out
+	tmpbuf     []byte // for storing temporary data read from scale
+	toQuit     bool   // for informing the read/write goroutine to quit
+	maxPackLen int    // max package size that scale can receive on time
 }
 
 // NewScale creates a new scale
-func NewSerial(pconf ComInfo, pickerFn packPickerFn) (*TSerial, error) {
+func NewSerial(pconf ComInfo, pickerFn picker.PickerFunc) (*TSerial, error) {
 	if pickerFn == nil {
 		return nil, fmt.Errorf("user NewSerial(), should provide a picker function")
 	}
@@ -63,8 +67,8 @@ func NewSerial(pconf ComInfo, pickerFn packPickerFn) (*TSerial, error) {
 	s := &TSerial{
 		port:     port,
 		sendCh:   make(chan []byte, SEND_CH_SIZE),
-		recvCh:   make(chan Packet, RECV_CH_SIZE),
-		queue:    NewCircularBuffer(QUEUE_SIZE),
+		recvCh:   make(chan comm.Packet, RECV_CH_SIZE),
+		queue:    util.NewCircularBuffer(QUEUE_SIZE),
 		pickerFn: pickerFn,
 		baud:     pconf.Baud,
 		tmpbuf:   make([]byte, TMP_BUF_SIZE),
@@ -111,7 +115,7 @@ func IsClosed(ch <-chan []byte) bool {
 	return false
 }
 
-func IsPacketChClosed(ch <-chan Packet) bool {
+func IsPacketChClosed(ch <-chan comm.Packet) bool {
 	select {
 	case <-ch:
 		return true
@@ -124,7 +128,7 @@ func IsPacketChClosed(ch <-chan Packet) bool {
 func (s *TSerial) Write(data []byte) error {
 	if len(s.sendCh) >= SEND_CH_SIZE {
 		log.Log.Error("sendCh is full")
-		return errFull
+		return util.ErrFull
 	}
 	s.sendCh <- data
 	return nil
@@ -136,7 +140,7 @@ func (s *TSerial) Write(data []byte) error {
 // reads from this goroutine.
 func (c *TSerial) read() {
 	packCnt := 0
-	//readTimeOut := time.Duration(float64(256)*1000/float64(c.baud)) * time.Millisecond // read 256 bytes time
+	// readTimeOut := time.Duration(float64(256)*1000/float64(c.baud)) * time.Millisecond // read 256 bytes time
 	for {
 		if c.toQuit {
 			break // quit immediately
@@ -151,7 +155,7 @@ func (c *TSerial) read() {
 		if n, err := c.readScale(); err != nil { // data will be stored in the queue
 			log.Log.Errorf("@TSerial read(), err: %v\n", err)
 			if !IsPacketChClosed(c.recvCh) {
-				c.recvCh <- Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
+				c.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
 			}
 			time.Sleep(10 * time.Second) // to avoid sending error too often to UI
 			continue
@@ -185,10 +189,10 @@ func (s *TSerial) readScale() (int, error) {
 		log.Log.Errorf("Error reading scale: %v", err)
 		return 0, err
 	}
-	//fmt.Printf("data:%v", string(tmpBuf))
+	// fmt.Printf("data:%v", string(tmpBuf))
 
 	if s.queue.IsFull() { // FIXME: should we handle this error with this way?
-		s.queue.DequeueN(s.queue.capacity) // handle abnormal case
+		s.queue.DequeueN(s.queue.Capacity) // handle abnormal case
 	}
 
 	if n > 0 {

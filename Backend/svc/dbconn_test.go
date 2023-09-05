@@ -65,8 +65,10 @@ func TestDbScaleConn_InsertScaleConn(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{name: "insert scale connection", d: db, args: args{conn: ScaleConnMedia{ScaleModel: "QTP", ScaleSn: "1234", TMedia: MEDIA_COM, MediaConf: MediaConf{Type: MEDIA_COM,
-			MediaInfoJson: `"DevPath":"COM6", "Baud": 9600, "DataBits": 8, "StopBits": 1, "Parity": 0`}}}, wantErr: false},
+		{name: "insert scale connection", d: db, args: args{conn: ScaleConnMedia{ScaleModel: "QTP", ScaleSn: "1234", TMedia: MEDIA_COM, MediaConf: MediaConf{
+			Type:          MEDIA_COM,
+			MediaInfoJson: `"DevPath":"COM6", "Baud": 9600, "DataBits": 8, "StopBits": 1, "Parity": 0`,
+		}}}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -88,8 +90,10 @@ func TestDbScaleConn_UpdateScaleConn(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{name: "update scale connection", d: db, args: args{conn: ScaleConnMedia{ScaleModel: "QTP", ScaleSn: "1234", TMedia: MEDIA_COM, MediaConf: MediaConf{Type: MEDIA_COM,
-			MediaInfoJson: `"DevPath":"COM6", "Baud": 115200, "DataBits": 8, "StopBits": 1, "Parity": 0`}}}, wantErr: false},
+		{name: "update scale connection", d: db, args: args{conn: ScaleConnMedia{ScaleModel: "QTP", ScaleSn: "1234", TMedia: MEDIA_COM, MediaConf: MediaConf{
+			Type:          MEDIA_COM,
+			MediaInfoJson: `"DevPath":"COM6", "Baud": 115200, "DataBits": 8, "StopBits": 1, "Parity": 0`,
+		}}}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -111,8 +115,10 @@ func TestDbScaleConn_DeleteScaleConn(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{name: "delete scale connection", d: db, args: args{inConn: ScaleConnMedia{ScaleModel: "QTP", ScaleSn: "1234", TMedia: MEDIA_COM, MediaConf: MediaConf{Type: MEDIA_COM,
-			MediaInfoJson: `"DevPath":"COM6", "Baud": 9600, "DataBits": 8, "StopBits": 1, "Parity": 0`}}}, wantErr: false},
+		{name: "delete scale connection", d: db, args: args{inConn: ScaleConnMedia{ScaleModel: "QTP", ScaleSn: "1234", TMedia: MEDIA_COM, MediaConf: MediaConf{
+			Type:          MEDIA_COM,
+			MediaInfoJson: `"DevPath":"COM6", "Baud": 9600, "DataBits": 8, "StopBits": 1, "Parity": 0`,
+		}}}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

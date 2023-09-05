@@ -3,6 +3,10 @@
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
+    "go.useLanguageServer": true,
+    "gopls": {
+	    "formatting.gofumpt": true,
+    },
     "configurations": [
         {
             "name": "Launch file",

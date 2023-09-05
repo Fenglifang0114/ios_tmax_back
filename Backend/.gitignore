@@ -7,7 +7,7 @@
 *.dll
 *.so
 *.dylib
-
+tmaxsrv
 ui
 # backup file
 *.bak
@@ -35,3 +35,8 @@ cpu_profile
 #sqlite db file
 *.db
 
+#printer format file
+*.fmt
+
+#swap file
+*-swp

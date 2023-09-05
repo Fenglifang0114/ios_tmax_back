@@ -19,26 +19,48 @@ type printInfo struct {
 	printerName     [23]byte
 	formatNum       uint8
 	everyFormatInfo [12]InfoStr
+	varInfo         [30]VarStruct
+}
+
+type printInfoTmax struct {
+	printerName     [23]byte
+	formatNum       uint8
+	everyFormatInfo [12]InfoStr
 	varInfo         [120]VarStruct
 }
 
 const (
-	headBufLen = 0x558
+	headBufLen = 468
 )
 
 func ParserFmtToFile(utf8Buff string) bool {
+	buffer := ParserFmtToBuf(utf8Buff)
 
+	// 7.创建bin文件
+
+	if creatFile("formatBin.bin", buffer) {
+		fmt.Println("creat binary file success")
+		return true
+	} else {
+		fmt.Println("creat binary file fail")
+		return false
+	}
+
+	// 8.写数据到串口
+}
+
+func ParserFmtToBuf(utf8Buff string) *bytes.Buffer {
 	var clearList []VarStruct
-	VarList = clearList //用于清空数据
+	VarList = clearList // 用于清空数据
 
 	var clearTable ScaleVarOrder
-	VarTable = clearTable //用于清空数据
+	VarTable = clearTable // 用于清空数据
 
 	var FinalFormatInfo printInfo
-	var everyBufLen []int                    //每个打印格式的命令集合
-	totalbuffer := bytes.NewBufferString("") //打印命令集合
+	var everyBufLen []int                    // 每个打印格式的命令集合
+	totalbuffer := bytes.NewBufferString("") // 打印命令集合
 	dataCamp := bytes.NewBufferString("")
-	TotalVarDataIndex := 0 //每个打印格式信息的索引
+	TotalVarDataIndex := 0 // 每个打印格式信息的索引
 
 	fillchar := 0xff
 	lastVarPos := 0
@@ -74,21 +96,21 @@ func ParserFmtToFile(utf8Buff string) bool {
 	lastVarNum = len(VarList)
 	lastAddr = div + lastAddr
 
-	//4.将变量信息写入结构体
+	// 4.将变量信息写入结构体
 	for i := 0; i < len(VarList); i++ {
 		FinalFormatInfo.varInfo[i] = VarList[i]
 	}
-	//5.转换为bin文件
+	// 5.转换为bin文件
 	buffer := binaryData(FinalFormatInfo)
 	binary.Write(buffer, binary.LittleEndian, totalbuffer.Bytes())
 
-	if buffer.Len() < (8192 - 8) {
-		for i := buffer.Len(); i < (8192 - 8); i++ {
+	if buffer.Len() < (2048 - 8) {
+		for i := buffer.Len(); i < (2048 - 8); i++ {
 			binary.Write(buffer, binary.LittleEndian, byte(fillchar))
 		}
 	}
 
-	//6.写结尾5a a5 a5 5a 00 00 00 00
+	// 6.写结尾5a a5 a5 5a 00 00 00 00
 	fillTail := []byte{0x5a, 0xa5, 0xa5, 0x5a, 0x00, 0x00, 0x00, 0x00}
 	dataCamp1 := bytes.NewBufferString("")
 
@@ -98,17 +120,7 @@ func ParserFmtToFile(utf8Buff string) bool {
 
 	binary.Write(buffer, binary.LittleEndian, dataCamp1.Bytes())
 
-	//7.创建bin文件
-
-	if creatFile("formatBin.bin", buffer) {
-		fmt.Println("creat binary file success")
-		return true
-	} else {
-		fmt.Println("creat binary file fail")
-		return false
-	}
-
-	//8.写数据到串口
+	return buffer
 }
 
 // 转二进制

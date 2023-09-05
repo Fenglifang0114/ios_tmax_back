@@ -1,4 +1,4 @@
-package svc
+package util
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ func TestQueue(t *testing.T) {
 
 	// can't insert new data.
 	assert.Error(t, q.Enqueue(0))
-	assert.Equal(t, errFull, q.Enqueue(0))
+	assert.Equal(t, ErrFull, q.Enqueue(0))
 
 	assert.Equal(t, size, q.GetDataLen())
 	for i := 0; i < size; i++ {

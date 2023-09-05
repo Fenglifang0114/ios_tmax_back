@@ -50,7 +50,6 @@ func NewWsServer() *WsServer {
 }
 
 func (s *WsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
 	if r.URL.Path != "/tmax" {
 		httpCode := http.StatusInternalServerError
 		reasePhrase := http.StatusText(httpCode)
@@ -86,13 +85,15 @@ func (s *WsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Log.Infof("client connect : %v", wsconn.RemoteAddr())
-	c := &Client{srvMgr: mSrvMgr, conn: wsconn, sendCh: make(chan []byte, CLIENT_SEND_CH_SIZE),
-		recvCh: make(chan []byte, CLIENT_RECV_CH_SIZE), scaleId: rqScaleId}
+	c := &Client{
+		srvMgr: mSrvMgr, conn: wsconn, sendCh: make(chan []byte, CLIENT_SEND_CH_SIZE),
+		recvCh: make(chan []byte, CLIENT_RECV_CH_SIZE), scaleId: rqScaleId,
+	}
 	c.ID = GenUserId()
 	c.Addr = wsconn.RemoteAddr().String()
 	c.EnterAt = time.Now()
 	mSrvMgr.register <- c
-	//defer func() { mHub.unregister <- c }()
+	// defer func() { mHub.unregister <- c }()
 	go c.writePump()
 	go c.readPump()
 }

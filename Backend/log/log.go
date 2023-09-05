@@ -7,8 +7,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var Log *log.Logger
-var once sync.Once
+var (
+	Log  *log.Logger
+	once sync.Once
+)
 
 func init() {
 	// once ensures the singleton is initialized only once
@@ -23,7 +25,8 @@ func init() {
 				FieldMap: log.FieldMap{
 					"FieldKeyTime":  "@timestamp",
 					"FieldKeyLevel": "@level",
-					"FieldKeyMsg":   "@message"},
+					"FieldKeyMsg":   "@message",
+				},
 			},
 		}
 		log.SetReportCaller(true)

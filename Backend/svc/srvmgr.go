@@ -44,9 +44,11 @@ type SrvMgr struct {
 	uiConfig  *UiConfig
 }
 
-var gIsKeyValid bool
-var gMachineId string
-var gLicValidDate string
+var (
+	gIsKeyValid   bool
+	gMachineId    string
+	gLicValidDate string
+)
 
 func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	productPb := NewProductRecProvider()
@@ -104,7 +106,7 @@ func (h *SrvMgr) Run() {
 			}
 			if !isRegisted {
 				h.clients[client] = true
-				//if scaleId != 0 { // 0 reserved for common information channel, 9999 reserved for legacy MCU scale, only support one scale with this ID
+				// if scaleId != 0 { // 0 reserved for common information channel, 9999 reserved for legacy MCU scale, only support one scale with this ID
 				h.clientOfScales[h.scales[scaleId]] = client
 				if scaleId != 0 { // id 0 is reserved for common information channel
 					h.scales[scaleId].SetClient(client)
@@ -146,7 +148,7 @@ func (h *SrvMgr) Run() {
 			json.Unmarshal(userMessage, &data)
 			scaleId := new(big.Int).SetBytes(data["scaleId"]).Int64()
 			if scaleId == 0 { // not for scale communication but for information purposes
-				//request := parseMsg(string(data["message"]))
+				// request := parseMsg(string(data["message"]))
 				// TODO: send request to scale manager to get scale list or get serial ports
 				// parse request for "get port list", "get scale list", "update scale conneciton",
 				//                   "create a new scale", delete a scale" or "close application"
@@ -159,7 +161,7 @@ func (h *SrvMgr) Run() {
 				} else if scale.Id != scaleId { // something wrong about scale id
 					l.Log.Errorf("scale id: %v is not consistent with the id: %v recorded in the hub", scaleId, scale.Id)
 				} else {
-					//send data to the scale
+					// send data to the scale
 					// if req, err := parseToScaleReq(string(data["message"])); err == nil {
 					// 	go procToScaleReq(req, scaleId, h, scale) // TODO: handle error
 					// }
@@ -189,7 +191,7 @@ func (h *SrvMgr) Run() {
 			client := h.clientOfScales[h.scales[scaleMessage.ScaleId]]
 			if client != nil { // handle the transient situation
 				outData, _ := json.Marshal(scaleMessage)
-				//fmt.Printf("%v\n", scaleMessage)
+				// fmt.Printf("%v\n", scaleMessage)
 				l.Log.Debugf("%v\n", string(outData))
 				client.sendCh <- outData
 			}

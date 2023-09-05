@@ -15,11 +15,13 @@ func Test_parseNetworkInfo(t *testing.T) {
 		args args
 		want []CWLAPResponse
 	}{
-		{name: "Test_parseNetworkInfo",
+		{
+			name: "Test_parseNetworkInfo",
 			args: args{[]byte("+CWLAP:(3,\"Test1\",-92,\"bc:e2:65:c1:22:b0\",1,18,2)\r\n+CWLAP:(3,\"Test2\",-92,\"bc:e2:65:c1:22:bb\",1,18,2)\r\n\r\nOK\r\n")},
 			want: []CWLAPResponse{{3, "Test1", -92, "bc:e2:65:c1:22:b0", 1, 18, 2}, {3, "Test2", -92, "bc:e2:65:c1:22:bb", 1, 18, 2}},
 		},
-		{name: "Test_parseNetworkInfo",
+		{
+			name: "Test_parseNetworkInfo",
 			args: args{[]byte("+CWLAP:(3,\"Test2\",-88,\"bc:e2:65:c1:22:b2\",2,19,0)\r\n")},
 			want: nil,
 		},
@@ -42,7 +44,8 @@ func Test_convertResponsesToInfos(t *testing.T) {
 		args args
 		want []APInfo
 	}{
-		{name: "Test_convertResponsesToInfos",
+		{
+			name: "Test_convertResponsesToInfos",
 			args: args{[]CWLAPResponse{{2, "test1", -65, "11:22:33:44:55:66", 2, 66, 1}, {2, "test2", -66, "11:22:33:44:55:68", 3, 67, 2}}},
 			want: []APInfo{{0, "test1", 3, "11:22:33:44:55:66", "NONE"}, {1, "test2", 3, "11:22:33:44:55:68", "WEP"}},
 		},

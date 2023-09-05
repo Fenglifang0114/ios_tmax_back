@@ -3,6 +3,8 @@ package svc
 import (
 	"reflect"
 	"testing"
+
+	"tmaxsrv/comm"
 )
 
 func TestNewScale(t *testing.T) {
@@ -21,11 +23,11 @@ func TestNewScale(t *testing.T) {
 		want    *Scale
 		wantErr bool
 	}{
-		{name: "new scale test", args: args{scaleMgr: mgr, conn: scaleConn}, want: nil, wantErr: false},
+		{name: "new scale test", args: args{scaleMgr: mgr, conn: scaleConn, model: ""}, want: nil, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewScale(tt.args.scaleMgr, scaleConn, tt.args.model, tt.args.sn, true)
+			got, err := NewScale(tt.args.scaleMgr, scaleConn, comm.SCALE_T2200, tt.args.model, tt.args.sn, true)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewScale() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -106,7 +108,7 @@ func Test_writeScale(t *testing.T) {
 	scaleMgr := NewScaleMgr()
 	mediaConf := `{"Mode":{"BaudRate":9600,"DataBits":8,"Parity":0,"StopBits":0,"InitialStatusBits":null},"PortName":"COM6"}`
 	scaleConn := &ScaleConnMedia{ScaleModel: "ATP", ScaleSn: "123456", TMedia: MEDIA_COM, MediaConf: MediaConf{Type: MEDIA_COM, MediaInfoJson: mediaConf}}
-	myscale, _ := NewScale(scaleMgr, scaleConn, "ATP", "123456", true)
+	myscale, _ := NewScale(scaleMgr, scaleConn, comm.SCALE_T2200, "ATP", "123456", true)
 
 	type args struct {
 		c    *Scale
@@ -163,7 +165,7 @@ func TestScale_RegisterNotif(t *testing.T) {
 	scaleMgr := NewScaleMgr()
 	mediaConf := `{"Mode":{"BaudRate":9600,"DataBits":8,"Parity":0,"StopBits":0,"InitialStatusBits":null},"PortName":"COM6"}`
 	scaleConn := &ScaleConnMedia{ScaleModel: "ATP", ScaleSn: "123456", TMedia: MEDIA_COM, MediaConf: MediaConf{Type: MEDIA_COM, MediaInfoJson: mediaConf}}
-	myscale, _ := NewScale(scaleMgr, scaleConn, "ATP", "123456", true)
+	myscale, _ := NewScale(scaleMgr, scaleConn, comm.SCALE_T2200, "ATP", "123456", true)
 
 	type args struct {
 		msgType RespMsgType
@@ -189,7 +191,7 @@ func TestScale_UnRegisterNotif(t *testing.T) {
 	_ = NewSrvMgr(scaleMgr, make(chan bool))
 	mediaConf := `{"Mode":{"BaudRate":9600,"DataBits":8,"Parity":0,"StopBits":0,"InitialStatusBits":null},"PortName":"COM6"}`
 	scaleConn := &ScaleConnMedia{ScaleModel: "ATP", ScaleSn: "123456", TMedia: MEDIA_COM, MediaConf: MediaConf{Type: MEDIA_COM, MediaInfoJson: mediaConf}}
-	myscale, _ := NewScale(scaleMgr, scaleConn, "ATP", "123456", true)
+	myscale, _ := NewScale(scaleMgr, scaleConn, comm.SCALE_T2200, "ATP", "123456", true)
 
 	type args struct {
 		msgType RespMsgType

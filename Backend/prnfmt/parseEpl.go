@@ -36,11 +36,11 @@ const (
 	eplLineEnd     = "\r\n"
 	txtLineHead    = "A"
 	innerLineSep   = ","
-	reverted       = "R"  //黑色背景白色字体
-	textBold       = "B"  //字体加粗
-	normal         = "N"  //字体正常
-	revertedBold   = "W"  //反白加粗
-	textSep        = "\"" //文本分割符""
+	reverted       = "R"  // 黑色背景白色字体
+	textBold       = "B"  // 字体加粗
+	normal         = "N"  // 字体正常
+	revertedBold   = "W"  // 反白加粗
+	textSep        = "\"" // 文本分割符""
 	LINE_HEAD      = "LS"
 	RECTANGLE_HEAD = "X"
 	ROTATE_ZB      = "ZB"
@@ -49,38 +49,39 @@ const (
 	LANGUAGE_EPL   = "EPL"
 )
 
-var VarList []VarStruct
-var VarTable ScaleVarOrder
+var (
+	VarList  []VarStruct
+	VarTable ScaleVarOrder
+)
 
 func ParseEplLines(buff string, dataBuffer *bytes.Buffer, lastvarPos int) *bytes.Buffer {
-	//获取VarTable.json和barcode.xlsx文件路径
+	// 获取VarTable.json和barcode.xlsx文件路径
 	file, _ := exec.LookPath(os.Args[0])
 	path, _ := filepath.Abs(file)
 	index := strings.LastIndex(path, string(os.PathSeparator))
 	currentPath := path[:index]
-	currentPath = currentPath + "\\" + comm.SRV_DATA_PATH
-	VarTable = ReadTableFromFile(currentPath + "/varTable.json") //获取变量ID表
+	currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	VarTable = ReadTableFromFile(currentPath + "/varTable.json") // 获取变量ID表
 
-	//处理字符串并解析
+	// 处理字符串并解析
 	buf := dataBuffer
 	var lines []string
 	scanner := bufio.NewScanner(strings.NewReader(buff))
 
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text()) //每行字符串添加到切片
+		lines = append(lines, scanner.Text()) // 每行字符串添加到切片
 	}
 	for i := 0; i < len(lines); i++ {
 		rowArray := strings.Split(lines[i], ",")
 		buf, lastvarPos = EplLines(rowArray, buf, lastvarPos, currentPath)
 	}
 
-	//写入打印命令结尾
+	// 写入打印命令结尾
 	buf.WriteString(eplTail)
 	return buf
 }
 
 func EplLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, path string) (*bytes.Buffer, int) {
-
 	switch line[0] {
 	case "P":
 		ParseEplPage(line, dataBuffer)
@@ -110,11 +111,9 @@ func EplLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, path stri
 		}
 	}
 	return dataBuffer, lastvarPos
-
 }
 
 func ParseEplPage(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
-
 	widthHead := "q"
 	hightHead := "Q"
 	paperGap := ",24+8"
@@ -125,12 +124,12 @@ func ParseEplPage(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
 	if strings.Contains(tempRowArr[2], "\r\n") {
 		tempRowArr[2] = strings.Replace(tempRowArr[2], "\r\n", "", 1)
 	}
-	dataBuffer.WriteString(tempRowArr[2]) //高度
+	dataBuffer.WriteString(tempRowArr[2]) // 高度
 	dataBuffer.WriteString(paperGap)
 	dataBuffer.WriteString(eplLineEnd)
 
 	dataBuffer.WriteString(widthHead)
-	dataBuffer.WriteString(tempRowArr[1]) //宽度
+	dataBuffer.WriteString(tempRowArr[1]) // 宽度
 	dataBuffer.WriteString(eplLineEnd)
 
 	// fmt.Println(dataBuffer.String())
@@ -152,7 +151,6 @@ func ParseEplRotate(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer
 
 // L,63,133,153,133,2,0,0
 func ParseEplLine(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
-
 	dataBuffer.WriteString(LINE_HEAD)
 	dataBuffer.WriteString(tempRowArr[1])
 	dataBuffer.WriteString(innerLineSep)
@@ -171,7 +169,6 @@ func ParseEplLine(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
 
 // R,63,133,153,133,2,0,0
 func ParseEplRectangle(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
-
 	dataBuffer.WriteString(RECTANGLE_HEAD)
 	dataBuffer.WriteString(tempRowArr[1])
 	dataBuffer.WriteString(innerLineSep)
@@ -190,7 +187,6 @@ func ParseEplRectangle(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buf
 
 // TB,12,43,130,30,0,1,1,2,0,TEXT,TIME,0
 func ParseEplText(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
-
 	dataBuffer = TextVarPosInfo(tempRowArr, dataBuffer)
 	dataBuffer.WriteString(textSep)
 
@@ -206,7 +202,6 @@ func ParseEplText(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
 }
 
 func ParseEplVar(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int) (*bytes.Buffer, int) {
-
 	var tempVarData VarStruct
 	varId, isFind := findVarID(tempRowArr[11])
 
@@ -223,19 +218,16 @@ func ParseEplVar(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int) 
 			intAlign, err := strconv.Atoi(tempRowArr[13])
 			if err == nil {
 				tempVarData.align = uint16(intAlign)
-
 			}
 			intMaxLen, err := strconv.Atoi(tempRowArr[14])
 			if err == nil {
 				tempVarData.maxlen = uint16(intMaxLen)
-
 			}
 			VarList = append(VarList, tempVarData)
 			lastvarPos = int(tempVarData.endPos) + lastvarPos
 
 		} else {
 			dataBuffer, lastvarPos = VarDateTime(dataBuffer, lastvarPos, varId)
-
 		}
 
 		dataBuffer.WriteString(textSep)
@@ -250,25 +242,25 @@ func ParseEplVar(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int) 
 
 func TextVarPosInfo(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
 	dataBuffer.WriteString(txtLineHead)
-	dataBuffer.WriteString(tempRowArr[1]) //X
+	dataBuffer.WriteString(tempRowArr[1]) // X
 	dataBuffer.WriteString(innerLineSep)
 
-	dataBuffer.WriteString(tempRowArr[2]) //Y
+	dataBuffer.WriteString(tempRowArr[2]) // Y
 	dataBuffer.WriteString(innerLineSep)
 
-	dataBuffer.WriteString(tempRowArr[9]) //旋转
+	dataBuffer.WriteString(tempRowArr[9]) // 旋转
 	dataBuffer.WriteString(innerLineSep)
 
-	if tempRowArr[5] == "0" { //字体大小不能为0
+	if tempRowArr[5] == "0" { // 字体大小不能为0
 		tempRowArr[5] = "4"
 	}
-	dataBuffer.WriteString(tempRowArr[5]) //字体大小
+	dataBuffer.WriteString(tempRowArr[5]) // 字体大小
 	dataBuffer.WriteString(innerLineSep)
 
-	dataBuffer.WriteString(tempRowArr[6]) //宽度倍数
+	dataBuffer.WriteString(tempRowArr[6]) // 宽度倍数
 	dataBuffer.WriteString(innerLineSep)
 
-	dataBuffer.WriteString(tempRowArr[7]) //高度倍数
+	dataBuffer.WriteString(tempRowArr[7]) // 高度倍数
 	dataBuffer.WriteString(innerLineSep)
 
 	if tempRowArr[8] == "0" {
@@ -286,7 +278,6 @@ func TextVarPosInfo(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer
 	}
 
 	return dataBuffer
-
 }
 
 /*
@@ -295,23 +286,22 @@ func TextVarPosInfo(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer
 // content: TEXT,2,TEXT,0,TEXT,0,DATA,Net,01234567,3,8,TEXT,7,TEXT,8,DATA,Net,01234567,3,8
 
 func ParsEplBarcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int, path string) (*bytes.Buffer, int) {
-
 	lineHead := "B"
 	innerLineSep := ","
 	dataSep := "\""
-	bottom := "BC" //显示数据在条码下方，居中
+	bottom := "BC" // 显示数据在条码下方，居中
 	// noCode := "N"  //不显示数据
-	top := "TC" //显示数据在条码上方，居中（没有适配的打印机命令）
+	top := "TC" // 显示数据在条码上方，居中（没有适配的打印机命令）
 	parseContentArr := []string{}
 
 	dataBuffer.WriteString(lineHead)
-	dataBuffer.WriteString(tempRowArr[1]) //X
+	dataBuffer.WriteString(tempRowArr[1]) // X
 
 	dataBuffer.WriteString(innerLineSep)
-	dataBuffer.WriteString(tempRowArr[2]) //Y
+	dataBuffer.WriteString(tempRowArr[2]) // Y
 
 	dataBuffer.WriteString(innerLineSep)
-	dataBuffer.WriteString(tempRowArr[7]) //旋转
+	dataBuffer.WriteString(tempRowArr[7]) // 旋转
 
 	dataBuffer.WriteString(innerLineSep)
 	path = path + "\\" + BAR_CODE_EXCEL
@@ -319,11 +309,11 @@ func ParsEplBarcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos in
 	dataBuffer.WriteString(codeType)
 	dataBuffer.WriteString(innerLineSep)
 
-	dataBuffer.WriteString(tempRowArr[5]) //条码中窄条的宽度
+	dataBuffer.WriteString(tempRowArr[5]) // 条码中窄条的宽度
 	dataBuffer.WriteString(innerLineSep)
-	dataBuffer.WriteString(tempRowArr[5]) //条码中宽条的宽度 TTC中只送了一个宽度
+	dataBuffer.WriteString(tempRowArr[5]) // 条码中宽条的宽度 TTC中只送了一个宽度
 	dataBuffer.WriteString(innerLineSep)
-	dataBuffer.WriteString(tempRowArr[4]) //条码整体高度
+	dataBuffer.WriteString(tempRowArr[4]) // 条码整体高度
 	dataBuffer.WriteString(innerLineSep)
 	if tempRowArr[8] == top {
 		dataBuffer.WriteString(bottom)
@@ -331,7 +321,7 @@ func ParsEplBarcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos in
 		dataBuffer.WriteString(tempRowArr[8])
 	}
 	dataBuffer.WriteString(innerLineSep)
-	dataBuffer.WriteString(dataSep) //条码数据开始
+	dataBuffer.WriteString(dataSep) // 条码数据开始
 	for i := 9; i < len(tempRowArr); i++ {
 		parseContentArr = append(parseContentArr, tempRowArr[i])
 	}
@@ -360,10 +350,9 @@ func findVarID(name string) (int, bool) {
 	return id, isFind
 }
 
-//QR,248,176,1,6,1,,DATA,Net,000000,0,6,DATA,Unit_weight,000000,0,4,TEXT,SN9000,0
+// QR,248,176,1,6,1,,DATA,Net,000000,0,6,DATA,Unit_weight,000000,0,4,TEXT,SN9000,0
 
-//转换后 b100,200,Q,m2,s6,"123456789"  //Q 代表QR m2 代表模式2，样式， s6代表大小  “” 数据
-
+// 转换后 b100,200,Q,m2,s6,"123456789"  //Q 代表QR m2 代表模式2，样式， s6代表大小  “” 数据
 func ParsEplQRcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int) (*bytes.Buffer, int) {
 	lineHead := "b"
 	innerLineSep := ","
@@ -374,15 +363,15 @@ func ParsEplQRcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int
 
 	parseContentArr := []string{}
 	dataBuffer.WriteString(lineHead)
-	dataBuffer.WriteString(tempRowArr[1]) //X
+	dataBuffer.WriteString(tempRowArr[1]) // X
 	dataBuffer.WriteString(innerLineSep)
 
-	dataBuffer.WriteString(tempRowArr[2]) //Y
+	dataBuffer.WriteString(tempRowArr[2]) // Y
 	dataBuffer.WriteString(innerLineSep)
 
-	dataBuffer.WriteString(QRcodeType) //Q，
-	dataBuffer.WriteString(styleType)  //m2,
-	dataBuffer.WriteString(QRsize)     //s
+	dataBuffer.WriteString(QRcodeType) // Q，
+	dataBuffer.WriteString(styleType)  // m2,
+	dataBuffer.WriteString(QRsize)     // s
 
 	sizedata, err := strconv.Atoi(tempRowArr[4])
 	if err != nil {
@@ -390,16 +379,14 @@ func ParsEplQRcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int
 	}
 	if 0 < sizedata && sizedata < 99 {
 		dataBuffer.WriteString(tempRowArr[4]) // 二维码大小
-
 	} else {
 		dataBuffer.WriteString("6")
 	}
 	dataBuffer.WriteString(innerLineSep)
 
-	dataBuffer.WriteString(dataSep) //二维码数据开始
+	dataBuffer.WriteString(dataSep) // 二维码数据开始
 	for i := 7; i < len(tempRowArr); i++ {
 		parseContentArr = append(parseContentArr, tempRowArr[i])
-
 	}
 
 	if len(parseContentArr) == 0 {
@@ -410,7 +397,6 @@ func ParsEplQRcode(tempRowArr []string, dataBuffer *bytes.Buffer, lastvarPos int
 	dataBuffer.WriteString(dataSep)
 	dataBuffer.WriteString(eplLineEnd)
 	return dataBuffer, lastvarPos
-
 }
 
 func VarDateTime(dataBuffer *bytes.Buffer, lastvarPos int, varId int) (*bytes.Buffer, int) {
@@ -431,7 +417,6 @@ func VarDateTime(dataBuffer *bytes.Buffer, lastvarPos int, varId int) (*bytes.Bu
 			lastvarPos = int(tempVarData.endPos) + lastvarPos
 
 		}
-
 	} else {
 		for i := 4; i < 7; i++ {
 			if i == 4 {
@@ -490,13 +475,10 @@ func FindVarInfo(parseContentArr []string, dataBuffer *bytes.Buffer, lastvarPos 
 				} else {
 					dataBuffer, lastvarPos = VarDateTime(dataBuffer, lastvarPos, varId)
 				}
-
 			} else {
 				fmt.Println("Var name is not find ")
 			}
 		}
-
 	}
 	return dataBuffer, lastvarPos
-
 }

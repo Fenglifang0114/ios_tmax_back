@@ -6,6 +6,7 @@ import (
 
 	"go.bug.st/serial"
 
+	"tmaxsrv/comm"
 	"tmaxsrv/log"
 )
 
@@ -67,41 +68,29 @@ func init() {
 	userModified.Register(createModifyUserNotifier)
 }
 
-type portListedNotifier struct {
-}
+type portListedNotifier struct{}
 
-type scaleListedNotifier struct {
-}
+type scaleListedNotifier struct{}
 
-type addScaleNotifier struct {
-}
+type addScaleNotifier struct{}
 
-type modifyScaleNotifier struct {
-}
+type modifyScaleNotifier struct{}
 
-type productListedNotifier struct {
-}
+type productListedNotifier struct{}
 
-type addProductNotifier struct {
-}
+type addProductNotifier struct{}
 
-type delProductNotifier struct {
-}
+type delProductNotifier struct{}
 
-type modifyProductNotifier struct {
-}
+type modifyProductNotifier struct{}
 
-type userListedNotifier struct {
-}
+type userListedNotifier struct{}
 
-type addUserNotifier struct {
-}
+type addUserNotifier struct{}
 
-type delUserNotifier struct {
-}
+type delUserNotifier struct{}
 
-type modifyUserNotifier struct {
-}
+type modifyUserNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event
@@ -122,7 +111,7 @@ func (p scaleListedNotifier) Handle(scaleMgr *ScaleMgr) {
 	// Do something for this event
 	log.Log.Debug("Handle scaleListedNotifier called")
 	// Do something with this event
-	//scaleMedias, _ := NewScaleConnProvider().GetScaleConnsList()
+	// scaleMedias, _ := NewScaleConnProvider().GetScaleConnsList()
 	scaleMedias := scaleMgr.medias
 	var scalesStr string
 	var err error
@@ -178,7 +167,7 @@ func (s *ScaleMgr) Run() {
 			if conn.scale == nil {
 				// new scale and assign scaleid to the instance
 				var scale *Scale
-				scale, _ = NewScale(s, conn, conn.ScaleModel, conn.ScaleSn, false) // TODO: check this blocks
+				scale, _ = NewScale(s, conn, comm.SCALE_TMAX, conn.ScaleModel, conn.ScaleSn, false) // FIXME: correct scale type
 				scale.Id = nextScaleId
 				conn.scale = scale
 				conn.ScaleId = scale.Id
@@ -268,7 +257,7 @@ func getPortsList() ([]string, error) {
 		log.Log.Error(err)
 	}
 	if len(ports) == 0 {
-		//log.Fatal("No serial ports found!")
+		// log.Fatal("No serial ports found!")
 	}
 	// for _, port := range ports {
 	// 	fmt.Printf("Found port: %v\n", port)

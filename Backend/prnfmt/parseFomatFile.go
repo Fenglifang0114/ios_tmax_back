@@ -21,20 +21,18 @@ func GetFormatLines(fileNames string) ([]string, bool) {
 	f, err := os.Open(fileNames)
 	if err != nil {
 		panic("open file error")
-
 	}
-	defer f.Close() //打开文件出错处理
+	defer f.Close() // 打开文件出错处理
 	if nil == err {
-		buff := bufio.NewReader(f) //读入缓存
+		buff := bufio.NewReader(f) // 读入缓存
 		for {
 
-			line, err := buff.ReadString('\n') //以'\n'为结束符读入一行
+			line, err := buff.ReadString('\n') // 以'\n'为结束符读入一行
 			if err != nil || io.EOF == err {
 				break
 			}
 			if lineIdx == 0 && strings.Contains(line, "\ufeff") {
 				line = strings.Replace(line, "\ufeff", "", 1)
-
 			}
 			formatArray = append(formatArray, line)
 		}
@@ -62,10 +60,8 @@ func ReadTableFromFile(tableFilePath string) ScaleVarOrder {
 	return tempTable
 }
 
-//读取excel文件，返回行列数组
-
+// 读取excel文件，返回行列数组
 func getBarCodeTypeId(filename string, tempLan string, tempType string) string {
-
 	ret := ""
 	f, err := excelize.OpenFile(filename)
 	if err != nil {
@@ -85,7 +81,7 @@ func getBarCodeTypeId(filename string, tempLan string, tempType string) string {
 	isOk := false
 
 	for i, row := range rows {
-		if i == 0 { //取得第一行的所有数据---execel表头
+		if i == 0 { // 取得第一行的所有数据---execel表头
 			cols = append(cols, row...)
 			isOk = true
 			// fmt.Println("列信息", cols)
@@ -110,7 +106,7 @@ func getBarCodeTypeId(filename string, tempLan string, tempType string) string {
 		}
 
 		for i, col := range cols1 {
-			if i == 1 { //取得第一行的所有数据---execel表头
+			if i == 1 { // 取得第一行的所有数据---execel表头
 				row1 = append(row1, col...)
 				isOk = true
 				// fmt.Println("行信息", row1)

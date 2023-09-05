@@ -1,4 +1,6 @@
 package build
 
-var Time string
-var User string
+var (
+	Time string
+	User string
+)

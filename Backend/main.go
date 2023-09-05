@@ -29,7 +29,7 @@ func main() {
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", INSTANCE_PORT))
 	if err != nil {
 		if strings.Index(err.Error(), "in use") != -1 {
-			//optionally send command line arguments to the other instance
+			// optionally send command line arguments to the other instance
 			fmt.Fprintln(os.Stderr, "Already running.")
 			return
 		} else {

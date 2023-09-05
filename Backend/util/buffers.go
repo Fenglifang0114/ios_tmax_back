@@ -1,28 +1,37 @@
-package svc
+package util
 
 import (
 	"fmt"
+
+	"tmaxsrv/comm"
 )
 
 type CmdID uint16
 
-type CmdMap map[CmdID]RespMsgType
+type CmdMap map[CmdID]comm.RespMsgType
 
-var cmdsMap CmdMap
-var cmdsRespMap CmdMap
+var (
+	CmdsMap     CmdMap
+	CmdsRespMap CmdMap
+)
 
-func (m CmdMap) Set(id CmdID, s string) {
-	m[id] = RespMsgType(s)
+func init() {
+	CmdsMap = make(CmdMap)
+	CmdsRespMap = make(CmdMap)
 }
 
-func GetString(id CmdID) (string, error) {
-	s, ok := cmdsMap[id]
-	if ok {
-		return string(s), nil
-	} else {
-		return "", fmt.Errorf("not found id: %v", id)
-	}
+func (m CmdMap) Set(id CmdID, s comm.RespMsgType) {
+	m[id] = s
 }
+
+// func GetString(id CmdID) (string, error) {
+// 	s, ok := cmdsMap[id]
+// 	if ok {
+// 		return s.(string), nil
+// 	} else {
+// 		return "", fmt.Errorf("not found id: %v", id)
+// 	}
+// }
 
 type RingBuffers map[string]*CircularBuffer
 

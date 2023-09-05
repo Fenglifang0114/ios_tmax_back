@@ -139,7 +139,8 @@ type ProductModified struct {
 // Register adds an event handler for this event
 func (u *ProductModified) Register(handler interface {
 	Handle(mgr *SrvMgr, payload ReqModifyProduct)
-}) {
+},
+) {
 	u.handlers = append(u.handlers, handler)
 }
 
@@ -161,7 +162,8 @@ type ProductDeleted struct {
 // Register adds an event handler for this event
 func (u *ProductDeleted) Register(handler interface {
 	Handle(mgr *SrvMgr, payload ReqDelProduct)
-}) {
+},
+) {
 	u.handlers = append(u.handlers, handler)
 }
 
@@ -221,7 +223,8 @@ type UserModified struct {
 // Register adds an event handler for this event
 func (u *UserModified) Register(handler interface {
 	Handle(mgr *SrvMgr, payload ReqModifyUser)
-}) {
+},
+) {
 	u.handlers = append(u.handlers, handler)
 }
 
@@ -243,7 +246,8 @@ type UserDeleted struct {
 // Register adds an event handler for this event
 func (u *UserDeleted) Register(handler interface {
 	Handle(mgr *SrvMgr, payload ReqDelUser)
-}) {
+},
+) {
 	u.handlers = append(u.handlers, handler)
 }
 

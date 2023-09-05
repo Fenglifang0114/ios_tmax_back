@@ -2,6 +2,7 @@ package svc
 
 import (
 	"os"
+
 	"tmaxsrv/log"
 
 	"github.com/spf13/viper"
@@ -37,7 +38,7 @@ func NewUiConfig() *UiConfig {
 	var config Config
 	if err := cnf.ReadInConfig(); err != nil {
 		// create a config.json file with default
-		os.WriteFile(CFG_FILE_NAME+".json", []byte(DEFAULT_UI_CFG_STR), 0644)
+		os.WriteFile(CFG_FILE_NAME+".json", []byte(DEFAULT_UI_CFG_STR), 0o644)
 		config := Config{RecMode: "auto", StableTimeToRec: "2", ZeroRange: "1", DateFormat: "1"}
 		uiCfg := &UiConfig{Config: &config}
 		uiCfg.UpdateConfig(&config)

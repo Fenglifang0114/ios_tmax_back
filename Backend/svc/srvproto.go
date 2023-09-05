@@ -4,6 +4,8 @@ import (
 	"net"
 
 	"go.bug.st/serial"
+
+	"tmaxsrv/comm"
 )
 
 // ********** Request for scale manager **********
@@ -52,7 +54,8 @@ type ReqDelScale struct {
 type ReqModifyScale struct {
 	ScaleId int64
 	// MediaType MediaType
-	MediaConf MediaConf
+	MediaConf  MediaConf
+	ScaleModel string
 }
 
 type ReqAddProduct struct {
@@ -211,6 +214,8 @@ const (
 	SREQ_MODIFY_BT_NAME      SReqType = "modify_bt_name"
 	SREQ_SEND_DATA_TO_BT     SReqType = "send_data_to_bt"
 	SREQ_SEND_DATA_TO_WIFI   SReqType = "send_data_to_wifi"
+	SREQ_GET_IP_MODE         SReqType = "get_ip_mode"
+	SREQ_GET_WIFI_INFO       SReqType = "get_wifi_info"
 )
 
 type ReqScaleRec struct {
@@ -228,77 +233,47 @@ type ReqDelScaleRec struct {
 	RecId uint
 }
 
+type ReqPrnData struct {
+	ScaleModel   string   `json:"ScaleModel"`
+	PrinterModel string   `json:"PrinterModel"`
+	FilePaths    []string `json:"FilePaths"`
+}
+
 type ScaleRespMsg struct { // including response and unsolicited messages
-	MsgType RespMsgType
+	MsgType comm.RespMsgType
 	MsgBody interface{} // MsgBody [T RespMsg|string]
 	ScaleId int64
 }
 
-type RespMsgType string
-
-const (
-	WEIGHT_DATA              RespMsgType = "weight_data"
-	ZERO_CMD_RESP            RespMsgType = "resp_zero_cmd"
-	TARE_CMD_RESP            RespMsgType = "resp_tare_cmd"
-	WEIGHT_DATA_RESP         RespMsgType = "resp_weight_data"
-	REG_WEIGHT_RESP          RespMsgType = "resp_reg_weight"
-	UNREG_WEIGHT_RESP        RespMsgType = "resp_unreg_weight"
-	GET_RECS_RESP            RespMsgType = "resp_get_recs"
-	ADD_REC_RESP             RespMsgType = "resp_add_rec"
-	DEL_REC_RESP             RespMsgType = "resp_del_rec"
-	EN_FAC_MODE_RESP         RespMsgType = "resp_en_fac_mode"
-	DIS_FAC_MODE_RESP        RespMsgType = "resp_dis_fac_mode"
-	EN_PASSTH_MODE_RESP      RespMsgType = "resp_en_passth_mode"
-	DIS_PASSTH_MODE_RESP     RespMsgType = "resp_dis_passth_mode"
-	ERASE_FLASH_RESP         RespMsgType = "resp_erase_flash"
-	WRITE_DATA_FLASH_RESP    RespMsgType = "resp_write_data_flash"
-	DOWN_PRN_FMT_RESP        RespMsgType = "resp_down_prn_fmt"
-	ERR_SERIAL_RESP          RespMsgType = "resp_err_serial"
-	GET_AP_LIST_RESP         RespMsgType = "resp_get_ap_list"
-	RESCAN_AP_LIST_RESP      RespMsgType = "resp_rescan_ap_list"
-	CONNECT_AP_RESP          RespMsgType = "resp_connect_ap"
-	SET_WIFI_DYNAMIC_IP_RESP RespMsgType = "resp_set_wifi_dynamic_ip"
-	SET_WIFI_STATIC_IP_RESP  RespMsgType = "resp_set_wifi_static_ip"
-	GET_IP_INFO_RESP         RespMsgType = "resp_get_ip_info"
-	MODIFY_BT_NAME_RESP      RespMsgType = "resp_modify_bt_name"
-	NO_RESP                  RespMsgType = "resp_no_response"
-	BT_PASSTH_DATA_RESP      RespMsgType = "resp_bt_passth_data"
-	WIFI_PASSTH_DATA_RESP    RespMsgType = "resp_wifi_passth_data"
-	PRT_PASSTH_DATA_RESP     RespMsgType = "resp_prt_passth_data"
-	SEND_DATA_TO_BT_RESP     RespMsgType = "resp_send_data_to_bt"
-	SEND_DATA_TO_WIFI_RESP   RespMsgType = "resp_send_data_to_wifi"
-	UNKNOWN_DATA             RespMsgType = "unknown_data"
-)
-
-var respMsgTypeTab = []RespMsgType{
-	WEIGHT_DATA,
-	ZERO_CMD_RESP,
-	TARE_CMD_RESP,
-	WEIGHT_DATA_RESP,
-	REG_WEIGHT_RESP,
-	UNREG_WEIGHT_RESP,
-	GET_RECS_RESP,
-	ADD_REC_RESP,
-	DEL_REC_RESP,
-	EN_FAC_MODE_RESP,
-	DIS_FAC_MODE_RESP,
-	EN_PASSTH_MODE_RESP,
-	DIS_PASSTH_MODE_RESP,
-	ERASE_FLASH_RESP,
-	WRITE_DATA_FLASH_RESP,
-	DOWN_PRN_FMT_RESP,
-	ERR_SERIAL_RESP,
-	GET_AP_LIST_RESP,
-	RESCAN_AP_LIST_RESP,
-	SET_WIFI_DYNAMIC_IP_RESP,
-	SET_WIFI_STATIC_IP_RESP,
-	GET_IP_INFO_RESP,
-	MODIFY_BT_NAME_RESP,
-	NO_RESP,
-	BT_PASSTH_DATA_RESP,
-	WIFI_PASSTH_DATA_RESP,
-	PRT_PASSTH_DATA_RESP,
-	UNKNOWN_DATA,
+var respMsgTypeTab = []comm.RespMsgType{
+	comm.WEIGHT_DATA,
+	comm.ZERO_CMD_RESP,
+	comm.TARE_CMD_RESP,
+	comm.WEIGHT_DATA_RESP,
+	comm.REG_WEIGHT_RESP,
+	comm.UNREG_WEIGHT_RESP,
+	comm.GET_RECS_RESP,
+	comm.ADD_REC_RESP,
+	comm.DEL_REC_RESP,
+	comm.EN_FAC_MODE_RESP,
+	comm.DIS_FAC_MODE_RESP,
+	comm.EN_PASSTH_MODE_RESP,
+	comm.DIS_PASSTH_MODE_RESP,
+	comm.ERASE_FLASH_RESP,
+	comm.WRITE_DATA_FLASH_RESP,
+	comm.DOWN_PRN_FMT_RESP,
+	comm.ERR_SERIAL_RESP,
+	comm.GET_AP_LIST_RESP,
+	comm.RESCAN_AP_LIST_RESP,
+	comm.SET_WIFI_DYNAMIC_IP_RESP,
+	comm.SET_WIFI_STATIC_IP_RESP,
+	comm.GET_IP_INFO_RESP,
+	comm.MODIFY_BT_NAME_RESP,
+	comm.NO_RESP,
+	comm.BT_PASSTH_DATA_RESP,
+	comm.WIFI_PASSTH_DATA_RESP,
+	comm.PRT_PASSTH_DATA_RESP,
+	comm.UNKNOWN_DATA,
 }
 
 type RespMsg struct {
