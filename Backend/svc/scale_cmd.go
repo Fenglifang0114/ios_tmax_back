@@ -118,7 +118,7 @@ func (c *Scale) ModifyBTName(name string) (*ScaleRespMsg, error) {
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
-
+	GExpectBTResp = m.MODIFY_BT_NAME_RESP
 	return perfCmdNwaitResult(c, cmd, m.MODIFY_BT_NAME_RESP, timeoutMs)
 }
 

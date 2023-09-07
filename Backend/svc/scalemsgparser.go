@@ -428,7 +428,7 @@ func handleBTPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	switch GExpectBTResp {
 	case m.MODIFY_BT_NAME_RESP:
 		return handleModifyBtNameResp(scaleId, data)
-	case m.SEND_DATA_TO_BT_RESP:
+	case m.BT_PASSTH_DATA_RESP:
 		return handleSendDataToBTResp(scaleId, data)
 	default:
 		return ScaleRespMsg{}, 0
@@ -475,15 +475,15 @@ func handleSetWifiDynamicIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) 
 	if strings.Contains(string(data), SET_WIFI_DYNAMIC_IP_OK_RESP) { // success
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "ok"}, len(data)
 	} else { // unkown
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_DYNAMIC_IP_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{}, 0
 	}
 }
 
 func handleSetWifiStaticIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), SET_WIFI_STATIC_IP_OK_RESP) { // success
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_STATIC_IP_RESP, MsgBody: "ok"}, len(data)
-	} else { // unkown
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_STATIC_IP_RESP, MsgBody: "fail"}, len(data)
+	} else {
+		return ScaleRespMsg{}, 0
 	}
 }
 
@@ -537,7 +537,7 @@ func extractIPMode(response string) (bool, error) {
 				mode = false
 				err = fmt.Errorf("invalid response")
 			}
-			break;
+			break
 		}
 	}
 

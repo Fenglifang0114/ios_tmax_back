@@ -168,7 +168,7 @@ func (s *ScaleMgr) Run() {
 			if conn.scale == nil {
 				// new scale and assign scaleid to the instance
 				var scale *Scale
-				scale, _ = NewScale(s, conn, comm.SCALE_TMAX, conn.ScaleModel, conn.ScaleSn, false) // FIXME: correct scale type
+				scale, _ = NewScale(s, conn, conn.ScaleCat, conn.ScaleModel, conn.ScaleSn, false) // FIXME: correct scale type
 				scale.Id = nextScaleId
 				conn.scale = scale
 				conn.ScaleId = scale.Id

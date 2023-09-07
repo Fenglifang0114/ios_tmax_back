@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -404,11 +404,7 @@ func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
 		return msg, err
 	}
 
-	if _, err := SendDataToBT(s, data); err != nil {
-		return &ScaleRespMsg{}, err
-	}
-
-	return &ScaleRespMsg{m.SEND_DATA_TO_BT_RESP, "ok", s.Id}, nil
+	return SendDataToBT(s, data+"\r\n\x00")
 }
 
 func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
@@ -507,7 +503,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 
 	for _, file := range reqData.FilePaths {
-		fileName := path.Base(file)
+		fileName := filepath.Base(file)
 		fileOrderNo := fileName[0:1]
 		csvFmtContent, err := os.ReadFile(file)
 		if err != nil {

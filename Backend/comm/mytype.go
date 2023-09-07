@@ -110,7 +110,7 @@ const (
 	BT_PASSTH_DATA_RESP      RespMsgType = "resp_bt_passth_data"
 	WIFI_PASSTH_DATA_RESP    RespMsgType = "resp_wifi_passth_data"
 	PRT_PASSTH_DATA_RESP     RespMsgType = "resp_prt_passth_data"
-	SEND_DATA_TO_BT_RESP     RespMsgType = "resp_send_data_to_bt"
+	SEND_DATA_TO_BT_RESP     RespMsgType = "resp_bt_passth_data"
 	SEND_DATA_TO_WIFI_RESP   RespMsgType = "resp_send_data_to_wifi"
 	UNKNOWN_DATA             RespMsgType = "unknown_data"
 )

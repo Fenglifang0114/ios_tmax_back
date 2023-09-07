@@ -204,12 +204,19 @@ func eraseCmdTMAX(addr uint32) []byte { // erase size will 2K
 	return packet
 }
 
+func MyStringToBytes(str string) []byte {
+	byteSlice := make([]byte, len(str))
+	copy(byteSlice, str)
+	return byteSlice
+}
+
 // 修改蓝牙名称
 func modifyBTNameCmdTMAX(name string) []byte {
 	l.Log.Debug("compose modify BT name cmd")
 	// MODIFY_BT_NAME_CHUNK_SIZE should include all data except BT name
-	data := "TTM:REN-\r\n" + name
-	return composeCmd(0xf201, 0, []byte(data))
+	data := "TTM:REN-" + name + "\r\n\x00"
+	bytes := MyStringToBytes(data)
+	return composeCmd(0xf201, 0, bytes)
 }
 
 // Get AP list
