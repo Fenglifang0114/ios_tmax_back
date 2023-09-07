@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"tmaxsrv/comm"
 )
 
 func Test_parseNetworkInfo(t *testing.T) {
@@ -70,7 +71,7 @@ func Test_handleGetApListResp(t *testing.T) {
 		want  ScaleRespMsg
 		want1 int
 	}{
-		{name: "Test_handleGetApListResp", args: args{1, []byte("+CWLAP:(3,\"Test1\",-92,\"bc:e2:65:c1:22:b0\",1,18,2)\r\n+CWLAP:(3,\"Test2\",-92,\"bc:e2:65:c1:22:bb\",1,18,2)\r\n\r\nOK\r\n")}, want: ScaleRespMsg{GET_AP_LIST_RESP, "[{\"seqno\":0,\"ssid\":\"Test1\",\"rssi\":1,\"mac\":\"bc:e2:65:c1:22:b0\"},{\"seqno\":1,\"ssid\":\"Test2\",\"rssi\":1,\"mac\":\"bc:e2:65:c1:22:bb\"}]", 1}, want1: 108},
+		{name: "Test_handleGetApListResp", args: args{1, []byte("+CWLAP:(3,\"Test1\",-92,\"bc:e2:65:c1:22:b0\",1,18,2)\r\n+CWLAP:(3,\"Test2\",-92,\"bc:e2:65:c1:22:bb\",1,18,2)\r\n\r\nOK\r\n")}, want: ScaleRespMsg{comm.GET_AP_LIST_RESP, "[{\"seqno\":0,\"ssid\":\"Test1\",\"rssi\":1,\"mac\":\"bc:e2:65:c1:22:b0\"},{\"seqno\":1,\"ssid\":\"Test2\",\"rssi\":1,\"mac\":\"bc:e2:65:c1:22:bb\"}]", 1}, want1: 108},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -106,6 +107,36 @@ func Test_getRssiLevel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getRssiLevel(tt.args.rssi); got != tt.want {
 				t.Errorf("getRssiLevel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_extractWifiAPInfo(t *testing.T) {
+	type args struct {
+		response string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    WifiAPInfo
+		wantErr bool
+	}{
+		{name: "Test_extractWifiAPInfo #1", args: args{response: `AT+CWJAP_DEF?
+  
+		+CWJAP_DEF:"T-Scale","0c:4b:54:61:fd:db",1,-67
+		
+		OK`}, want: WifiAPInfo{"T-Scale", "0c:4b:54:61:fd:db", "1", 3}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := extractWifiAPInfo(tt.args.response)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("extractWifiAPInfo() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("extractWifiAPInfo() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -509,12 +509,15 @@ func extractWifiAPInfo(response string) (WifiAPInfo, error) {
 	// 	+CWJAP_DEF:<ssid>, <bssid>, <channel>, <rssi>
 	// OK
 	// split response string into multiple lines
-	lines := strings.Split(response, "\r\n")
+	lines := strings.Split(response, "\n")
 
 	// iterates on each lines to extract ssid, bssid, channel, rssi
 	for _, line := range lines {
+		line = strings.Trim(line, "\t")
+		line = strings.Replace(line, `\"`, "", -1)
+		line = strings.Replace(line, `"`, "", -1)
 		if strings.HasPrefix(line, "+CWJAP_DEF:") {
-			data := strings.Trim(line[len("+CWJAP_DEF:\""):], "\"")
+			data := line[len("+CWJAP_DEF:"):]
 			dataSplit := strings.Split(data, ",")
 			info.Ssid = dataSplit[0]
 			info.Bssid = dataSplit[1]

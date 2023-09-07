@@ -168,7 +168,7 @@ func TestScale_RegisterNotif(t *testing.T) {
 	myscale, _ := NewScale(scaleMgr, scaleConn, comm.SCALE_T2200, "ATP", "123456", true)
 
 	type args struct {
-		msgType RespMsgType
+		msgType comm.RespMsgType
 		inCh    chan *ScaleRespMsg
 	}
 	tests := []struct {
@@ -176,7 +176,7 @@ func TestScale_RegisterNotif(t *testing.T) {
 		c    *Scale
 		args args
 	}{
-		{name: "RegisterNotif test", c: myscale, args: args{msgType: WEIGHT_DATA, inCh: make(chan *ScaleRespMsg)}},
+		{name: "RegisterNotif test", c: myscale, args: args{msgType: comm.WEIGHT_DATA, inCh: make(chan *ScaleRespMsg)}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -194,7 +194,7 @@ func TestScale_UnRegisterNotif(t *testing.T) {
 	myscale, _ := NewScale(scaleMgr, scaleConn, comm.SCALE_T2200, "ATP", "123456", true)
 
 	type args struct {
-		msgType RespMsgType
+		msgType comm.RespMsgType
 		inCh    chan *ScaleRespMsg
 	}
 	tests := []struct {
@@ -202,7 +202,7 @@ func TestScale_UnRegisterNotif(t *testing.T) {
 		c    *Scale
 		args args
 	}{
-		{name: "RegisterNotif test", c: myscale, args: args{msgType: WEIGHT_DATA, inCh: make(chan *ScaleRespMsg)}},
+		{name: "RegisterNotif test", c: myscale, args: args{msgType: comm.WEIGHT_DATA, inCh: make(chan *ScaleRespMsg)}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
