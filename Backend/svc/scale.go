@@ -419,7 +419,7 @@ func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
 
 func ReqGetWifiApInfo(s *Scale) (*ScaleRespMsg, error) {
 	defer DisPassthrough(s)
-	msg, err := enablePassthrough(s, m.GET_AP_LIST_RESP)
+	msg, err := enablePassthrough(s, m.GET_WIFI_AP_INFO_RESP)
 	if msg.MsgBody != "ok" {
 		return msg, err
 	}
