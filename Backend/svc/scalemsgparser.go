@@ -500,7 +500,7 @@ type WifiAPInfo struct {
 	Ssid    string
 	Bssid   string
 	Channel string
-	Rssi    string
+	Rssi    int
 }
 
 func extractWifiAPInfo(response string) (WifiAPInfo, error) {
@@ -519,7 +519,8 @@ func extractWifiAPInfo(response string) (WifiAPInfo, error) {
 			info.Ssid = dataSplit[0]
 			info.Bssid = dataSplit[1]
 			info.Channel = dataSplit[2]
-			info.Rssi = dataSplit[3]
+			level, _ := strconv.ParseInt(dataSplit[3], 10, 64)
+			info.Rssi = getRssiLevel(int(level))
 		}
 	}
 
