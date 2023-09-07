@@ -128,14 +128,7 @@ func procGetIpMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func procGetWifiInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	// TODO:
-	//
-	//	return WifiInfo{
-	//		Ssid:  "test",
-	//		Rssi:  2,
-	//		Bssid: "11:22:33:44:55:66",
-	//	}
-	return nil, nil
+	return ReqGetWifiApInfo(scale)
 }
 
 func procSendDataToWifi(scale *Scale, req SRequest) (*ScaleRespMsg, error) {

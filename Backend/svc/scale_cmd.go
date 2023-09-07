@@ -130,6 +130,12 @@ func GetApList(c *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_LIST, m.GET_AP_LIST_RESP)
 }
 
+// Get Wifi AP info
+func GetWifiApInfo(c *Scale) (*ScaleRespMsg, error) {
+	GExpectWifiResp = m.GET_WIFI_AP_INFO_RESP
+	return excuteSimpCmd(c, m.CMD_WIFI_GET_IP_INFO, m.GET_WIFI_AP_INFO_RESP)
+}
+
 // Send data to BT
 func SendDataToBT(c *Scale, data string) (*ScaleRespMsg, error) {
 	l.Log.Debug("Send data to BT")

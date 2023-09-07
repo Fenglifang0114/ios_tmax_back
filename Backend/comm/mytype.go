@@ -32,6 +32,7 @@ const (
 	CMD_WIFI_EN_DHCP
 	CMD_WIFI_DIS_DHCP
 	CMD_WIFI_SET_STATIC_IP
+	CMD_WIFI_GET_AP_INFO
 	CMD_WIFI_GET_IP_INFO
 	CMD_WIFI_GET_IP_MODE
 	CMD_WIFI_CONN_AP
@@ -103,6 +104,7 @@ const (
 	CONNECT_AP_RESP          RespMsgType = "resp_connect_ap"
 	SET_WIFI_DYNAMIC_IP_RESP RespMsgType = "resp_set_wifi_dynamic_ip"
 	SET_WIFI_STATIC_IP_RESP  RespMsgType = "resp_set_wifi_static_ip"
+	GET_WIFI_AP_INFO_RESP    RespMsgType = "resp_get_wifi_ap_info"
 	GET_IP_INFO_RESP         RespMsgType = "resp_get_ip_info"
 	GET_IP_MODE_RESP         RespMsgType = "resp_get_ip_mode"
 	MODIFY_BT_NAME_RESP      RespMsgType = "resp_modify_bt_name"

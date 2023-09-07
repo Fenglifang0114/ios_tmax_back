@@ -78,6 +78,8 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return setWifiStaticIpCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_GET_IP_INFO:
 		return getIpInfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
+	case m.CMD_WIFI_GET_AP_INFO:
+		return getApInfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_GET_IP_MODE:
 		return getIpModCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_CONN_AP:
@@ -255,6 +257,12 @@ func connectWifiApCmdTMAX(ssid string, bssid string, passwd string) []byte {
 func disconnectWifiApCmdTMAX() []byte {
 	l.Log.Debug("compose disconnect to Wifi AP cmd")
 	return composeCmd(0xf202, 0, []byte{})
+}
+
+// Get wifi AP info from scale
+func getApInfoCmdTMAX() []byte {
+	l.Log.Debug("compose get IP info cmd")
+	return composeCmd(0xf202, 0, GET_AP_INFO_CMD)
 }
 
 // Get IP info from scale

@@ -21,6 +21,7 @@ const (
 	CONNECT_AP_OK_RESP          string = "\r\nOK\r\n"
 	SET_WIFI_DYNAMIC_IP_OK_RESP string = "\r\nOK\r\n"
 	SET_WIFI_STATIC_IP_OK_RESP  string = "\r\nOK\r\n"
+	GET_AP_INFO_OK_RESP         string = "\r\nOK\r\n"
 	GET_IP_INFO_OK_RESP         string = "\r\nOK\r\n"
 	GET_IP_MODE_OK_RESP         string = "\r\nOK\r\n"
 )
@@ -413,6 +414,8 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return handleSetWifiDynamicIpResp(scaleId, data)
 	case m.SEND_DATA_TO_WIFI_RESP:
 		return handleSendDataToWifiResp(scaleId, data)
+	case m.GET_WIFI_AP_INFO_RESP:
+		return handleGetApInfoResp(scaleId, data)
 	case m.GET_IP_INFO_RESP:
 		return handleGetIpInfoResp(scaleId, data)
 	case m.GET_IP_MODE_RESP:
@@ -493,6 +496,36 @@ type IPInfo struct {
 	Netmask string
 }
 
+type WifiAPInfo struct {
+	Ssid    string
+	Bssid   string
+	Channel string
+	Rssi    string
+}
+
+func extractWifiAPInfo(response string) (WifiAPInfo, error) {
+	var info WifiAPInfo
+
+	// 	+CWJAP_DEF:<ssid>, <bssid>, <channel>, <rssi>
+	// OK
+	// split response string into multiple lines
+	lines := strings.Split(response, "\r\n")
+
+	// iterates on each lines to extract ssid, bssid, channel, rssi
+	for _, line := range lines {
+		if strings.HasPrefix(line, "+CWJAP_DEF:") {
+			data := strings.Trim(line[len("+CWJAP_DEF:\""):], "\"")
+			dataSplit := strings.Split(data, ",")
+			info.Ssid = dataSplit[0]
+			info.Bssid = dataSplit[1]
+			info.Channel = dataSplit[2]
+			info.Rssi = dataSplit[3]
+		}
+	}
+
+	return info, nil
+}
+
 func extractIPInfo(response string) (IPInfo, error) {
 	var info IPInfo
 
@@ -537,11 +570,26 @@ func extractIPMode(response string) (bool, error) {
 				mode = false
 				err = fmt.Errorf("invalid response")
 			}
-			break;
+			break
 		}
 	}
 
 	return mode, err
+}
+
+func handleGetApInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AP_INFO_OK_RESP) { // success
+		apInfo, err := extractWifiAPInfo(string(data))
+		if err != nil {
+			return ScaleRespMsg{}, len(data)
+		}
+		apInfoStr, _ := json.MarshalToString(apInfo)
+		return ScaleRespMsg{m.GET_WIFI_AP_INFO_RESP, apInfoStr, scaleId}, len(data)
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WIFI_AP_INFO_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
 }
 
 func handleGetIpInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
