@@ -106,23 +106,55 @@ var DIS_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,0")
 var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=\"%s\",\"%s\",\"%s\"\r\n") // ip, gateway, netmask
 
 const (
-	FLASH_ADDR                     = 0x08003000
-	PACKET_HEAD_TMAX               = 0x5AA5
-	CMD_IDENTIFY_TMAX              = 0xA0
-	CMD_TYPE                       = 0xB0
-	PACKET_TAIL_TMAX               = 0xA55A
-	DATA_LENGTH                    = 256
-	FILE_CHUNK_SIZE_TMAX           = 272
-	OPEN_FAC_CHUNK_SIZE_TMAX       = 6
-	CLOSE_FAC_CHUNK_SIZE_TMAX      = 6
-	EN_PASSTH_CHUNK_SIZE_TMAX      = 6
-	DIS_PASSTH_CHUNK_SIZE_TMAX     = 6
-	MODIFY_BT_NAME_CHUNK_SIZE_TMAX = 24
-	REC_CHUNK_SIZE_TMAX            = 11
-	EARSE_CHUNK_SIZE_TMAX          = 0x10
-	CMD_ERASE_TMAX                 = 0xA2
-	CMD_ERASE_SIZE_TMAx            = 0x800
-	CMD_FLASH_TMAX                 = 0xB0
+	PACKET_HEAD_TMAX      = 0x5AA5
+	PACKET_TAIL_TMAX      = 0xA55A
+	FILE_CHUNK_SIZE_TMAX  = 275 //FLF
+	EARSE_CHUNK_SIZE_TMAX = 0x13
+	ERASE_SIZE_TMAX       = 0x800
+)
+
+const (
+	CMDID_READ_WEIGHT_TMAX         = 0xE101
+	CMDID_READ_STABLE_WEIGHT_TMAX  = 0xE102
+	CMDID_PREF_ZERO_TMAX           = 0xE103
+	CMDID_PREF_ZERO_ON_STABLE_TMAX = 0xE104
+	CMDID_PREF_TARE_TMAX           = 0xE105
+	CMDID_PREF_TARE_ON_STABLE_TMAX = 0xE106
+	CMDID_EN_CONT_WEIGHT_TMAX      = 0xE107
+	CMDID_DIS_CONT_WEIGHT_TMAX     = 0xE108
+	CMDID_SET_1ST_CAP_TMAX         = 0xE109
+	CMDID_SET_2ND_CAP_TMAX         = 0xE10A
+)
+
+const (
+	CMDID_SEND_DATA_TO_BT_TMAX   = 0xF201
+	CMDID_SEND_DATA_TO_WIFI_TMAX = 0xF202
+	CMDID_SEND_DATA_TO_PRN_TMAX  = 0xF203
+)
+
+const (
+	CMDID_READ_SCALE_INFO_TMAX   = 0x05F0
+	CMDID_EN_FAC_TMAX            = 0x05F1
+	CMDID_DIS_FAC_TMAX           = 0x05F2
+	CMDID_EN_PASSTH_TMAX         = 0x05F3
+	CMDID_DIS_PASSTH_TMAX        = 0x05F4
+	CMDID_GET_MAX_PACK_SIZE_TMAX = 0x05F5
+)
+const (
+	CMDID_READ_FLASH_TMAX   = 0xF101
+	CMDID_WRITE_FLASH_TMAX  = 0xF102
+	CMDID_ERASE_FLASH_TMAX  = 0xF103
+	CMDID_READ_EEPROM_TMAX  = 0xF104
+	CMDID_WRITE_EEPROM_TMAX = 0xF105
+	CMDID_ERASE_EEPROM_TMAX = 0xF106
+	CMDID_READ_ROM_TMAX     = 0xF107
+	CMDID_WRITE_ROM_TMAX    = 0xF108
+	CMDID_ERASE_ROM_TMAX    = 0xF109
+)
+
+const (
+	RESP_RESULT_OK   = 0x06
+	RESP_RESULT_FAIL = 0x15
 )
 
 const (
@@ -135,7 +167,7 @@ func composeCmd(cmdID uint16, seqNo byte, data []byte) []byte {
 	// Calculate packet length
 	var packLen uint16 = uint16(PACK_LEN_WITHOUT_DATA_TMAX + len(data))
 	cmd := make([]byte, packLen)
-	binary.BigEndian.PutUint16(cmd[0:2], PACKET_HEAD)
+	binary.BigEndian.PutUint16(cmd[0:2], PACKET_HEAD_TMAX)
 	// 构建命令ID与命令类型
 	binary.BigEndian.PutUint16(cmd[2:4], packLen-2) // packet length without header
 	binary.BigEndian.PutUint16(cmd[4:6], cmdID)
@@ -147,61 +179,65 @@ func composeCmd(cmdID uint16, seqNo byte, data []byte) []byte {
 	checksum := util.Crc32MPEG2(cmd[2 : packLen-6])
 	binary.BigEndian.PutUint32(cmd[packLen-6:], checksum)
 	// 添加包尾
-	binary.BigEndian.PutUint16(cmd[packLen-2:], PACKET_TAIL)
+	binary.BigEndian.PutUint16(cmd[packLen-2:], PACKET_TAIL_TMAX)
 
 	return cmd
 }
 
-// 构建一个数据包
+// 构建一个数据包   //FLF
 func wrDataCmdTMAX(addr uint32, data []byte) []byte {
 	// 构建包头
-	packet := make([]byte, FILE_CHUNK_SIZE)
-	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+	packet := make([]byte, FILE_CHUNK_SIZE_TMAX)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
+	//构建数据长度  总长度-包头
+	binary.BigEndian.PutUint16(packet[2:4], FILE_CHUNK_SIZE_TMAX-2)
 
 	// 构建命令ID与命令类型
-	packet[2] = CMD_IDENTIFY
-	packet[3] = CMD_TYPE
-
+	binary.BigEndian.PutUint16(packet[4:6], uint16(CMDID_WRITE_FLASH_TMAX))
+	//构建保留数据 00
+	binary.BigEndian.PutUint16(packet[6:8], 0x00)
 	// 构建地址
-	binary.BigEndian.PutUint32(packet[4:8], addr)
+	binary.BigEndian.PutUint32(packet[7:11], addr)
 
 	// 构建数据长度
-	binary.BigEndian.PutUint16(packet[8:10], uint16(len(data)))
+	binary.BigEndian.PutUint16(packet[11:13], uint16(len(data)))
 
 	// 复制数据
-	copy(packet[10:], data)
+	copy(packet[13:], data)
 
 	// 计算与添加校验码
-	checksum := util.Crc32MPEG2(packet[2 : FILE_CHUNK_SIZE-6])
-	binary.BigEndian.PutUint32(packet[FILE_CHUNK_SIZE-6:], checksum)
+	checksum := util.Crc32MPEG2(packet[2 : FILE_CHUNK_SIZE_TMAX-6])
+	binary.BigEndian.PutUint32(packet[FILE_CHUNK_SIZE_TMAX-6:], checksum)
 
 	// 添加包尾
-	binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE-2:], PACKET_TAIL)
+	binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE_TMAX-2:], PACKET_TAIL_TMAX)
 
 	return packet
 }
 
+// CMD:  5a a5 00 11 f1 03 00 08 01 e0 00 08 00 75 E8 A3 E3 a5 5a   //FLF
 // 擦除原本秤上的打印格式
 func eraseCmdTMAX(addr uint32) []byte { // erase size will 2K
 	// 构建包头
-	packet := make([]byte, EARSE_CHUNK_SIZE)
-	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+	packet := make([]byte, EARSE_CHUNK_SIZE_TMAX)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
+	//构建数据长度  总长度-包头
+	binary.BigEndian.PutUint16(packet[2:4], EARSE_CHUNK_SIZE_TMAX-2)
 	// 构建命令ID与命令类型
-	packet[2] = CMD_ERASE
-	packet[3] = CMD_FLASH
-
+	binary.BigEndian.PutUint16(packet[4:6], uint16(CMDID_ERASE_FLASH_TMAX))
+	//构建保留数据 00
+	binary.BigEndian.PutUint16(packet[6:8], 0x00)
 	// 构建地址
-	binary.BigEndian.PutUint32(packet[4:8], addr)
-
+	binary.BigEndian.PutUint32(packet[7:11], addr)
 	// 擦除长度
-	binary.BigEndian.PutUint16(packet[8:10], CMD_ERASE_SIZE)
+	binary.BigEndian.PutUint16(packet[11:13], ERASE_SIZE_TMAX)
 
 	// 计算与添加校验码
-	checksum := util.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE-6])
-	binary.BigEndian.PutUint32(packet[EARSE_CHUNK_SIZE-6:], checksum)
+	checksum := util.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE_TMAX-6])
+	binary.BigEndian.PutUint32(packet[EARSE_CHUNK_SIZE_TMAX-6:], checksum)
 
 	// 添加包尾
-	binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE-2:], PACKET_TAIL)
+	binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE_TMAX-2:], PACKET_TAIL_TMAX)
 
 	return packet
 }

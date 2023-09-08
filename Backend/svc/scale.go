@@ -19,23 +19,24 @@ import (
 )
 
 const (
-	FLASH_ADDR_TMAX                = 0x08003000
-	PACKET_HEAD_TMAX               = 0x5AA5
-	CMD_IDENTIFY_TMAX              = 0xA0
-	CMD_TYPE_TMAX                  = 0xB0
-	PACKET_TAIL_TMAX               = 0xA55A
-	DATA_LENGTH_TMAX               = 256
-	FILE_CHUNK_SIZE_TMAX           = 272
-	OPEN_FAC_CHUNK_SIZE_TMAX       = 6
-	CLOSE_FAC_CHUNK_SIZE_TMAX      = 6
-	EN_PASSTH_CHUNK_SIZE_TMAX      = 6
-	DIS_PASSTH_CHUNK_SIZE_TMAX     = 6
-	MODIFY_BT_NAME_CHUNK_SIZE_TMAX = 24
-	REC_CHUNK_SIZE_TMAX            = 11
-	EARSE_CHUNK_SIZE_TMAX          = 0x10
-	CMD_ERASE_TMAX                 = 0xA2
-	CMD_ERASE_SIZE_TMAX            = 0x800
-	CMD_FLASH_TMAX                 = 0xB0
+	// 	FLASH_ADDR_TMAX                = 0x08003000           //FLF
+	// 	PACKET_HEAD_TMAX               = 0x5AA5
+	// 	CMD_IDENTIFY_TMAX              = 0xA0
+	// 	CMD_TYPE_TMAX                  = 0xB0
+	// 	PACKET_TAIL_TMAX               = 0xA55A
+	DATA_LENGTH_TMAX = 256
+
+// FILE_CHUNK_SIZE_TMAX           = 272
+// OPEN_FAC_CHUNK_SIZE_TMAX       = 6
+// CLOSE_FAC_CHUNK_SIZE_TMAX      = 6
+// EN_PASSTH_CHUNK_SIZE_TMAX      = 6
+// DIS_PASSTH_CHUNK_SIZE_TMAX     = 6
+// MODIFY_BT_NAME_CHUNK_SIZE_TMAX = 24
+// REC_CHUNK_SIZE_TMAX            = 11
+// EARSE_CHUNK_SIZE_TMAX          = 0x10
+// CMD_ERASE_TMAX                 = 0xA2
+// CMD_ERASE_SIZE_TMAX            = 0x800
+// CMD_FLASH_TMAX                 = 0xB0
 )
 
 var GlastWantRespMsgType m.RespMsgType = m.NO_RESP

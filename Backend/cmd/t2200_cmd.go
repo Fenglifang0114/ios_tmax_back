@@ -11,19 +11,16 @@ import (
 )
 
 const (
-	//FLASH_ADDR          = 0x08003000
-	PACKET_HEAD  = 0x5AA5
-	CMD_IDENTIFY = 0xA0
-	// CMD_TYPE            = 0xB0
-	PACKET_TAIL = 0xA55A
-	// DATA_LENGTH         = 256
-	FILE_CHUNK_SIZE     = 272
-	OPEN_FAC_CHUNK_SIZE = 6
-	REC_CHUNK_SIZE      = 11
-	EARSE_CHUNK_SIZE    = 0x10
-	CMD_ERASE           = 0xA2
-	CMD_ERASE_SIZE      = 0x800
-	CMD_FLASH           = 0xB0
+	PACKET_HEAD_T2000         = 0x5AA5
+	CMD_IDENTIFY_T2000        = 0xA0
+	PACKET_TAIL_T2000         = 0xA55A
+	FILE_CHUNK_SIZE_T2000     = 272
+	OPEN_FAC_CHUNK_SIZE_T2000 = 6
+	REC_CHUNK_SIZE_T2000      = 11
+	EARSE_CHUNK_SIZE_T2000    = 0x10
+	CMD_ERASE_T2000           = 0xA2
+	ERASE_SIZE_T2000          = 0x800
+	CMD_FLASH_T2000           = 0xB0
 )
 
 const (
@@ -109,15 +106,15 @@ func parseWrDataT2200(inData string) (addr int64, data []byte) { // inData is he
 // 打开工厂模式
 func enFacModeCmdT2200() ([]byte, int, error) {
 	// 构建包头
-	packet := make([]byte, OPEN_FAC_CHUNK_SIZE)
-	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+	packet := make([]byte, OPEN_FAC_CHUNK_SIZE_T2000)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_T2000)
 
 	// 构建命令ID与命令类型
 	packet[2] = 0x05
 	packet[3] = 0xF1
 
 	// 添加包尾
-	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE-2:], PACKET_TAIL)
+	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE_T2000-2:], PACKET_TAIL_T2000)
 
 	return packet, CMD_TIMEOUT_SHORT_100_MS, nil
 }
@@ -125,15 +122,15 @@ func enFacModeCmdT2200() ([]byte, int, error) {
 // 关闭工厂模式
 func disFacModeCmdT2200() ([]byte, int, error) {
 	// 构建包头
-	packet := make([]byte, OPEN_FAC_CHUNK_SIZE)
-	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+	packet := make([]byte, OPEN_FAC_CHUNK_SIZE_T2000)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_T2000)
 
 	// 构建命令ID与命令类型
 	packet[2] = 0x05
 	packet[3] = 0xF2
 
 	// 添加包尾
-	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE-2:], PACKET_TAIL)
+	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE_T2000-2:], PACKET_TAIL_T2000)
 
 	return packet, CMD_TIMEOUT_SHORT_100_MS, nil
 }
@@ -141,12 +138,12 @@ func disFacModeCmdT2200() ([]byte, int, error) {
 // 构建一个数据包
 func wrDataCmdT2200(addr uint32, data []byte) ([]byte, int, error) {
 	// 构建包头
-	packet := make([]byte, FILE_CHUNK_SIZE)
-	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+	packet := make([]byte, FILE_CHUNK_SIZE_T2000)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_T2000)
 
 	// 构建命令ID与命令类型
-	packet[2] = CMD_IDENTIFY
-	packet[3] = CMD_FLASH
+	packet[2] = CMD_IDENTIFY_T2000
+	packet[3] = CMD_FLASH_T2000
 
 	// 构建地址
 	binary.BigEndian.PutUint32(packet[4:8], addr)
@@ -158,11 +155,11 @@ func wrDataCmdT2200(addr uint32, data []byte) ([]byte, int, error) {
 	copy(packet[10:], data)
 
 	// 计算与添加校验码
-	checksum := util.Crc32MPEG2(packet[2 : FILE_CHUNK_SIZE-6])
-	binary.BigEndian.PutUint32(packet[FILE_CHUNK_SIZE-6:], checksum)
+	checksum := util.Crc32MPEG2(packet[2 : FILE_CHUNK_SIZE_T2000-6])
+	binary.BigEndian.PutUint32(packet[FILE_CHUNK_SIZE_T2000-6:], checksum)
 
 	// 添加包尾
-	binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE-2:], PACKET_TAIL)
+	binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE_T2000-2:], PACKET_TAIL_T2000)
 	fmt.Printf("%x\n", packet)
 	return packet, CMD_TIMEOUT_MEDIUM_2000_MS, nil
 }
@@ -170,24 +167,24 @@ func wrDataCmdT2200(addr uint32, data []byte) ([]byte, int, error) {
 // 擦除原本秤上的打印格式
 func eraseCmdT2200(addr uint32) ([]byte, int, error) { // erase size will 2K
 	// 构建包头
-	packet := make([]byte, EARSE_CHUNK_SIZE)
-	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+	packet := make([]byte, EARSE_CHUNK_SIZE_T2000)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_T2000)
 	// 构建命令ID与命令类型
-	packet[2] = CMD_ERASE
-	packet[3] = CMD_FLASH
+	packet[2] = CMD_ERASE_T2000
+	packet[3] = CMD_FLASH_T2000
 
 	// 构建地址
 	binary.BigEndian.PutUint32(packet[4:8], addr)
 
 	// 擦除长度
-	binary.BigEndian.PutUint16(packet[8:10], CMD_ERASE_SIZE)
+	binary.BigEndian.PutUint16(packet[8:10], ERASE_SIZE_T2000)
 
 	// 计算与添加校验码
-	checksum := util.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE-6])
-	binary.BigEndian.PutUint32(packet[EARSE_CHUNK_SIZE-6:], checksum)
+	checksum := util.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE_T2000-6])
+	binary.BigEndian.PutUint32(packet[EARSE_CHUNK_SIZE_T2000-6:], checksum)
 
 	// 添加包尾
-	binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE-2:], PACKET_TAIL)
+	binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE_T2000-2:], PACKET_TAIL_T2000)
 
 	fmt.Printf("%x\n", packet)
 	return packet, CMD_TIMEOUT_LONG_20000_MS, nil

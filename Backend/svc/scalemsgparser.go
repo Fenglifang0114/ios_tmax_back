@@ -9,6 +9,7 @@ import (
 
 	"github.com/gitteamer/log"
 
+	"tmaxsrv/cmd"
 	m "tmaxsrv/comm"
 	"tmaxsrv/util"
 )
@@ -35,34 +36,34 @@ var responseHandlerMap map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int)
 
 func init() {
 	util.CmdsRespMap = util.CmdMap{
-		0xe107: m.WEIGHT_DATA,
-		0xe103: m.ZERO_CMD_RESP,
-		0xe105: m.TARE_CMD_RESP,
-		0xe101: m.WEIGHT_DATA_RESP,
-		0xfff3: m.REG_WEIGHT_RESP,
-		0xe108: m.UNREG_WEIGHT_RESP,
-		0xfff6: m.GET_RECS_RESP,
-		0xfff7: m.ADD_REC_RESP,
-		0xfff8: m.DEL_REC_RESP,
-		0x05f1: m.EN_FAC_MODE_RESP,
-		0x05f2: m.DIS_FAC_MODE_RESP,
-		0x05f3: m.EN_PASSTH_MODE_RESP,
-		0x05f4: m.DIS_PASSTH_MODE_RESP,
-		0xfff9: m.ERASE_FLASH_RESP,
-		0xff10: m.WRITE_DATA_FLASH_RESP,
-		0xff11: m.DOWN_PRN_FMT_RESP,
-		0xff12: m.ERR_SERIAL_RESP,
-		0xff13: m.GET_AP_LIST_RESP,
-		0xff14: m.RESCAN_AP_LIST_RESP,
-		0xff15: m.SET_WIFI_DYNAMIC_IP_RESP,
-		0xff16: m.SET_WIFI_STATIC_IP_RESP,
-		0xff17: m.GET_IP_INFO_RESP,
-		0xff18: m.MODIFY_BT_NAME_RESP,
-		0xff19: m.NO_RESP,
-		0xf201: m.BT_PASSTH_DATA_RESP,
-		0xf202: m.WIFI_PASSTH_DATA_RESP,
-		0xff22: m.PRT_PASSTH_DATA_RESP,
-		0xff23: m.UNKNOWN_DATA,
+		0xe107:                     m.WEIGHT_DATA,
+		0xe103:                     m.ZERO_CMD_RESP,
+		0xe105:                     m.TARE_CMD_RESP,
+		0xe101:                     m.WEIGHT_DATA_RESP,
+		0xfff3:                     m.REG_WEIGHT_RESP,
+		0xe108:                     m.UNREG_WEIGHT_RESP,
+		0xfff6:                     m.GET_RECS_RESP,
+		0xfff7:                     m.ADD_REC_RESP,
+		0xfff8:                     m.DEL_REC_RESP,
+		0x05f1:                     m.EN_FAC_MODE_RESP,
+		0x05f2:                     m.DIS_FAC_MODE_RESP,
+		0x05f3:                     m.EN_PASSTH_MODE_RESP,
+		0x05f4:                     m.DIS_PASSTH_MODE_RESP,
+		cmd.CMDID_ERASE_FLASH_TMAX: m.ERASE_FLASH_RESP, //FLF//
+		cmd.CMDID_WRITE_FLASH_TMAX: m.WRITE_DATA_FLASH_RESP,
+		0xff11:                     m.DOWN_PRN_FMT_RESP,
+		0xff12:                     m.ERR_SERIAL_RESP,
+		0xff13:                     m.GET_AP_LIST_RESP,
+		0xff14:                     m.RESCAN_AP_LIST_RESP,
+		0xff15:                     m.SET_WIFI_DYNAMIC_IP_RESP,
+		0xff16:                     m.SET_WIFI_STATIC_IP_RESP,
+		0xff17:                     m.GET_IP_INFO_RESP,
+		0xff18:                     m.MODIFY_BT_NAME_RESP,
+		0xff19:                     m.NO_RESP,
+		0xf201:                     m.BT_PASSTH_DATA_RESP,
+		0xf202:                     m.WIFI_PASSTH_DATA_RESP,
+		0xff22:                     m.PRT_PASSTH_DATA_RESP,
+		0xff23:                     m.UNKNOWN_DATA,
 	}
 
 	responseHandlerMap = map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
@@ -261,14 +262,20 @@ func handleDisPassthModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	}
 }
 
-func handleEraseFlashResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
+func handleEraseFlashResp(scaleId int64, data []byte) (ScaleRespMsg, int) { //FLF
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.ERASE_FLASH_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.ERASE_FLASH_RESP, MsgBody: "fail"}, len(data)
+	}
 }
 
-func handleWriteDataFlashResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
+func handleWriteDataFlashResp(scaleId int64, data []byte) (ScaleRespMsg, int) { //FLF
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.WRITE_DATA_FLASH_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.WRITE_DATA_FLASH_RESP, MsgBody: "fail"}, len(data)
+	}
 }
 
 func handleDownPrnFmtResp(scaleId int64, data []byte) (ScaleRespMsg, int) {

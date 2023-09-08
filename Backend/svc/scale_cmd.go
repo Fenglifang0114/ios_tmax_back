@@ -34,13 +34,23 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 
 func (c *Scale) PerfZero() (*ScaleRespMsg, error) {
 	l.Log.Debug("perform zero")
+	_, err := EnFacMode(c)
+	if err != nil {
+		return &ScaleRespMsg{}, err //FLF
+	}
 	return excuteSimpCmd(c, m.CMD_ZERO, m.ZERO_CMD_RESP)
 }
 
+
 func (c *Scale) PerfTare() (*ScaleRespMsg, error) {
 	l.Log.Debug("perform tare")
+	_, err := EnFacMode(c)
+	if err != nil {
+		return &ScaleRespMsg{}, err //FLF
+	}
 	return excuteSimpCmd(c, m.CMD_TARE, m.TARE_CMD_RESP)
 }
+
 
 func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 	// if c.isOldC51Scale {
@@ -52,13 +62,19 @@ func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 	return nil, nil // FIXME:
 }
 
-func (c *Scale) RegWeightData() (*ScaleRespMsg, error) {
+
+func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 	l.Log.Debug("register weight data")
 	c.isSendUnolicitedData = true
-	DisFacMode(c) // TODO: check return value
+	_, err := EnFacMode(c)
+	if err != nil {
+		return &ScaleRespMsg{}, err //FLF
+	}
+	// DisFacMode(c) // TODO: check return value
 	// enable scale sending weighing info continually
 	return excuteSimpCmd(c, m.CMD_EN_CONTINUE_MODE, m.REG_WEIGHT_RESP)
 }
+
 
 // func sendErrMsg(c *Scale, msg *ScaleRespMsg) {
 // 	msgStr, err := json.MarshalToString(msg)
@@ -71,7 +87,7 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) {
 
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	c.isSendUnolicitedData = false
-	_, err := DisFacMode(c)
+	_, err := EnFacMode(c)
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
