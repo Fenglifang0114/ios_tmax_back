@@ -133,6 +133,7 @@ type Scale struct {
 	// function pointer to handle message from scale
 	// composer object
 	composer *m.CmdComposer
+	Pcnf     ComInfo
 }
 
 // NewScale creates a new scale
@@ -150,7 +151,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 	}
 	scale := &Scale{
 		scaleMgr: scaleMgr, Conn: conn, ScaleCat: scaleCat, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
-		fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MySerial: sport,
+		fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MySerial: sport, Pcnf: pcnf,
 		quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
 	}
 	scale.respChansMap = map[m.RespMsgType][]chan *ScaleRespMsg{}

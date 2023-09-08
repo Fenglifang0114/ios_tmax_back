@@ -160,6 +160,10 @@ func GetResVsResp(reqType SReqType) m.RespMsgType {
 	return conversionMap[reqType]
 }
 
+func procUpdateFirmware(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return scale.UpdateFirmware(req.ReqData)
+}
+
 func init() {
 	handlers = map[SReqType]reqProcFun{
 		SREQ_GET_WEIGHT:          procGetWeight,
@@ -182,6 +186,7 @@ func init() {
 		SREQ_SEND_DATA_TO_WIFI:   procSendDataToWifi,
 		SREQ_GET_IP_MODE:         procGetIpMode,
 		SREQ_GET_WIFI_INFO:       procGetWifiInfo,
+		SREQ_UPDATE_FIRMWARE:     procUpdateFirmware,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

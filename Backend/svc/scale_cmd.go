@@ -2,13 +2,35 @@ package svc
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"tmaxsrv/cmd"
 	mcmd "tmaxsrv/cmd"
 	m "tmaxsrv/comm"
 	l "tmaxsrv/log"
+	"tmaxsrv/util"
 )
+
+func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
+	pickerFn := c.MySerial.pickerFn
+	c.MySerial.Close()
+
+	result, err := util.RunCommand("BootCommander.exe", "-t=xcp_rs232", "-b=115200", name)
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+
+	if c.MySerial, err = NewSerial(c.Pcnf, pickerFn); err != nil {
+		l.Log.Error(err.Error())
+	}
+
+	if strings.Contains(result, "done") {
+		return &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+	} else {
+		return &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
+	}
+}
 
 func (c *Scale) PerfZero() (*ScaleRespMsg, error) {
 	l.Log.Debug("perform zero")

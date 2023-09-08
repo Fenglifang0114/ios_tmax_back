@@ -114,5 +114,6 @@ const (
 	PRT_PASSTH_DATA_RESP     RespMsgType = "resp_prt_passth_data"
 	SEND_DATA_TO_BT_RESP     RespMsgType = "resp_bt_passth_data"
 	SEND_DATA_TO_WIFI_RESP   RespMsgType = "resp_send_data_to_wifi"
+	UPDATE_FIRMWARE_RESP     RespMsgType = "resp_update_firmware"
 	UNKNOWN_DATA             RespMsgType = "unknown_data"
 )

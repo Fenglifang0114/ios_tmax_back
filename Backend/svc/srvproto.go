@@ -217,6 +217,7 @@ const (
 	SREQ_SEND_DATA_TO_WIFI   SReqType = "send_data_to_wifi"
 	SREQ_GET_IP_MODE         SReqType = "get_ip_mode"
 	SREQ_GET_WIFI_INFO       SReqType = "get_wifi_info"
+	SREQ_UPDATE_FIRMWARE     SReqType = "update_firmware"
 )
 
 type ReqScaleRec struct {
