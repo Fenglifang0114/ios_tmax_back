@@ -191,7 +191,7 @@ func (s *TSerial) readScale() (int, error) {
 	}
 	// fmt.Printf("data:%v", string(tmpBuf))
 
-	if s.queue.IsFull() { // FIXME: should we handle this error with this way?
+	if s.queue.IsFull() {
 		s.queue.DequeueN(s.queue.Capacity) // handle abnormal case
 	}
 

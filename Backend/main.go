@@ -13,6 +13,7 @@ import (
 	"tmaxsrv/build"
 	"tmaxsrv/log"
 	"tmaxsrv/svc"
+	"tmaxsrv/util"
 )
 
 var Version = "1.0.0"
@@ -21,10 +22,27 @@ const (
 	INSTANCE_PORT = 9292
 )
 
+var (
+	OUR_USED_APP_NAMES []string = []string{"BootCommander.exe"}
+)
+
+func killZombieApp() error {
+	for _, app := range OUR_USED_APP_NAMES {
+		if err := util.KillApp(app); err == nil {
+			fmt.Println("wait 5 seconds...")
+			time.Sleep(5 * time.Second)
+			fmt.Println("done")
+		}
+	}
+	return nil
+}
+
 func main() {
 	fmt.Println("Version:\t", Version)
 	fmt.Println("build.Time:\t", build.Time)
 	fmt.Println("build.User:\t", build.User)
+
+	killZombieApp()
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", INSTANCE_PORT))
 	if err != nil {

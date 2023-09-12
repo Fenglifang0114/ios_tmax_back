@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 )
@@ -31,4 +32,16 @@ func RunCommand(command string, args ...string) (string, error) {
 	}
 
 	return output, nil
+}
+
+func KillApp(appName string) error {
+	cmd := exec.Command("taskkill", "/F", "/IM", appName)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Error killing process:", err)
+		return err
+	}
+
+	fmt.Println("Process killed")
+	return nil
 }

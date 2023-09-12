@@ -129,7 +129,7 @@ const (
 )
 
 type PortsListMsg struct {
-	PortsList []serial.Port // FIXME:
+	PortsList []serial.Port
 }
 
 type ScalesListMsg struct {
@@ -194,17 +194,16 @@ type SRequest struct { // request for a scale or scale manager for records
 type SReqType string
 
 const (
-	SREQ_ZERO              SReqType = "zero"
-	SREQ_TARE              SReqType = "tare"
-	SREQ_GET_WEIGHT        SReqType = "get_weight"
-	SREQ_SEND_WT_CONT      SReqType = "send_wt_cont"
-	SREQ_STOP_SEND_WT      SReqType = "stop_send_wt"
-	SREQ_REG_WEIGHT_DATA   SReqType = "reg_weight_data"
-	SREQ_UNREG_WEIGHT_DATA SReqType = "unreg_weight_data"
-	SREQ_GET_RECS          SReqType = "get_recs" // with parameter ReqScaleRec
-	SREQ_ADD_REC           SReqType = "add_rec"  // with parameter ReqAddScaleRec
-	SREQ_DEL_REC           SReqType = "del_rec"  // with parameter ReqDelScaleRec
-	//	SREQ_DOWN_PRN_FMT      SReqType = "down_prn_fmt" // with parameter csv formatted string
+	SREQ_ZERO                SReqType = "zero"
+	SREQ_TARE                SReqType = "tare"
+	SREQ_GET_WEIGHT          SReqType = "get_weight"
+	SREQ_SEND_WT_CONT        SReqType = "send_wt_cont"
+	SREQ_STOP_SEND_WT        SReqType = "stop_send_wt"
+	SREQ_REG_WEIGHT_DATA     SReqType = "reg_weight_data"
+	SREQ_UNREG_WEIGHT_DATA   SReqType = "unreg_weight_data"
+	SREQ_GET_RECS            SReqType = "get_recs"                   // with parameter ReqScaleRec
+	SREQ_ADD_REC             SReqType = "add_rec"                    // with parameter ReqAddScaleRec
+	SREQ_DEL_REC             SReqType = "del_rec"                    // with parameter ReqDelScaleRec
 	SREQ_DOWN_PRN_FMT        SReqType = "down_print_format_to_scale" // with parameter csv formatted string
 	SREQ_GET_AP_LIST         SReqType = "get_ap_list"
 	SREQ_RESCAN_AP_LIST      SReqType = "rescan_ap_list"
@@ -245,37 +244,6 @@ type ScaleRespMsg struct { // including response and unsolicited messages
 	MsgType comm.RespMsgType
 	MsgBody interface{} // MsgBody [T RespMsg|string]
 	ScaleId int64
-}
-
-var respMsgTypeTab = []comm.RespMsgType{
-	comm.WEIGHT_DATA,
-	comm.ZERO_CMD_RESP,
-	comm.TARE_CMD_RESP,
-	comm.WEIGHT_DATA_RESP,
-	comm.REG_WEIGHT_RESP,
-	comm.UNREG_WEIGHT_RESP,
-	comm.GET_RECS_RESP,
-	comm.ADD_REC_RESP,
-	comm.DEL_REC_RESP,
-	comm.EN_FAC_MODE_RESP,
-	comm.DIS_FAC_MODE_RESP,
-	comm.EN_PASSTH_MODE_RESP,
-	comm.DIS_PASSTH_MODE_RESP,
-	comm.ERASE_FLASH_RESP,
-	comm.WRITE_DATA_FLASH_RESP,
-	comm.DOWN_PRN_FMT_RESP,
-	comm.ERR_SERIAL_RESP,
-	comm.GET_AP_LIST_RESP,
-	comm.RESCAN_AP_LIST_RESP,
-	comm.SET_WIFI_DYNAMIC_IP_RESP,
-	comm.SET_WIFI_STATIC_IP_RESP,
-	comm.GET_IP_INFO_RESP,
-	comm.MODIFY_BT_NAME_RESP,
-	comm.NO_RESP,
-	comm.BT_PASSTH_DATA_RESP,
-	comm.WIFI_PASSTH_DATA_RESP,
-	comm.PRT_PASSTH_DATA_RESP,
-	comm.UNKNOWN_DATA,
 }
 
 type RespMsg struct {

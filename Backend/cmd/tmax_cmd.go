@@ -84,7 +84,7 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getIpModCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_CONN_AP:
 		fields := strings.Split(cmdData.Data.(string), ",")
-		return connectWifiApCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_LONG_20000_MS, nil
+		return connectWifiApCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_VERY_LONG_60000_MS, nil
 	case m.CMD_WIFI_DISCONN_AP:
 		return disconnectWifiApCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_BT_DATA_PASSTH:
@@ -100,7 +100,7 @@ var CONNECT_AP_CMD []byte = []byte("AT+CWJAP_DEF=\"%s\",\"%s\"\r\n") // ssid, pa
 var DISCONNECT_AP_CMD []byte = []byte("AT+CWQAP\r\n")                // ssid, password, bssid
 var GET_AP_INFO_CMD []byte = []byte("AT+CWJAP_DEF?\r\n")             // ssid, password, bssid
 var GET_IP_INFO_CMD []byte = []byte("AT+CIPSTA_CUR?\r\n")            // ssid, password, bssid
-var GET_IP_MODE_CMD []byte = []byte("AT+CWDHCP_CUR?\r\n")            // FIXME:
+var GET_IP_MODE_CMD []byte = []byte("AT+CWDHCP_CUR?\r\n")
 var EN_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,1\r\n")
 var DIS_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,0")
 var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=\"%s\",\"%s\",\"%s\"\r\n") // ip, gateway, netmask

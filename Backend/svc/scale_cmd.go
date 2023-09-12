@@ -16,7 +16,10 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()
 
-	result, err := util.RunCommand("BootCommander.exe", "-t=xcp_rs232", "-b=115200", name)
+	println(c.Pcnf.DevPath)
+	comName := "-d=" + c.Pcnf.DevPath //FLF
+
+	result, err := util.RunCommand("./BootCommander.exe", "-t=xcp_rs232", comName, "-b=57600", name)
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
@@ -25,7 +28,8 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 		l.Log.Error(err.Error())
 	}
 
-	if strings.Contains(result, "done") {
+	fmt.Println(result)
+	if strings.Contains(result, "Finishing programming session...[OK]") {
 		return &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
 	} else {
 		return &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
@@ -41,7 +45,6 @@ func (c *Scale) PerfZero() (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_ZERO, m.ZERO_CMD_RESP)
 }
 
-
 func (c *Scale) PerfTare() (*ScaleRespMsg, error) {
 	l.Log.Debug("perform tare")
 	_, err := EnFacMode(c)
@@ -50,7 +53,6 @@ func (c *Scale) PerfTare() (*ScaleRespMsg, error) {
 	}
 	return excuteSimpCmd(c, m.CMD_TARE, m.TARE_CMD_RESP)
 }
-
 
 func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 	// if c.isOldC51Scale {
@@ -61,7 +63,6 @@ func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 	// }
 	return nil, nil // FIXME:
 }
-
 
 func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 	l.Log.Debug("register weight data")
@@ -74,7 +75,6 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 	// enable scale sending weighing info continually
 	return excuteSimpCmd(c, m.CMD_EN_CONTINUE_MODE, m.REG_WEIGHT_RESP)
 }
-
 
 // func sendErrMsg(c *Scale, msg *ScaleRespMsg) {
 // 	msgStr, err := json.MarshalToString(msg)
@@ -204,7 +204,7 @@ func SetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
 
 func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
 	l.Log.Debug("set wifi to static IP")
-	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_SET_STATIC_IP, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ip, gateway, netmask)}) //FIXME:
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_SET_STATIC_IP, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ip, gateway, netmask)})
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
@@ -215,7 +215,7 @@ func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*Scal
 // Connect to specifi AP
 func ConnectWifiAp(s *Scale, ssid string, bssid string, passwd string) (*ScaleRespMsg, error) {
 	l.Log.Debug("Connect to Wifi AP")
-	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_CONN_AP, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ssid, bssid, passwd)}) //FIXME:
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_CONN_AP, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ssid, bssid, passwd)})
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}

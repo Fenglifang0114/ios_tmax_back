@@ -20,6 +20,7 @@ const (
 
 const (
 	CONNECT_AP_OK_RESP          string = "\r\nOK\r\n"
+	CONNECT_AP_FAIL_RESP        string = "+CWJAP:"
 	SET_WIFI_DYNAMIC_IP_OK_RESP string = "\r\nOK\r\n"
 	SET_WIFI_STATIC_IP_OK_RESP  string = "\r\nOK\r\n"
 	GET_AP_INFO_OK_RESP         string = "\r\nOK\r\n"
@@ -469,10 +470,10 @@ func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 func handleConnectApResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), CONNECT_AP_OK_RESP) { // success
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "ok"}, len(data)
-	} else if strings.Contains(string(data), "+CWJAP:") { // fail
+	} else if strings.Contains(string(data), CONNECT_AP_FAIL_RESP) { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
-		return ScaleRespMsg{}, 0
+		return ScaleRespMsg{}, len(data)
 	}
 }
 

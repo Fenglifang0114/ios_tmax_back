@@ -221,16 +221,13 @@ func (s *Scale) procScaleRespMsg() {
 		case <-s.quitProcScaleRespMessageCh:
 			quit = true
 		case inPack := <-s.MySerial.recvCh:
-			if inPack.PayloadLen == 0 { // TODO: maybe caused by closed serial port
+			if inPack.PayloadLen == 0 {
 				continue
 			}
 			l.Log.Debugf("From sport: %v", inPack)
-			// if !s.isSendUnolicitedData || !s.isWaintingResp {
-			// 	// continue // FIXME: skip this line for testing purpose
-			// }
+
 			if s.ScaleCat == m.SCALE_C51 {
 			} else if s.ScaleCat == m.SCALE_T2200 {
-				// TODO:
 				msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
 				if err != nil {
 					continue
@@ -309,14 +306,14 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 			pickFun = s.MySerial.pickerFn
 			s.MySerial.Close()
 			s.MySerial = nil
-			if s.MySerial, err = NewSerial(pcnf, pickFun); err != nil {
-				l.Log.Error(err.Error())
-			}
 		} else {
 			l.Log.Error("no serial port is assigned before")
 			return false
 		}
-
+		time.Sleep(1 * time.Second)
+		if s.MySerial, err = NewSerial(pcnf, pickFun); err != nil {
+			l.Log.Error(err.Error())
+		}
 	} else if conf.Type == MEDIA_NET {
 		return false
 	} else if conf.Type == MEDIA_BT {
@@ -440,16 +437,14 @@ func ReqGetApList(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func ReqConnectAp(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
 	if msg.MsgBody != "ok" {
 		return msg, err
 	}
 
-	if _, err := ConnectWifiAp(s, ssid, password, bssid); err != nil {
-		return &ScaleRespMsg{}, err
-	}
-	return &ScaleRespMsg{m.CONNECT_AP_RESP, "ok", s.Id}, nil
+	res, err := ConnectWifiAp(s, ssid, password, bssid)
+	return res, err
 }
 
 func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
@@ -518,7 +513,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		if prnfmt.ParserFmtToFile(string(csvFmtContent)) { //FIXME: ("csvPrnFmt") is incorrect
+		if prnfmt.ParserFmtToFile(string(csvFmtContent)) {
 			// 读取bin文件
 			data, err := os.ReadFile("formatBin.bin")
 			if err != nil {

@@ -94,7 +94,7 @@ func procGetApList(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func procRescanAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return &ScaleRespMsg{ScaleId: scale.Id, MsgType: m.RESCAN_AP_LIST_RESP, MsgBody: "ok"}, nil // FIXME:
+	return &ScaleRespMsg{ScaleId: scale.Id, MsgType: m.RESCAN_AP_LIST_RESP, MsgBody: "ok"}, nil
 }
 
 func procConnectAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -210,7 +210,7 @@ func init() {
 		SREQ_MODIFY_BT_NAME:      m.MODIFY_BT_NAME_RESP,
 		SREQ_SEND_DATA_TO_BT:     m.SEND_DATA_TO_BT_RESP,
 		SREQ_SEND_DATA_TO_WIFI:   m.SEND_DATA_TO_WIFI_RESP,
-		SREQ_GET_IP_MODE:         m.GET_IP_INFO_RESP,
+		SREQ_GET_IP_MODE:         m.GET_IP_MODE_RESP, //FLF
 		SREQ_GET_WIFI_INFO:       m.GET_IP_INFO_RESP,
 	}
 }
