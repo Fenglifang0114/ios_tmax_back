@@ -3,9 +3,9 @@ package svc
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
-
 	"tmaxsrv/cmd"
 	mcmd "tmaxsrv/cmd"
 	m "tmaxsrv/comm"
@@ -14,16 +14,19 @@ import (
 )
 
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
+	Reboot(c)
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()
 
 	output := make(chan string)
 	done := make(chan error)
-	go util.RunCommand(output, done, "BootCommander.exe", "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
+	go util.RunCommand(output, done, "./BootCommander.exe", "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
 	var err error
 	isFinish := false
 	isStartUpdate := false
 	var cmdOutput string
+	var percentage float32 = 0.0
+	var updateTimeMs float32 = 0.0
 	var respMsg *ScaleRespMsg
 	respOk := &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "ok", ScaleId: c.Id}
 	respFail := &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "fail", ScaleId: c.Id}
@@ -38,22 +41,34 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 			// send progress notification to UI
 			if isStartUpdate {
 				// check percentage and send progress notification to UI
-				percentage := getPercentage(cmdOutput)
+				// percentage := getPercentage(cmdOutput)
 
-				respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: percentage, ScaleId: c.Id}
-				result, _ := json.Marshal(respMsg)
-				c.client.sendCh <- result
+				// respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: percentage, ScaleId: c.Id}
+				// result, _ := json.Marshal(respMsg)
+				// c.client.sendCh <- result
 			}
-			if strings.Contains(cmdOutput, "\r\nProgramming ") {
+			if !isStartUpdate && strings.Contains(cmdOutput, "Erasing") {
 				isStartUpdate = true
 				// inform UI update firmware is
+				re := regexp.MustCompile(`Erasing (\d+) bytes`)
+				match := re.FindStringSubmatch(cmdOutput)
+				if len(match) > 1 {
+					number := match[1]
+					updateTimeInt, _ := strconv.Atoi(number)
+					updateTimeMs = float32(updateTimeInt) / 2.6
+					fmt.Println(number) // 输出: 64980
+				}
+
 				respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: "started", ScaleId: c.Id}
 				result, _ := json.Marshal(respMsg)
 				c.client.sendCh <- result
 			}
-
 		case err = <-done:
 			if strings.Contains(cmdOutput, "Finishing programming session...[OK]") {
+				respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(100), ScaleId: c.Id}
+				result, _ := json.Marshal(respMsg100)
+				c.client.sendCh <- result
+				time.Sleep(500 * time.Millisecond)
 				respMsg = respOk
 			} else {
 				respMsg = respFail
@@ -64,6 +79,14 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 				fmt.Println("Command completed")
 			}
 			isFinish = true
+		case <-time.After(time.Duration(250) * time.Millisecond):
+			if isStartUpdate {
+				percentage = percentage + 25000.0/updateTimeMs
+				percentageInt := int(percentage)
+				respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(percentageInt), ScaleId: c.Id}
+				result, _ := json.Marshal(respMsg)
+				c.client.sendCh <- result
+			}
 		}
 	}
 	if c.MySerial, err = NewSerial(c.Pcnf, pickerFn); err != nil {
@@ -107,10 +130,10 @@ func (c *Scale) PerfTare() (*ScaleRespMsg, error) {
 
 func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 	// if c.isOldC51Scale {
-	// 	return perfCmd(c, []byte(GET_WEIGHT_CMD))
+	//     return perfCmd(c, []byte(GET_WEIGHT_CMD))
 	// } else {
-	// 	_, err := perfCmdNwaitResult(c, TMAX_READ_WEIGHT_CMD, WEIGHT_DATA_RESP)
-	// 	return err == nil
+	//     _, err := perfCmdNwaitResult(c, TMAX_READ_WEIGHT_CMD, WEIGHT_DATA_RESP)
+	//     return err == nil
 	// }
 	return nil, nil // FIXME:
 }
@@ -128,12 +151,12 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 }
 
 // func sendErrMsg(c *Scale, msg *ScaleRespMsg) {
-// 	msgStr, err := json.MarshalToString(msg)
-// 	if err != nil {
-// 		if c.client != nil {
-// 			c.client.sendCh <- []byte(msgStr)
-// 		}
-// 	}
+//     msgStr, err := json.MarshalToString(msg)
+//     if err != nil {
+//         if c.client != nil {
+//             c.client.sendCh <- []byte(msgStr)
+//         }
+//     }
 // }
 
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
@@ -161,6 +184,12 @@ func (c *Scale) AddRec(rec ScaleRec) error {
 
 func (c *Scale) DelRec(recId uint) error {
 	return c.scaleMgr.recPb.DeleteRec(recId)
+}
+
+// 重启
+func Reboot(s *Scale) (*ScaleRespMsg, error) {
+	l.Log.Debug("send reboot cmd to scale")
+	return excuteSimpCmd(s, m.CMD_REBOOT, m.UNKNOWN_DATA)
 }
 
 // 打开工厂模式
@@ -380,137 +409,137 @@ func Req2CmdForC51(req SReqType) ([]byte, error) {
 
 // // 打开工厂模式
 // func enFacModeCmdT2200() []byte {
-// 	// 构建包头
-// 	packet := make([]byte, OPEN_FAC_CHUNK_SIZE)
-// 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+//     // 构建包头
+//     packet := make([]byte, OPEN_FAC_CHUNK_SIZE)
+//     binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
 
-// 	// 构建命令ID与命令类型
-// 	packet[2] = 0x05
-// 	packet[3] = 0xF1
+//     // 构建命令ID与命令类型
+//     packet[2] = 0x05
+//     packet[3] = 0xF1
 
-// 	// 添加包尾
-// 	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE-2:], PACKET_TAIL)
+//     // 添加包尾
+//     binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE-2:], PACKET_TAIL)
 
-// 	return packet
+//     return packet
 // }
 
 // // 打开工厂模式
 // func disFacModeCmdT2200() []byte {
-// 	// 构建包头
-// 	packet := make([]byte, OPEN_FAC_CHUNK_SIZE)
-// 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+//     // 构建包头
+//     packet := make([]byte, OPEN_FAC_CHUNK_SIZE)
+//     binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
 
-// 	// 构建命令ID与命令类型
-// 	packet[2] = 0x05
-// 	packet[3] = 0xF2
+//     // 构建命令ID与命令类型
+//     packet[2] = 0x05
+//     packet[3] = 0xF2
 
-// 	// 添加包尾
-// 	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE-2:], PACKET_TAIL)
+//     // 添加包尾
+//     binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE-2:], PACKET_TAIL)
 
-// 	return packet
+//     return packet
 // }
 
 // // 擦除原本秤上的打印格式
 // func eraseCmdT2200(addr uint32) []byte { // erase size will 2K
-// 	// 构建包头
-// 	packet := make([]byte, EARSE_CHUNK_SIZE)
-// 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
-// 	// 构建命令ID与命令类型
-// 	packet[2] = CMD_ERASE
-// 	packet[3] = CMD_FLASH
+//     // 构建包头
+//     packet := make([]byte, EARSE_CHUNK_SIZE)
+//     binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+//     // 构建命令ID与命令类型
+//     packet[2] = CMD_ERASE
+//     packet[3] = CMD_FLASH
 
-// 	// 构建地址
-// 	binary.BigEndian.PutUint32(packet[4:8], addr)
+//     // 构建地址
+//     binary.BigEndian.PutUint32(packet[4:8], addr)
 
-// 	// 擦除长度
-// 	binary.BigEndian.PutUint16(packet[8:10], CMD_ERASE_SIZE)
+//     // 擦除长度
+//     binary.BigEndian.PutUint16(packet[8:10], CMD_ERASE_SIZE)
 
-// 	// 计算与添加校验码
-// 	checksum := utils.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE-6])
-// 	binary.BigEndian.PutUint32(packet[EARSE_CHUNK_SIZE-6:], checksum)
+//     // 计算与添加校验码
+//     checksum := utils.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE-6])
+//     binary.BigEndian.PutUint32(packet[EARSE_CHUNK_SIZE-6:], checksum)
 
-// 	// 添加包尾
-// 	binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE-2:], PACKET_TAIL)
+//     // 添加包尾
+//     binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE-2:], PACKET_TAIL)
 
-// 	return packet
+//     return packet
 // }
 
 // func wrDataCmdT2200(addr uint32, data []byte) []byte {
-// 	// 构建包头
-// 	packet := make([]byte, FILE_CHUNK_SIZE)
-// 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
+//     // 构建包头
+//     packet := make([]byte, FILE_CHUNK_SIZE)
+//     binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD)
 
-// 	// 构建命令ID与命令类型
-// 	packet[2] = CMD_IDENTIFY
-// 	packet[3] = CMD_TYPE
+//     // 构建命令ID与命令类型
+//     packet[2] = CMD_IDENTIFY
+//     packet[3] = CMD_TYPE
 
-// 	// 构建地址
-// 	binary.BigEndian.PutUint32(packet[4:8], addr)
+//     // 构建地址
+//     binary.BigEndian.PutUint32(packet[4:8], addr)
 
-// 	// 构建数据长度
-// 	binary.BigEndian.PutUint16(packet[8:10], uint16(len(data)))
+//     // 构建数据长度
+//     binary.BigEndian.PutUint16(packet[8:10], uint16(len(data)))
 
-// 	// 复制数据
-// 	copy(packet[10:], data)
+//     // 复制数据
+//     copy(packet[10:], data)
 
-// 	// 计算与添加校验码
-// 	checksum := utils.Crc32MPEG2(packet[2 : FILE_CHUNK_SIZE-6])
-// 	binary.BigEndian.PutUint32(packet[FILE_CHUNK_SIZE-6:], checksum)
+//     // 计算与添加校验码
+//     checksum := utils.Crc32MPEG2(packet[2 : FILE_CHUNK_SIZE-6])
+//     binary.BigEndian.PutUint32(packet[FILE_CHUNK_SIZE-6:], checksum)
 
-// 	// 添加包尾
-// 	binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE-2:], PACKET_TAIL)
+//     // 添加包尾
+//     binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE-2:], PACKET_TAIL)
 
-// 	return packet
+//     return packet
 // }
 
 // func Req2CmdForT2200(req SReqType, reqData string) ([]byte, error) {
-// 	fmt.Println("Req2CmdForT2200")
-// 	switch req {
-// 	// case SREQ_EN_FAC_MODE:
-// 	// 	return enFacModeCmdT2200(), nil
-// 	// case SREQ_DIS_FAC_MODE:
-// 	// 	return disFacModeCmdT2200(), nil
-// 	// case SREQ_ERASE_FLASH:
-// 	// 	// TODO: reqData: format sequence 0-3
-// 	// 	seqNo, err := strconv.Atoi(reqData)
-// 	// 	if err != nil {
-// 	// 		return nil, err
-// 	// 	}
-// 	// 	return eraseCmdT2200(uint32(T2200_PRN_FMT_BASE_ADDR + seqNo*CMD_ERASE_SIZE)), nil
-// 	// case SREQ_READ_FLASH:
-// 	// 	return T2200_READ_FLASH, nil
-// 	// case SREQ_WRITE_FLASH:
-// 	// 	seqNo, err := strconv.Atoi(reqData[:1])
-// 	// 	if err != nil {
-// 	// 		fmt.Println("Invalid sequence number")
-// 	// 		return nil, err
-// 	// 	}
-// 	// 	offset, err := strconv.Atoi(reqData[2:8])
-// 	// 	if err != nil {
-// 	// 		fmt.Println("Invalid offset number")
-// 	// 		return nil, err
-// 	// 	}
+//     fmt.Println("Req2CmdForT2200")
+//     switch req {
+//     // case SREQ_EN_FAC_MODE:
+//     //     return enFacModeCmdT2200(), nil
+//     // case SREQ_DIS_FAC_MODE:
+//     //     return disFacModeCmdT2200(), nil
+//     // case SREQ_ERASE_FLASH:
+//     //     // TODO: reqData: format sequence 0-3
+//     //     seqNo, err := strconv.Atoi(reqData)
+//     //     if err != nil {
+//     //         return nil, err
+//     //     }
+//     //     return eraseCmdT2200(uint32(T2200_PRN_FMT_BASE_ADDR + seqNo*CMD_ERASE_SIZE)), nil
+//     // case SREQ_READ_FLASH:
+//     //     return T2200_READ_FLASH, nil
+//     // case SREQ_WRITE_FLASH:
+//     //     seqNo, err := strconv.Atoi(reqData[:1])
+//     //     if err != nil {
+//     //         fmt.Println("Invalid sequence number")
+//     //         return nil, err
+//     //     }
+//     //     offset, err := strconv.Atoi(reqData[2:8])
+//     //     if err != nil {
+//     //         fmt.Println("Invalid offset number")
+//     //         return nil, err
+//     //     }
 
-// 	// 	// Extract byte array
-// 	// 	data, err := hex.DecodeString(reqData[9:])
-// 	// 	if err != nil {
-// 	// 		fmt.Println("Invalid hex string")
-// 	// 		return nil, err
-// 	// 	}
-// 	// return wrDataCmdT2200(uint32(T2200_PRN_FMT_BASE_ADDR+seqNo*CMD_ERASE_SIZE+offset), data), nil
-// 	}
+//     //     // Extract byte array
+//     //     data, err := hex.DecodeString(reqData[9:])
+//     //     if err != nil {
+//     //         fmt.Println("Invalid hex string")
+//     //         return nil, err
+//     //     }
+//     // return wrDataCmdT2200(uint32(T2200_PRN_FMT_BASE_ADDR+seqNo*CMD_ERASE_SIZE+offset), data), nil
+//     }
 
-// 	return nil, nil
+//     return nil, nil
 // }
 
 // // func Req2CmdForJWP(req SReqType) ([]byte, error) {
-// // 	fmt.Println("Req2CmdForJWP")
-// // 	return nil, nil
+// //     fmt.Println("Req2CmdForJWP")
+// //     return nil, nil
 // // }
 
 // // func Req2CmdForTMAX(req SReqType) ([]byte, error) {
-// // 	fmt.Println("Req2CmdForTMAX")
-// // 	return nil, nil
+// //     fmt.Println("Req2CmdForTMAX")
+// //     return nil, nil
 // // }
 
 // 创建ScaleCat的函数映射

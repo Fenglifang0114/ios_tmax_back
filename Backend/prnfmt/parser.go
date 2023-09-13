@@ -67,8 +67,8 @@ func ParserFmtToBuf(utf8Buff string) *bytes.Buffer {
 	lastVarNum := 0
 	lastAddr := 0
 
-	buff, _ := Utf8ToGb2312(utf8Buff)
-	formatbuf := ParseEplLines(buff, dataCamp, lastVarPos)
+	// buff, _ := Utf8ToGb2312(utf8Buff)
+	formatbuf := ParseEplLines(utf8Buff, dataCamp, lastVarPos)
 	everyBufLen = append(everyBufLen, formatbuf.Len())
 
 	fmt.Println(string(dataCamp.Bytes()))
