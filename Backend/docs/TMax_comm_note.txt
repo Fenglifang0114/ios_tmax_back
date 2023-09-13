@@ -110,7 +110,9 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 	"ReqData": "tmax_firmware.srec"
 }
 	response: {"MsgType":"resp_update_firmware","MsgBody":"ok", "ScaleId":1}
-
+10.1 progress of updating firmware => {
+	 "MsgType":"resp_update_firmware_progress","MsgBody":"10%", "ScaleId":1
+}
 To configure scale's wifi to connect to specific AP
 ws://127.0.0.1:7878/tmax?scaleid=1
 

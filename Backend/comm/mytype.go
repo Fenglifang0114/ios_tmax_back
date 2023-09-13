@@ -115,5 +115,6 @@ const (
 	SEND_DATA_TO_BT_RESP     RespMsgType = "resp_bt_passth_data"
 	SEND_DATA_TO_WIFI_RESP   RespMsgType = "resp_send_data_to_wifi"
 	UPDATE_FIRMWARE_RESP     RespMsgType = "resp_update_firmware"
+	UPDATE_FIRMWARE_PROGRESS RespMsgType = "resp_update_firmware_progress"
 	UNKNOWN_DATA             RespMsgType = "unknown_data"
 )

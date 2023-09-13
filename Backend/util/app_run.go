@@ -1,37 +1,39 @@
 package util
 
 import (
+	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os/exec"
 )
 
-func RunCommand(command string, args ...string) (string, error) {
+func RunCommand(output chan<- string, done chan<- error, command string, args ...string) {
 	cmd := exec.Command(command, args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", err
+		done <- fmt.Errorf("failed to create stdout pipe: %v", err)
+		return
 	}
+
 	// Start the command
 	if err := cmd.Start(); err != nil {
-		return "", nil
+		done <- fmt.Errorf("failed to start command: %v", err)
+		return
 	}
 
-	// Read output from both pipes
-	outputBytes, err := ioutil.ReadAll(stdout)
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		output <- line // Send each line of output to the output channel
+	}
+
+	err = cmd.Wait()
 	if err != nil {
-		panic(err)
-	}
-	// Convert output to strings
-	output := string(outputBytes)
-
-	// Wait for the command to finish
-	if err := cmd.Wait(); err != nil {
-		panic(err)
+		done <- fmt.Errorf("command failed: %v", err)
+		return
 	}
 
-	return output, nil
+	done <- nil
 }
 
 func KillApp(appName string) error {

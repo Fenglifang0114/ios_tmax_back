@@ -2,6 +2,7 @@ package svc
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,24 +17,74 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()
 
-	println(c.Pcnf.DevPath)
-	comName := "-d=" + c.Pcnf.DevPath //FLF
+	output := make(chan string)
+	done := make(chan error)
+	go util.RunCommand(output, done, "BootCommander.exe", "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
+	var err error
+	isFinish := false
+	isStartUpdate := false
+	var cmdOutput string
+	var respMsg *ScaleRespMsg
+	respOk := &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "ok", ScaleId: c.Id}
+	respFail := &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "fail", ScaleId: c.Id}
+	for {
+		if isFinish {
+			break
+		}
+		select {
+		case line := <-output:
+			cmdOutput += line
+			fmt.Println(line) // Print each line of output as it is received
+			// send progress notification to UI
+			if isStartUpdate {
+				// check percentage and send progress notification to UI
+				percentage := getPercentage(cmdOutput)
 
-	result, err := util.RunCommand("./BootCommander.exe", "-t=xcp_rs232", comName, "-b=57600", name)
-	if err != nil {
-		return &ScaleRespMsg{}, err
+				respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: percentage, ScaleId: c.Id}
+				result, _ := json.Marshal(respMsg)
+				c.client.sendCh <- result
+			}
+			if strings.Contains(cmdOutput, "\r\nProgramming ") {
+				isStartUpdate = true
+				// inform UI update firmware is
+				respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: "started", ScaleId: c.Id}
+				result, _ := json.Marshal(respMsg)
+				c.client.sendCh <- result
+			}
+
+		case err = <-done:
+			if strings.Contains(cmdOutput, "Finishing programming session...[OK]") {
+				respMsg = respOk
+			} else {
+				respMsg = respFail
+			}
+			if err != nil {
+				fmt.Println("Error:", err)
+			} else {
+				fmt.Println("Command completed")
+			}
+			isFinish = true
+		}
 	}
-
 	if c.MySerial, err = NewSerial(c.Pcnf, pickerFn); err != nil {
 		l.Log.Error(err.Error())
 	}
+	return respMsg, nil
+}
 
-	fmt.Println(result)
-	if strings.Contains(result, "Finishing programming session...[OK]") {
-		return &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+func getPercentage(data string) string {
+	percentage := "0%"
+	pattern := `\[ *(\d+)%\][^[]*$`
+	r := regexp.MustCompile(pattern)
+	match := r.FindStringSubmatch(data)
+	if len(match) > 1 {
+		fmt.Println(match[1])
+		percentage = match[1]
 	} else {
-		return &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
+		fmt.Println("No match found.")
 	}
+
+	return percentage + "%"
 }
 
 func (c *Scale) PerfZero() (*ScaleRespMsg, error) {
