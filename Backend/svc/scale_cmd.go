@@ -14,6 +14,7 @@ import (
 )
 
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
+	EnFacMode(c)
 	Reboot(c)
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()

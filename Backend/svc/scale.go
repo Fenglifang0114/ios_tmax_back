@@ -314,6 +314,7 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 		if s.MySerial, err = NewSerial(pcnf, pickFun); err != nil {
 			l.Log.Error(err.Error())
 		}
+		s.Pcnf = pcnf
 	} else if conf.Type == MEDIA_NET {
 		return false
 	} else if conf.Type == MEDIA_BT {
