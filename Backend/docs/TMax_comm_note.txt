@@ -55,6 +55,12 @@ ws://127.0.0.1:7878/tmax?scaleid=0
 
 15. check if license is valid => {"Req": "check_license","ReqData":""}
     response: 	{"MsgType":"resp_check_license","MsgBody":"true,e4e13e78c5,2023-11-17"}
+15.1
+    check if given license key is valid => {"Req": "check_license","ReqData":"7f5ea60190eebe063d5ec40c8cf0a8642024-01-211771ccc88aa71ae5740ee8b21df3c74c"}
+    response: 	{"MsgType":"resp_check_license","MsgBody":"true,874fa8f310,2024-01-21"}
+16.
+    update license key => {"Req": "update_license","ReqData":"7f5ea60190eebe063d5ec40c8cf0a8642024-01-211771ccc88aa71ae5740ee8b21df3c74c"}
+    response: 	{"MsgType":"resp_update_license","MsgBody":"ok"}
 
 To connect to TMax scale with scaleId websocket
 ws://127.0.0.1:7878/tmax?scaleid=1
@@ -113,6 +119,15 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 10.1 progress of updating firmware => {
 	 "MsgType":"resp_update_firmware_progress","MsgBody":"10%", "ScaleId":1
 }
+
+11  check serial port status =>{
+	"Req": "check_serial_port",
+	"ReqData": ""
+}
+ {
+	 "MsgType":"resp_check_serial_port","MsgBody":"ok", "ScaleId":1
+}
+
 To configure scale's wifi to connect to specific AP
 ws://127.0.0.1:7878/tmax?scaleid=1
 

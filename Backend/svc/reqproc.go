@@ -164,6 +164,12 @@ func procUpdateFirmware(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return scale.UpdateFirmware(req.ReqData)
 }
 
+func ProcCheckSerialPort(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return scale.CheckSerialPort()
+}
+
+//  处理请求
+
 func init() {
 	handlers = map[SReqType]reqProcFun{
 		SREQ_GET_WEIGHT:          procGetWeight,
@@ -187,6 +193,7 @@ func init() {
 		SREQ_GET_IP_MODE:         procGetIpMode,
 		SREQ_GET_WIFI_INFO:       procGetWifiInfo,
 		SREQ_UPDATE_FIRMWARE:     procUpdateFirmware,
+		SREQ_CHECK_SERIAL_PORT:   ProcCheckSerialPort,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

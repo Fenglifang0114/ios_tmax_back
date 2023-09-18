@@ -491,16 +491,17 @@ func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
 // func ReqDownPrnFmt(c *Scale, csvPrnFmt string, seqno string) error {
 func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// TODO: add a api for UI to send download printer format request
-	if !gIsKeyValid {
-		return &ScaleRespMsg{}, fmt.Errorf("license key is not valid")
-	}
+	//在UI层检查licese是否通过
+	// if !gIsKeyValid {
+	// 	return &ScaleRespMsg{}, fmt.Errorf("license key is not valid")
+	// }
 
-	layout := "2006-01-02"
-	date, err := time.Parse(layout, gLicValidDate)
-	if err != nil || time.Now().After(date) {
-		fmt.Println(err)
-		return &ScaleRespMsg{}, fmt.Errorf("license expired")
-	}
+	// layout := "2006-01-02"
+	// date, err := time.Parse(layout, gLicValidDate)
+	// if err != nil || time.Now().After(date) {
+	// 	fmt.Println(err)
+	// 	return &ScaleRespMsg{}, fmt.Errorf("license expired")
+	// }
 
 	var reqData ReqPrnData
 	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {

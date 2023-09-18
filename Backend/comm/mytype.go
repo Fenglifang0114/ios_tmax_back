@@ -81,6 +81,7 @@ type Packet struct {
 
 type RespMsgType string
 
+// 处理scale回应
 const (
 	WEIGHT_DATA              RespMsgType = "weight_data"
 	ZERO_CMD_RESP            RespMsgType = "resp_zero_cmd"
@@ -116,5 +117,7 @@ const (
 	SEND_DATA_TO_WIFI_RESP   RespMsgType = "resp_send_data_to_wifi"
 	UPDATE_FIRMWARE_RESP     RespMsgType = "resp_update_firmware"
 	UPDATE_FIRMWARE_PROGRESS RespMsgType = "resp_update_firmware_progress"
-	UNKNOWN_DATA             RespMsgType = "unknown_data"
+	CHECK_SERIAL_PORT_RESP   RespMsgType = "resp_check_serial_port"
+
+	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

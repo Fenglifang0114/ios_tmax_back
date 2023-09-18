@@ -34,10 +34,13 @@ const (
 	REQ_DEL_USER    ReqType = "del_user"    // with ReqDelScale parameter
 	REQ_MODIFY_USER ReqType = "modify_user" // with ReqModifyScale parameter
 
-	REQ_QUIT_APPLICATION ReqType = "quit_application" // without parameter
-	REQ_GET_UI_CONF      ReqType = "get_ui_conf"      // without parameter
-	REQ_UPDATE_UI_CONF   ReqType = "update_ui_conf"   // without parameter
-	REQ_CHECK_LICENSE    ReqType = "check_license"    // without parameter
+	REQ_QUIT_APPLICATION  ReqType = "quit_application"  // without parameter
+	REQ_GET_UI_CONF       ReqType = "get_ui_conf"       // without parameter
+	REQ_UPDATE_UI_CONF    ReqType = "update_ui_conf"    // without parameter
+	REQ_CHECK_LICENSE     ReqType = "check_license"     // without parameter
+	REQ_CHECK_LICENSE_KEY ReqType = "check_license_key" // with parameter
+	REQ_UPDATE_LICENSE    ReqType = "update_license"    // with parameter
+
 )
 
 type ReqAddScale struct {
@@ -108,24 +111,28 @@ type ScaleMgrRespMsg struct {
 
 type ScaleMgrRespMsgType string
 
+// 处理公用的回应
 const (
-	SCALE_MGR_RESP_PORTS_LIST       ScaleMgrRespMsgType = "resp_ports_list"       // with response of PortsListMsg
-	SCALE_MGR_RESP_SCALES_LIST      ScaleMgrRespMsgType = "resp_scales_list"      // with response of ScalesListMsg
-	SCALE_MGR_RESP_SCALE_ADD        ScaleMgrRespMsgType = "resp_scale_add"        // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_SCALE_DEL        ScaleMgrRespMsgType = "resp_scale_del"        // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_SCALE_MODIFY     ScaleMgrRespMsgType = "resp_scale_modify"     // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_PRODUCTS_LIST    ScaleMgrRespMsgType = "resp_product_list"     // with response of ScalesListMsg
-	SCALE_MGR_RESP_PRODUCT_ADD      ScaleMgrRespMsgType = "resp_product_add"      // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_PRODUCT_DEL      ScaleMgrRespMsgType = "resp_product_del"      // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_PRODUCT_MODIFY   ScaleMgrRespMsgType = "resp_product_modify"   // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_USERS_LIST       ScaleMgrRespMsgType = "resp_user_list"        // with response of ScalesListMsg
-	SCALE_MGR_RESP_USER_ADD         ScaleMgrRespMsgType = "resp_user_add"         // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_USER_DEL         ScaleMgrRespMsgType = "resp_user_del"         // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_USER_MODIFY      ScaleMgrRespMsgType = "resp_user_modify"      // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_QUIT_APPLICATION ScaleMgrRespMsgType = "resp_quit_application" // without data
-	SCALE_MGR_RESP_GET_UI_CONFIG    ScaleMgrRespMsgType = "resp_get_ui_config"    // with response of UI configuration
-	SCALE_MGR_RESP_UPDATE_UI_CONFIG ScaleMgrRespMsgType = "resp_update_ui_config" // without parameter
-	SCALE_MGR_RESP_CHECK_LICENSE    ScaleMgrRespMsgType = "resp_check_license"    // with response of true or false
+	SCALE_MGR_RESP_PORTS_LIST        ScaleMgrRespMsgType = "resp_ports_list"        // with response of PortsListMsg
+	SCALE_MGR_RESP_SCALES_LIST       ScaleMgrRespMsgType = "resp_scales_list"       // with response of ScalesListMsg
+	SCALE_MGR_RESP_SCALE_ADD         ScaleMgrRespMsgType = "resp_scale_add"         // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_SCALE_DEL         ScaleMgrRespMsgType = "resp_scale_del"         // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_SCALE_MODIFY      ScaleMgrRespMsgType = "resp_scale_modify"      // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_PRODUCTS_LIST     ScaleMgrRespMsgType = "resp_product_list"      // with response of ScalesListMsg
+	SCALE_MGR_RESP_PRODUCT_ADD       ScaleMgrRespMsgType = "resp_product_add"       // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_PRODUCT_DEL       ScaleMgrRespMsgType = "resp_product_del"       // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_PRODUCT_MODIFY    ScaleMgrRespMsgType = "resp_product_modify"    // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_USERS_LIST        ScaleMgrRespMsgType = "resp_user_list"         // with response of ScalesListMsg
+	SCALE_MGR_RESP_USER_ADD          ScaleMgrRespMsgType = "resp_user_add"          // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_USER_DEL          ScaleMgrRespMsgType = "resp_user_del"          // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_USER_MODIFY       ScaleMgrRespMsgType = "resp_user_modify"       // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_QUIT_APPLICATION  ScaleMgrRespMsgType = "resp_quit_application"  // without data
+	SCALE_MGR_RESP_GET_UI_CONFIG     ScaleMgrRespMsgType = "resp_get_ui_config"     // with response of UI configuration
+	SCALE_MGR_RESP_UPDATE_UI_CONFIG  ScaleMgrRespMsgType = "resp_update_ui_config"  // without parameter
+	SCALE_MGR_RESP_CHECK_LICENSE     ScaleMgrRespMsgType = "resp_check_license"     // with response of true or false
+	SCALE_MGR_RESP_CHECK_LICENSE_KEY ScaleMgrRespMsgType = "resp_check_license_key" // with response of true or false
+	SCALE_MGR_RESP_UPDATE_LICENSE    ScaleMgrRespMsgType = "resp_update_license"    // with response of true or false
+
 )
 
 type PortsListMsg struct {
@@ -217,6 +224,7 @@ const (
 	SREQ_GET_IP_MODE         SReqType = "get_ip_mode"
 	SREQ_GET_WIFI_INFO       SReqType = "get_wifi_info"
 	SREQ_UPDATE_FIRMWARE     SReqType = "update_firmware"
+	SREQ_CHECK_SERIAL_PORT   SReqType = "check_serial_port"
 )
 
 type ReqScaleRec struct {

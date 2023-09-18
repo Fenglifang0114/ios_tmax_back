@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"time"
 
@@ -16,6 +16,7 @@ import (
 	"tmaxsrv/log"
 )
 
+// 检验Key是否认证通过
 func IsKeyValid(licenseKey string) (bool, string, string) {
 	// Get a unique machine ID based on the CPUID and Hard Disk ID
 	machineIDStr, _ := machineid.ProtectedID("")
@@ -69,9 +70,14 @@ func decrypt(key []byte, ciphertext string) (string, error) {
 }
 
 func ReadLicFile(filename string) (string, error) {
-	content, err := ioutil.ReadFile(filename)
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}
 	return string(content), nil
+}
+
+func SaveKey(filePath string, content string) error {
+	return os.WriteFile(filePath, []byte(content), 0644)
+
 }

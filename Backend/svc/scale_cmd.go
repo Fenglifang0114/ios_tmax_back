@@ -96,6 +96,16 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	return respMsg, nil
 }
 
+func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
+	l.Log.Debug("check serial port")
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_EN_FAC_MODE, m.EN_FAC_MODE_RESP)
+	if reqMsg.MsgBody == "ok" {
+		return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+
+	}
+	return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
+}
+
 func getPercentage(data string) string {
 	percentage := "0%"
 	pattern := `\[ *(\d+)%\][^[]*$`

@@ -311,14 +311,31 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: ""}
 		}
 	case REQ_CHECK_LICENSE:
+
 		var isValid string
 		if gIsKeyValid {
 			isValid = "true"
 		} else {
 			isValid = "false"
 		}
-
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE, MsgBody: isValid + "," + gMachineId + "," + gLicValidDate}
+
+	case REQ_CHECK_LICENSE_KEY:
+
+		isValid, machineId, licValidDate := lic.IsKeyValid(req.ReqData)
+		var isValidStr string
+		if isValid {
+			isValidStr = "true"
+		} else {
+			isValidStr = "false"
+		}
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE_KEY, MsgBody: isValidStr + "," + machineId + "," + licValidDate}
+
+	case REQ_UPDATE_LICENSE:
+		if err := lic.SaveKey(comm.LICENSE_FILE, req.ReqData); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_LICENSE, MsgBody: "fail"}
+		}
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_LICENSE, MsgBody: "ok"}
 
 		// below commented: due to UI maintains records itself
 		// 	case SREQ_GET_RECS: // TODO: should we check the input parameters?
