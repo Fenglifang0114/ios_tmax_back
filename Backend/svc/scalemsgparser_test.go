@@ -141,3 +141,39 @@ func Test_extractWifiAPInfo(t *testing.T) {
 		})
 	}
 }
+
+func Test_retrieveWeight(t *testing.T) {
+	type args struct {
+		data []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    WeightMsg
+		wantErr bool
+	}{
+		{name: "Test_retrieveWeight #1", args: args{data: []byte("ST,GS,-0.123kg\r\n")}, want: WeightMsg{true, false, "-0.123", "kg"}, wantErr: false},
+		{name: "Test_retrieveWeight #2", args: args{data: []byte("UT,NT,-0.123kg\r\n")}, want: WeightMsg{false, true, "-0.123", "kg"}, wantErr: false},
+		{name: "Test_retrieveWeight #3", args: args{data: []byte("ST,GS, 90pcs\r\n")}, want: WeightMsg{true, false, "90", "pcs"}, wantErr: false},
+		{name: "Test_retrieveWeight #4", args: args{data: []byte("ST,GS, 89%\r\n")}, want: WeightMsg{true, false, "89", "%"}, wantErr: false},
+		{name: "Test_retrieveWeight #5", args: args{data: []byte("ST,GS,100pcs\r\n")}, want: WeightMsg{true, false, "100", "pcs"}, wantErr: false},
+		{name: "Test_retrieveWeight #6", args: args{data: []byte("ST,GS,100%\r\n")}, want: WeightMsg{true, false, "100", "%"}, wantErr: false},
+		{name: "Test_retrieveWeight #7", args: args{data: []byte("ST,GS,-0.123kg\r\n")}, want: WeightMsg{true, false, "-0.123", "kg"}, wantErr: false},
+		{name: "Test_retrieveWeight #8", args: args{data: []byte("--OL--        \r\n")}, want: WeightMsg{false, false, "--OL--", ""}, wantErr: false},
+		{name: "Test_retrieveWeight #9", args: args{data: []byte("--UL--        \r\n")}, want: WeightMsg{false, false, "--UL--", ""}, wantErr: false},
+		{name: "Test_retrieveWeight #10", args: args{data: []byte("ST,GS-0.123kg\r\n")}, want: WeightMsg{false, false, "", ""}, wantErr: true},
+		{name: "Test_retrieveWeight #11", args: args{data: []byte("UT,NT-0.123kg\r\n")}, want: WeightMsg{false, false, "", ""}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := retrieveWeight(tt.args.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("retrieveWeight() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("retrieveWeight() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

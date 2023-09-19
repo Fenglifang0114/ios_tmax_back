@@ -114,7 +114,7 @@ func extractMessageTMAX(scaleId int64, bufs *util.CircularBuffer, msgType m.Resp
 }
 
 func handleWeightDataMsg(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	weightMsg, err := retreiveWeight(data)
+	weightMsg, err := retrieveWeight(data)
 	if err != nil {
 		return ScaleRespMsg{}, len(data)
 	}
@@ -127,32 +127,52 @@ func handleWeightDataMsg(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	return respMsg, len(data)
 }
 
-func retreiveWeight(data []byte) (pack WeightMsg, err error) {
+func retrieveWeight(data []byte) (WeightMsg, error) {
 	dataStr := string(data)
-	// fields will be "ST,NT, 5.123kg" or "ST,NT,-0.123kg", or "-- UL --", "-- OL --"
 	fields := strings.Split(dataStr, ",")
+
 	if len(fields) != 3 {
 		if len(fields[0]) < MIN_PACK_SIZE {
 			return WeightMsg{}, fmt.Errorf("no packet")
 		}
 
-		return WeightMsg{WeightVal: strings.TrimRight(dataStr, "\r\n"), WeightUnit: ""}, nil
-	} else {
-		weightMsg := WeightMsg{}
-		weightMsg.IsStable = strings.Contains(fields[0], "ST")
-		weightMsg.IsNet = strings.Contains(fields[1], "NT")
-		regexp, err := regexp.Compile("([0-9.-]+)([%a-zA-Z]+)")
-		if err != nil {
-			return WeightMsg{}, err
+		weightVal := strings.TrimRight(dataStr, "\r\n")
+		weightVal = strings.TrimSpace(weightVal)
+		if weightVal == "--OL--" || weightVal == "--UL--" {
+			return WeightMsg{WeightVal: weightVal, WeightUnit: ""}, nil
 		}
-		match := regexp.FindStringSubmatch(fields[2])
-		if len(match) != 3 { // 5.123kg, 5.123, kg
-			return WeightMsg{}, fmt.Errorf("finding substring error: %v", fields[2])
+
+		// Regex pattern to match "ST,NT90PCS" or "ST,GS 80%"
+		pattern := `^ST,\s*([A-Za-z0-9]+)\s*([%A-Za-z]+)$`
+		re := regexp.MustCompile(pattern)
+		match := re.FindStringSubmatch(weightVal)
+		if len(match) == 3 {
+			weightVal := match[1]
+			weightUnit := match[2]
+			return WeightMsg{WeightVal: weightVal, WeightUnit: weightUnit}, nil
 		}
-		weightMsg.WeightVal = strings.TrimSpace(match[1])
-		weightMsg.WeightUnit = strings.TrimSpace(match[2])
-		return weightMsg, nil
+
+		return WeightMsg{}, fmt.Errorf("invalid weight format: %v", weightVal)
 	}
+
+	weightMsg := WeightMsg{}
+	weightMsg.IsStable = strings.Contains(fields[0], "ST")
+	weightMsg.IsNet = strings.Contains(fields[1], "NT")
+
+	regexp, err := regexp.Compile("([0-9.-]+)([a-zA-Z%]+)")
+	if err != nil {
+		return WeightMsg{}, err
+	}
+
+	match := regexp.FindStringSubmatch(fields[2])
+	if len(match) != 3 {
+		return WeightMsg{}, fmt.Errorf("finding substring error: %v", fields[2])
+	}
+
+	weightMsg.WeightVal = strings.TrimSpace(match[1])
+	weightMsg.WeightUnit = strings.TrimSpace(match[2])
+
+	return weightMsg, nil
 }
 
 func handleZeroCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
