@@ -141,7 +141,7 @@ func retreiveWeight(data []byte) (pack WeightMsg, err error) {
 		weightMsg := WeightMsg{}
 		weightMsg.IsStable = strings.Contains(fields[0], "ST")
 		weightMsg.IsNet = strings.Contains(fields[1], "NT")
-		regexp, err := regexp.Compile("([0-9.-]+)([a-zA-Z]+)")
+		regexp, err := regexp.Compile("([0-9.-]+)([%a-zA-Z]+)")
 		if err != nil {
 			return WeightMsg{}, err
 		}
