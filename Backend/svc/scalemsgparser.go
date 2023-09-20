@@ -129,6 +129,7 @@ func handleWeightDataMsg(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func retrieveWeight(data []byte) (WeightMsg, error) {
 	dataStr := string(data)
+	dataStr = strings.TrimSpace(dataStr)
 	fields := strings.Split(dataStr, ",")
 
 	if len(fields) != 3 {
@@ -156,15 +157,15 @@ func retrieveWeight(data []byte) (WeightMsg, error) {
 	}
 
 	weightMsg := WeightMsg{}
-	weightMsg.IsStable = strings.Contains(fields[0], "ST")
-	weightMsg.IsNet = strings.Contains(fields[1], "NT")
+	weightMsg.IsStable = strings.Contains(strings.TrimSpace(fields[0]), "ST")
+	weightMsg.IsNet = strings.Contains(strings.TrimSpace(fields[1]), "NT")
 
-	regexp, err := regexp.Compile("([0-9.-]+)([a-zA-Z%]+)")
+	regexp, err := regexp.Compile(`([0-9:.-]+)\s*([a-zA-Z%]+)`)
 	if err != nil {
 		return WeightMsg{}, err
 	}
 
-	match := regexp.FindStringSubmatch(fields[2])
+	match := regexp.FindStringSubmatch(strings.TrimSpace(fields[2]))
 	if len(match) != 3 {
 		return WeightMsg{}, fmt.Errorf("finding substring error: %v", fields[2])
 	}
