@@ -225,6 +225,7 @@ const (
 	SREQ_GET_WIFI_INFO       SReqType = "get_wifi_info"
 	SREQ_UPDATE_FIRMWARE     SReqType = "update_firmware"
 	SREQ_CHECK_SERIAL_PORT   SReqType = "check_serial_port"
+	SREQ_GET_BUILD_INFO      SReqType = "get_build_info" //20230926@FLF
 )
 
 type ReqScaleRec struct {

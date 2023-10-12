@@ -128,6 +128,21 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 	 "MsgType":"resp_check_serial_port","MsgBody":"ok", "ScaleId":1
 }
 
+12. get build info =>{
+	"Req": "get_build_info",
+	"ReqData": ""
+}
+ {
+	 "MsgType":"resp_get_build_info","MsgBody":"id2312313131534564654654651315213", "ScaleId":1
+}
+
+13. output format =>{
+	"Req": "set_output_format",
+	"ReqData": "outputFormat.json"
+}
+
+response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
+
 To configure scale's wifi to connect to specific AP
 ws://127.0.0.1:7878/tmax?scaleid=1
 

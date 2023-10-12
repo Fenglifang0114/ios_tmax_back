@@ -46,6 +46,7 @@ func init() {
 		0xfff6:                     m.GET_RECS_RESP,
 		0xfff7:                     m.ADD_REC_RESP,
 		0xfff8:                     m.DEL_REC_RESP,
+		0x0556:                     m.GET_BUILD_INFO_RESP,
 		0x05f1:                     m.EN_FAC_MODE_RESP,
 		0x05f2:                     m.DIS_FAC_MODE_RESP,
 		0x05f3:                     m.EN_PASSTH_MODE_RESP,
@@ -94,6 +95,7 @@ func init() {
 		m.MODIFY_BT_NAME_RESP:      handleModifyBtNameResp,
 		m.BT_PASSTH_DATA_RESP:      handleBTPassthResp,
 		m.WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
+		m.GET_BUILD_INFO_RESP:      handleGetBuildInfoResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -231,6 +233,25 @@ func handleUnregWeightResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		msg.MsgBody = "ok"
 	} else {
 		msg.MsgType = m.UNREG_WEIGHT_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+	}
+	return msg, len(data)
+}
+
+func handleGetBuildInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	msg := ScaleRespMsg{}
+	// 5A A5 00 30 05 56 00 78 78 78 78 78 78 78 78 2D 78 78 78 78 2D 78 78 78 78 2D 78 78 78 78 2D 78 78 78 78 78 78 78 78 78 78 78 78 00 1C EE D5 0B A5 5A 5A A5 00 0C 05 56 00 06 8E 0B A1 55 A5 5A
+	str := string(data)
+
+	if len(str) >= 36 {
+		msg.MsgType = m.GET_BUILD_INFO_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = str[:36]
+	} else if data[0] == 0x06 {
+
+	} else {
+		msg.MsgType = m.GET_BUILD_INFO_RESP
 		msg.ScaleId = scaleId
 		msg.MsgBody = "fail"
 	}

@@ -23,6 +23,7 @@ var (
 	DIS_CONT_MODE_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x08, 0x00, 0xf4, 0x75, 0x8c, 0x8d, 0xa5, 0x5a}
 	EN_PASSTH_MODE_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf3, 0x00, 0x59, 0xE4, 0xC9, 0x51, 0xa5, 0x5a}
 	DIS_PASSTH_MODE_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf4, 0x00, 0x6E, 0x2B, 0xB7, 0x2B, 0xa5, 0x5a}
+	GET_BUILD_INFO_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0x56, 0x00, 0x6C, 0xF6, 0xC7, 0x9A, 0xa5, 0x5a} //20230926@FLF
 )
 
 func NewComposerTMAX() *m.CmdComposer {
@@ -59,6 +60,9 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return EN_PASSTH_MODE_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil
 	case m.CMD_DIS_PASSTH:
 		return DIS_PASSTH_MODE_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil
+	case m.CMD_GET_BUILD_INFO:
+		return GET_BUILD_INFO_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20230926@FLF
+
 	case m.CMD_ERASE_FLASH:
 		addr := cmdData.Data.(int)
 		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil

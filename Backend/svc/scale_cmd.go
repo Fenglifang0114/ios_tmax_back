@@ -106,6 +106,12 @@ func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
 	return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
 }
 
+func (c *Scale) GetBuildInfo() (*ScaleRespMsg, error) {
+	l.Log.Debug("get build info")
+	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_BUILD_INFO, m.GET_BUILD_INFO_RESP)
+	return reqMsg, err
+}
+
 func getPercentage(data string) string {
 	percentage := "0%"
 	pattern := `\[ *(\d+)%\][^[]*$`

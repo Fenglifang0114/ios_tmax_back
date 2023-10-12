@@ -25,6 +25,8 @@ const (
 	CMD_EN_PASSTH
 	CMD_DIS_PASSTH
 
+	CMD_GET_BUILD_INFO
+
 	CMD_REBOOT
 
 	CMD_WIFI_DATA_PASSTH
@@ -118,6 +120,7 @@ const (
 	UPDATE_FIRMWARE_RESP     RespMsgType = "resp_update_firmware"
 	UPDATE_FIRMWARE_PROGRESS RespMsgType = "resp_update_firmware_progress"
 	CHECK_SERIAL_PORT_RESP   RespMsgType = "resp_check_serial_port"
+	GET_BUILD_INFO_RESP      RespMsgType = "resp_get_build_info"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

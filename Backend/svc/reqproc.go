@@ -168,6 +168,10 @@ func ProcCheckSerialPort(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return scale.CheckSerialPort()
 }
 
+func procGetBuildInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return scale.GetBuildInfo()
+}
+
 //  处理请求
 
 func init() {
@@ -194,6 +198,7 @@ func init() {
 		SREQ_GET_WIFI_INFO:       procGetWifiInfo,
 		SREQ_UPDATE_FIRMWARE:     procUpdateFirmware,
 		SREQ_CHECK_SERIAL_PORT:   ProcCheckSerialPort,
+		SREQ_GET_BUILD_INFO:      procGetBuildInfo,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -219,5 +224,6 @@ func init() {
 		SREQ_SEND_DATA_TO_WIFI:   m.SEND_DATA_TO_WIFI_RESP,
 		SREQ_GET_IP_MODE:         m.GET_IP_MODE_RESP, //FLF
 		SREQ_GET_WIFI_INFO:       m.GET_IP_INFO_RESP,
+		SREQ_GET_BUILD_INFO:      m.GET_BUILD_INFO_RESP,
 	}
 }
