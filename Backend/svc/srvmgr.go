@@ -39,9 +39,10 @@ type SrvMgr struct {
 	// quitch channel to close this application
 	quitch chan bool
 	// productPb
-	productPd *ProductRecProvider
-	userPd    *UserRecProvider
-	uiConfig  *UiConfig
+	productPd   *ProductRecProvider
+	userPd      *UserRecProvider
+	uiConfig    *UiConfig
+	modeSetting *ModeSettingProvider
 }
 
 var (
@@ -53,6 +54,7 @@ var (
 func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	productPb := NewProductRecProvider()
 	userPb := NewUserRecProvider()
+	modeSettingPb := NewModeSettingProvider()
 
 	var licKey string
 	var err error
@@ -81,6 +83,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		productPd:          productPb,
 		userPd:             userPb,
 		uiConfig:           NewUiConfig(),
+		modeSetting:        modeSettingPb,
 	}
 }
 
@@ -292,24 +295,24 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		l.Log.Warn("Got quit application")
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_QUIT_APPLICATION, MsgBody: ""}
 		mSrvMgr.quitch <- true
-	case REQ_GET_UI_CONF:
-		l.Log.Info("Got get UI Config request")
-		config, _ := mSrvMgr.uiConfig.GetConfig()
-		configStr, _ := json.MarshalToString(config)
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_UI_CONFIG, MsgBody: configStr}
-	case REQ_UPDATE_UI_CONF:
-		l.Log.Info("Got update UI Config request")
-		var config Config
-		if err := json.UnmarshalFromString(req.ReqData, &config); err != nil {
-			l.Log.Error(err)
-			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: "failed to parse update UI Config"}
-		} else {
-			err := mSrvMgr.uiConfig.UpdateConfig(&config)
-			if err != nil {
-				l.Log.Error(err)
-			}
-			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: ""}
-		}
+	// case REQ_GET_UI_CONF:
+	// 	l.Log.Info("Got get UI Config request")
+	// 	config, _ := mSrvMgr.uiConfig.GetConfig()
+	// 	configStr, _ := json.MarshalToString(config)
+	// 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_UI_CONFIG, MsgBody: configStr}
+	// case REQ_UPDATE_UI_CONF:
+	// 	l.Log.Info("Got update UI Config request")
+	// 	var config Config
+	// 	if err := json.UnmarshalFromString(req.ReqData, &config); err != nil {
+	// 		l.Log.Error(err)
+	// 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: "failed to parse update UI Config"}
+	// 	} else {
+	// 		err := mSrvMgr.uiConfig.UpdateConfig(&config)
+	// 		if err != nil {
+	// 			l.Log.Error(err)
+	// 		}
+	// 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: ""}
+	// 	}
 	case REQ_CHECK_LICENSE:
 
 		var isValid string

@@ -1,0 +1,275 @@
+package svc
+
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"os"
+	"sort"
+
+	"github.com/xuri/excelize/v2"
+)
+
+var VarNumberMap = map[string]byte{
+	"ProductNumber": 0,
+	"ProductName":   1,
+	"PriceUnit":     2,
+	"TaxModel":      3,
+	"TaxType":       4,
+	"Price":         5,
+	"UnitWeight":    6,
+	"PreTare":       7,
+	"LimitHigh":     8,
+	"LimitLow":      9,
+	"isUSED":        255,
+}
+
+var VarLenthMap = map[string]byte{
+	"ProductNumber": 4,
+	"ProductName":   30,
+	"PriceUnit":     1,
+	"TaxModel":      1,
+	"TaxType":       1,
+	"Price":         8,
+	"UnitWeight":    8,
+	"PreTare":       8,
+	"LimitHigh":     8,
+	"LimitLow":      8,
+	"isUSED":        1,
+}
+
+type Product struct {
+	ProductNumber int
+	ProductName   string
+	PriceUnit     byte
+	TaxModel      byte
+	TaxType       byte
+	Price         float64
+	UnitWeight    float64
+	PreTare       float64
+	LimitHigh     float64
+	LimitLow      float64
+	isUSED        byte
+}
+
+/*
+uint16_t  plu_serial;			0	4	PLU编号
+uint8_t plu_name[PLU_NAME_MAX];	1	30	品名
+uint8_t price_unit; 				2	1	价格单位（kg/100g/amount）
+uint8_t tax_mode;				3	1	税的模式（外含/内含/无）
+uint8_t tax_type;				4	1	税的类型（type1/type2/type3）
+double unit_price; 				5	8	单价
+double unit_weight;			6	8	单重
+double ptare; 				7	8	预扣重
+double plu_limit_high;			8	8	上限
+double plu_limit_low;  			9	8	下限
+*/
+
+func ParserPluFile(excelFileName string) bool {
+
+	columnNames := []string{
+		"ProductNumber",
+		"ProductName",
+		"PriceUnit",
+		"TaxModel",
+		"TaxType",
+		"Price",
+		"UnitWeight",
+		"PreTare",
+		"LimitHigh",
+		"LimitLow",
+		"isUSED",
+	}
+
+	products, err := readExcelToJSON(excelFileName, columnNames)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return false
+	}
+
+	jsonData, err := json.Marshal(products)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return false
+	}
+
+	fmt.Println(string(jsonData))
+
+	// 获取VarNumberMap长度
+	mapLength := byte(len(VarNumberMap))
+	// 创建bytes.Buffer
+	buf := new(bytes.Buffer)
+	// 将长度写入bytes.Buffer
+	buf.WriteByte(mapLength)
+	pluNameMaxLenth := 0
+	for _, product := range products {
+		// 计算ProductName字段的长度
+		nameLength := len(product.ProductName)
+		// 更新最大长度
+		if nameLength > pluNameMaxLenth {
+			pluNameMaxLenth = nameLength
+		}
+	}
+
+	varKeys := make([]string, 0, len(VarNumberMap))
+	for key := range VarNumberMap {
+		varKeys = append(varKeys, key)
+	}
+	sort.Slice(varKeys, func(i, j int) bool {
+		return VarNumberMap[varKeys[i]] < VarNumberMap[varKeys[j]]
+	})
+
+	for _, key := range varKeys {
+		// 按1个字节写入VarNumberMap的值
+		buf.WriteByte(VarNumberMap[key])
+		// 按2个字节写入VarLenthMap的值，以小端序列化
+		b := make([]byte, 2)
+		if key == "ProductName" {
+			binary.LittleEndian.PutUint16(b, uint16(pluNameMaxLenth))
+		} else {
+			binary.LittleEndian.PutUint16(b, uint16(VarLenthMap[key]))
+		}
+		buf.Write(b)
+	}
+
+	for _, product := range products {
+		// 按照VarLenthMap的字节数写入buf，以小端序列化
+		// 写入ProductNumber，4字节
+		binary.Write(buf, binary.LittleEndian, int32(product.ProductNumber))
+		// 写入ProductName，根据pluNameMaxLenth的值计算字节数
+		productNameBytes := []byte(product.ProductName)
+		productNameBytes = append(productNameBytes, make([]byte, pluNameMaxLenth-len(productNameBytes))...)
+		buf.Write(productNameBytes)
+		// 写入PriceUnit，1字节
+		buf.WriteByte(byte(product.PriceUnit))
+		// 写入TaxModel，1字节
+		buf.WriteByte(byte(product.TaxModel))
+		// 写入TaxType，1字节
+		buf.WriteByte(byte(product.TaxType))
+		// 写入Price，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.Price))
+		// 写入UnitWeight，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.UnitWeight))
+		// 写入PreTare，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.PreTare))
+		// 写入LimitHigh，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.LimitHigh))
+		// 写入LimitLow，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.LimitLow))
+		// 写入isUSED，1字节  0xFF plu有效   0x00 plu无效
+		buf.WriteByte(0xFF)
+	}
+
+	err = os.WriteFile("plu.bin", buf.Bytes(), 0644)
+	if err != nil {
+		fmt.Println("Write file error:", err)
+		return false
+	}
+	print(products)
+	print(pluNameMaxLenth)
+	return true
+}
+
+func readExcelToJSON(fileName string, columnNames []string) ([]Product, error) {
+	xlFile, err := excelize.OpenFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	var products []Product
+	rows, err := xlFile.GetRows("Sheet1")
+	if err != nil {
+		return nil, err
+	}
+
+	for rowIndex := range rows {
+		product := Product{}
+		for i, colName := range columnNames {
+			cellValue, err := xlFile.GetCellValue("Sheet1", indexToCellName(rowIndex+2, i+1))
+			if err != nil {
+				// 错误处理
+			}
+			switch colName {
+			case "ProductNumber":
+				product.ProductNumber = convertToInt(cellValue)
+				break
+			case "ProductName":
+				product.ProductName = cellValue
+				break
+			case "PriceUnit":
+				product.PriceUnit = convertToByte(cellValue)
+				break
+			case "TaxModel":
+				product.TaxModel = convertToByte(cellValue)
+				break
+			case "Type":
+				product.TaxType = convertToByte(cellValue)
+				break
+			case "Price":
+				product.Price = convertToFloat64(cellValue)
+				break
+			case "UnitWeight":
+				product.UnitWeight = convertToFloat64(cellValue)
+			case "PreTare":
+				product.PreTare = convertToFloat64(cellValue)
+				break
+			case "LimitHigh":
+				product.LimitHigh = convertToFloat64(cellValue)
+				break
+			case "LimitLow":
+				product.LimitLow = convertToFloat64(cellValue)
+				break
+			case "isUSED":
+				product.isUSED = convertToByte(cellValue)
+				break
+			default:
+				break
+			}
+		}
+		products = append(products, product)
+	}
+	return products, nil
+
+}
+func indexToCellName(row, col int) string {
+	colName := ""
+	for col > 0 {
+		remainder := (col - 1) % 26
+		colName = string('A'+remainder) + colName
+		col = (col - 1) / 26
+	}
+	return colName + fmt.Sprint(row)
+}
+
+func convertToInt(value string) int {
+	var result int
+	if value != "" {
+		_, err := fmt.Sscanf(value, "%d", &result)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return result
+}
+
+func convertToByte(value string) byte {
+	var result byte
+	if value != "" {
+		_, err := fmt.Sscanf(value, "%d", &result)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return result
+}
+
+func convertToFloat64(value string) float64 {
+	var result float64
+	if value != "" {
+		_, err := fmt.Sscanf(value, "%f", &result)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return result
+}

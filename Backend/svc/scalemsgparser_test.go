@@ -152,19 +152,19 @@ func Test_retrieveWeight(t *testing.T) {
 		want    WeightMsg
 		wantErr bool
 	}{
-		{name: "Test_retrieveWeight #1", args: args{data: []byte("ST,GS,-0.123kg\r\n")}, want: WeightMsg{true, false, "-0.123", "kg"}, wantErr: false},
-		{name: "Test_retrieveWeight #2", args: args{data: []byte("UT,NT,-0.123kg\r\n")}, want: WeightMsg{false, true, "-0.123", "kg"}, wantErr: false},
-		{name: "Test_retrieveWeight #3", args: args{data: []byte("ST,GS, 90pcs\r\n")}, want: WeightMsg{true, false, "90", "pcs"}, wantErr: false},
-		{name: "Test_retrieveWeight #3", args: args{data: []byte("ST,GS,90    pc\r\n")}, want: WeightMsg{true, false, "90", "pc"}, wantErr: false},
-		{name: "Test_retrieveWeight #5", args: args{data: []byte("ST,GS, 89%\r\n")}, want: WeightMsg{true, false, "89", "%"}, wantErr: false},
-		{name: "Test_retrieveWeight #6", args: args{data: []byte("ST,GS,100pcs\r\n")}, want: WeightMsg{true, false, "100", "pcs"}, wantErr: false},
-		{name: "Test_retrieveWeight #7", args: args{data: []byte("ST,GS,100%\r\n")}, want: WeightMsg{true, false, "100", "%"}, wantErr: false},
-		{name: "Test_retrieveWeight #8", args: args{data: []byte("ST,GS,-0.123kg\r\n")}, want: WeightMsg{true, false, "-0.123", "kg"}, wantErr: false},
-		{name: "Test_retrieveWeight #9", args: args{data: []byte("--OL--        \r\n")}, want: WeightMsg{false, false, "--OL--", ""}, wantErr: false},
-		{name: "Test_retrieveWeight #10", args: args{data: []byte("--UL--        \r\n")}, want: WeightMsg{false, false, "--UL--", ""}, wantErr: false},
-		{name: "Test_retrieveWeight #11", args: args{data: []byte("ST,GS-0.123kg\r\n")}, want: WeightMsg{false, false, "", ""}, wantErr: true},
-		{name: "Test_retrieveWeight #12", args: args{data: []byte("UT,NT-0.123kg\r\n")}, want: WeightMsg{false, false, "", ""}, wantErr: true},
-		{name: "Test_retrieveWeight #13", args: args{data: []byte("UT,NT,253:0.12lb\r\n")}, want: WeightMsg{false, true, "253:0.12", "lb"}, wantErr: false},
+		{name: "Test_retrieveWeight #1", args: args{data: []byte("ZE,ST,GS,-0.123kg\r\n")}, want: WeightMsg{true, true, false, "-0.123", "kg"}, wantErr: false},
+		{name: "Test_retrieveWeight #2", args: args{data: []byte("ZE,UT,NT,-0.123kg\r\n")}, want: WeightMsg{true, false, true, "-0.123", "kg"}, wantErr: false},
+		{name: "Test_retrieveWeight #3", args: args{data: []byte("ZE,ST,GS, 90pcs\r\n")}, want: WeightMsg{true, true, false, "90", "pcs"}, wantErr: false},
+		{name: "Test_retrieveWeight #3", args: args{data: []byte("ZE,ST,GS,90    pc\r\n")}, want: WeightMsg{true, true, false, "90", "pc"}, wantErr: false},
+		{name: "Test_retrieveWeight #5", args: args{data: []byte("ZE,ST,GS, 89%\r\n")}, want: WeightMsg{true, true, false, "89", "%"}, wantErr: false},
+		{name: "Test_retrieveWeight #6", args: args{data: []byte("ZE,ST,GS,100pcs\r\n")}, want: WeightMsg{true, true, false, "100", "pcs"}, wantErr: false},
+		{name: "Test_retrieveWeight #7", args: args{data: []byte("ZE,ST,GS,100%\r\n")}, want: WeightMsg{true, true, false, "100", "%"}, wantErr: false},
+		{name: "Test_retrieveWeight #8", args: args{data: []byte("ZE,ST,GS,-0.123kg\r\n")}, want: WeightMsg{true, true, false, "-0.123", "kg"}, wantErr: false},
+		{name: "Test_retrieveWeight #9", args: args{data: []byte("--OL--        \r\n")}, want: WeightMsg{true, false, false, "--OL--", ""}, wantErr: false},
+		{name: "Test_retrieveWeight #10", args: args{data: []byte("--UL--        \r\n")}, want: WeightMsg{true, false, false, "--UL--", ""}, wantErr: false},
+		{name: "Test_retrieveWeight #11", args: args{data: []byte("ZE,ST,GS-0.123kg\r\n")}, want: WeightMsg{true, false, false, "", ""}, wantErr: true},
+		{name: "Test_retrieveWeight #12", args: args{data: []byte("ZE,UT,NT-0.123kg\r\n")}, want: WeightMsg{true, false, false, "", ""}, wantErr: true},
+		{name: "Test_retrieveWeight #13", args: args{data: []byte("ZE,UT,NT,253:0.12lb\r\n")}, want: WeightMsg{true, false, true, "253:0.12", "lb"}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -175,6 +175,36 @@ func Test_retrieveWeight(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("retrieveWeight() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_handleScalePassthData(t *testing.T) {
+	type args struct {
+		scaleId   int64
+		data      []byte
+		isHexMode bool
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  ScaleRespMsg
+		want1 int
+	}{
+
+		{name: "Test_handleScalePassthData", args: args{scaleId: 1, data: []byte{0x30, 0x31, 0x0d, 0x0a, 0x20, 0x0d, 0x0a, 0x03, 0x02}, isHexMode: false}, want: ScaleRespMsg{ScaleId: 1, MsgType: comm.SCALE_PASSTH_DATA, MsgBody: "01\r\n \r\n"}, want1: 7},
+		{name: "Test_handleScalePassthData #2", args: args{scaleId: 1, data: []byte{0x30, 0x31, 0xEF, 0xBC, 0x9A, 0x0d, 0x0a, 0x20, 0x0d, 0x0a, 0x03, 0x02}, isHexMode: false}, want: ScaleRespMsg{ScaleId: 1, MsgType: comm.SCALE_PASSTH_DATA, MsgBody: "01：\r\n \r\n"}, want1: 10},
+		{name: "Test_handleScalePassthData #3", args: args{scaleId: 1, data: []byte{0x30, 0x31, 0xEF, 0xBC, 0x9A, 0x0D, 0x0A, 0x20, 0x0D, 0x0A, 0x03, 0x02}, isHexMode: true}, want: ScaleRespMsg{ScaleId: 1, MsgType: comm.SCALE_PASSTH_DATA, MsgBody: "30 31 EF BC 9A 0D 0A 20 0D 0A "}, want1: 10},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := handleScalePassthData(tt.args.scaleId, tt.args.data, tt.args.isHexMode)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("handleScalePassthData() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("handleScalePassthData() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}

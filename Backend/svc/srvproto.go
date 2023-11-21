@@ -34,9 +34,9 @@ const (
 	REQ_DEL_USER    ReqType = "del_user"    // with ReqDelScale parameter
 	REQ_MODIFY_USER ReqType = "modify_user" // with ReqModifyScale parameter
 
-	REQ_QUIT_APPLICATION  ReqType = "quit_application"  // without parameter
-	REQ_GET_UI_CONF       ReqType = "get_ui_conf"       // without parameter
-	REQ_UPDATE_UI_CONF    ReqType = "update_ui_conf"    // without parameter
+	REQ_QUIT_APPLICATION ReqType = "quit_application" // without parameter
+	// REQ_GET_UI_CONF       ReqType = "get_ui_conf"       // without parameter
+	// REQ_UPDATE_UI_CONF    ReqType = "update_ui_conf"    // without parameter
 	REQ_CHECK_LICENSE     ReqType = "check_license"     // without parameter
 	REQ_CHECK_LICENSE_KEY ReqType = "check_license_key" // with parameter
 	REQ_UPDATE_LICENSE    ReqType = "update_license"    // with parameter
@@ -113,22 +113,22 @@ type ScaleMgrRespMsgType string
 
 // 处理公用的回应
 const (
-	SCALE_MGR_RESP_PORTS_LIST        ScaleMgrRespMsgType = "resp_ports_list"        // with response of PortsListMsg
-	SCALE_MGR_RESP_SCALES_LIST       ScaleMgrRespMsgType = "resp_scales_list"       // with response of ScalesListMsg
-	SCALE_MGR_RESP_SCALE_ADD         ScaleMgrRespMsgType = "resp_scale_add"         // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_SCALE_DEL         ScaleMgrRespMsgType = "resp_scale_del"         // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_SCALE_MODIFY      ScaleMgrRespMsgType = "resp_scale_modify"      // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_PRODUCTS_LIST     ScaleMgrRespMsgType = "resp_product_list"      // with response of ScalesListMsg
-	SCALE_MGR_RESP_PRODUCT_ADD       ScaleMgrRespMsgType = "resp_product_add"       // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_PRODUCT_DEL       ScaleMgrRespMsgType = "resp_product_del"       // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_PRODUCT_MODIFY    ScaleMgrRespMsgType = "resp_product_modify"    // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_USERS_LIST        ScaleMgrRespMsgType = "resp_user_list"         // with response of ScalesListMsg
-	SCALE_MGR_RESP_USER_ADD          ScaleMgrRespMsgType = "resp_user_add"          // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_USER_DEL          ScaleMgrRespMsgType = "resp_user_del"          // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_USER_MODIFY       ScaleMgrRespMsgType = "resp_user_modify"       // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_QUIT_APPLICATION  ScaleMgrRespMsgType = "resp_quit_application"  // without data
-	SCALE_MGR_RESP_GET_UI_CONFIG     ScaleMgrRespMsgType = "resp_get_ui_config"     // with response of UI configuration
-	SCALE_MGR_RESP_UPDATE_UI_CONFIG  ScaleMgrRespMsgType = "resp_update_ui_config"  // without parameter
+	SCALE_MGR_RESP_PORTS_LIST       ScaleMgrRespMsgType = "resp_ports_list"       // with response of PortsListMsg
+	SCALE_MGR_RESP_SCALES_LIST      ScaleMgrRespMsgType = "resp_scales_list"      // with response of ScalesListMsg
+	SCALE_MGR_RESP_SCALE_ADD        ScaleMgrRespMsgType = "resp_scale_add"        // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_SCALE_DEL        ScaleMgrRespMsgType = "resp_scale_del"        // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_SCALE_MODIFY     ScaleMgrRespMsgType = "resp_scale_modify"     // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_PRODUCTS_LIST    ScaleMgrRespMsgType = "resp_product_list"     // with response of ScalesListMsg
+	SCALE_MGR_RESP_PRODUCT_ADD      ScaleMgrRespMsgType = "resp_product_add"      // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_PRODUCT_DEL      ScaleMgrRespMsgType = "resp_product_del"      // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_PRODUCT_MODIFY   ScaleMgrRespMsgType = "resp_product_modify"   // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_USERS_LIST       ScaleMgrRespMsgType = "resp_user_list"        // with response of ScalesListMsg
+	SCALE_MGR_RESP_USER_ADD         ScaleMgrRespMsgType = "resp_user_add"         // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_USER_DEL         ScaleMgrRespMsgType = "resp_user_del"         // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_USER_MODIFY      ScaleMgrRespMsgType = "resp_user_modify"      // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_QUIT_APPLICATION ScaleMgrRespMsgType = "resp_quit_application" // without data
+	// SCALE_MGR_RESP_GET_UI_CONFIG     ScaleMgrRespMsgType = "resp_get_ui_config"     // with response of UI configuration
+	// SCALE_MGR_RESP_UPDATE_UI_CONFIG  ScaleMgrRespMsgType = "resp_update_ui_config"  // without parameter
 	SCALE_MGR_RESP_CHECK_LICENSE     ScaleMgrRespMsgType = "resp_check_license"     // with response of true or false
 	SCALE_MGR_RESP_CHECK_LICENSE_KEY ScaleMgrRespMsgType = "resp_check_license_key" // with response of true or false
 	SCALE_MGR_RESP_UPDATE_LICENSE    ScaleMgrRespMsgType = "resp_update_license"    // with response of true or false
@@ -201,31 +201,40 @@ type SRequest struct { // request for a scale or scale manager for records
 type SReqType string
 
 const (
-	SREQ_ZERO                SReqType = "zero"
-	SREQ_TARE                SReqType = "tare"
-	SREQ_GET_WEIGHT          SReqType = "get_weight"
-	SREQ_SEND_WT_CONT        SReqType = "send_wt_cont"
-	SREQ_STOP_SEND_WT        SReqType = "stop_send_wt"
-	SREQ_REG_WEIGHT_DATA     SReqType = "reg_weight_data"
-	SREQ_UNREG_WEIGHT_DATA   SReqType = "unreg_weight_data"
-	SREQ_GET_RECS            SReqType = "get_recs"                   // with parameter ReqScaleRec
-	SREQ_ADD_REC             SReqType = "add_rec"                    // with parameter ReqAddScaleRec
-	SREQ_DEL_REC             SReqType = "del_rec"                    // with parameter ReqDelScaleRec
-	SREQ_DOWN_PRN_FMT        SReqType = "down_print_format_to_scale" // with parameter csv formatted string
-	SREQ_GET_AP_LIST         SReqType = "get_ap_list"
-	SREQ_RESCAN_AP_LIST      SReqType = "rescan_ap_list"
-	SREQ_CONNECT_AP          SReqType = "connect_ap"
-	SREQ_SET_WIFI_DYNAMIC_IP SReqType = "set_wifi_dynamic_ip"
-	SREQ_SET_WIFI_STATIC_IP  SReqType = "set_wifi_static_ip"
-	SREQ_GET_IP_INFO         SReqType = "get_ip_info"
-	SREQ_MODIFY_BT_NAME      SReqType = "modify_bt_name"
-	SREQ_SEND_DATA_TO_BT     SReqType = "send_data_to_bt"
-	SREQ_SEND_DATA_TO_WIFI   SReqType = "send_data_to_wifi"
-	SREQ_GET_IP_MODE         SReqType = "get_ip_mode"
-	SREQ_GET_WIFI_INFO       SReqType = "get_wifi_info"
-	SREQ_UPDATE_FIRMWARE     SReqType = "update_firmware"
-	SREQ_CHECK_SERIAL_PORT   SReqType = "check_serial_port"
-	SREQ_GET_BUILD_INFO      SReqType = "get_build_info" //20230926@FLF
+	SREQ_ZERO                     SReqType = "zero"
+	SREQ_TARE                     SReqType = "tare"
+	SREQ_GET_WEIGHT               SReqType = "get_weight"
+	SREQ_SEND_WT_CONT             SReqType = "send_wt_cont"
+	SREQ_STOP_SEND_WT             SReqType = "stop_send_wt"
+	SREQ_REG_WEIGHT_DATA          SReqType = "reg_weight_data"
+	SREQ_UNREG_WEIGHT_DATA        SReqType = "unreg_weight_data"
+	SREQ_GET_RECS                 SReqType = "get_recs"                   // with parameter ReqScaleRec
+	SREQ_ADD_REC                  SReqType = "add_rec"                    // with parameter ReqAddScaleRec
+	SREQ_DEL_REC                  SReqType = "del_rec"                    // with parameter ReqDelScaleRec
+	SREQ_DOWN_PRN_FMT             SReqType = "down_print_format_to_scale" // with parameter csv formatted string
+	SREQ_GET_AP_LIST              SReqType = "get_ap_list"
+	SREQ_RESCAN_AP_LIST           SReqType = "rescan_ap_list"
+	SREQ_CONNECT_AP               SReqType = "connect_ap"
+	SREQ_SET_WIFI_DYNAMIC_IP      SReqType = "set_wifi_dynamic_ip"
+	SREQ_SET_WIFI_STATIC_IP       SReqType = "set_wifi_static_ip"
+	SREQ_GET_IP_INFO              SReqType = "get_ip_info"
+	SREQ_MODIFY_BT_NAME           SReqType = "modify_bt_name"
+	SREQ_SEND_DATA_TO_BT          SReqType = "send_data_to_bt"
+	SREQ_SEND_DATA_TO_WIFI        SReqType = "send_data_to_wifi"
+	SREQ_GET_IP_MODE              SReqType = "get_ip_mode"
+	SREQ_GET_WIFI_INFO            SReqType = "get_wifi_info"
+	SREQ_UPDATE_FIRMWARE          SReqType = "update_firmware"
+	SREQ_CHECK_SERIAL_PORT        SReqType = "check_serial_port"
+	SREQ_GET_BUILD_INFO           SReqType = "get_build_info" //20230926@FLF
+	SREQ_SET_OUTPUT_FMT           SReqType = "set_output_format"
+	SREQ_OPNE_SCALE_PASSTHROUGH   SReqType = "open_scale_passthrough" //20231023@FLF
+	SREQ_CLOSE_SCALE_PASSTHROUGH  SReqType = "close_scale_passthrough"
+	SREQ_CHANGE_SCALE_PASSTH_MODE SReqType = "change_scale_passth_mode"
+	SREQ_GET_SCALE_INFO           SReqType = "get_scale_info" //20231101@FLF
+	SREQ_DOWN_PLU                 SReqType = "down_plu_to_scale"
+	SREQ_GET_UI_CONF              SReqType = "get_ui_conf"
+	SREQ_UPDATE_UI_CONF           SReqType = "update_ui_conf"
+	SREQ_CHANGE_WIFI_MODE         SReqType = "change_wifi_mode"
 )
 
 type ReqScaleRec struct {
@@ -249,6 +258,15 @@ type ReqPrnData struct {
 	FilePaths    []string `json:"FilePaths"`
 }
 
+type ReqPluData struct {
+	ScaleModel string `json:"ScaleModel"`
+	FilePath   string `json:"FilePath"`
+}
+
+type ReqSerialFileList struct {
+	Paths []string `json:"FilePath"`
+}
+
 type ScaleRespMsg struct { // including response and unsolicited messages
 	MsgType comm.RespMsgType
 	MsgBody interface{} // MsgBody [T RespMsg|string]
@@ -261,6 +279,7 @@ type RespMsg struct {
 }
 
 type WeightMsg struct {
+	IsZero     bool
 	IsStable   bool
 	IsNet      bool
 	WeightVal  string

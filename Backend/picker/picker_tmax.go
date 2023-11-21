@@ -78,6 +78,17 @@ const (
 	TMAX_MSG_MAX_LEN = 2048 // TODO: check if this is correct
 )
 
+func pickerFnTmaxPassth(inData []byte, dataLen int) (packOffset uint, packLen uint, shouldRemoveLen uint, pack comm.Packet) {
+	packOffset = 0
+	packLen = uint(dataLen)
+	shouldRemoveLen = uint(dataLen)
+	pack.CmdID = 0xff
+	pack.CmdSubId = 0x55
+	pack.PayloadLen = uint16(dataLen)
+	pack.Payload = inData
+	return
+}
+
 func pickerFnTmax(inData []byte, dataLen int) (packOffset uint, packLen uint, shouldRemoveLen uint, pack comm.Packet) {
 	if len(inData) < TMAX_MSG_MIN_LEN {
 		return 0, 0, 0, comm.Packet{}

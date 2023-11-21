@@ -46,7 +46,7 @@ ws://127.0.0.1:7878/tmax?scaleid=0
 12. inform application to quit => {"req":"quit_application","ReqData":""}
     response:
 	{"MsgType":"resp_quit_application","MsgBody":""}
-13. get ui configuration => {"Req": "get_ui_conf", "ReqData": ""}
+13. get ui configuration => {"Req": "get_ui_conf", "ReqData": "0"}
     response:
 	{"MsgType":"resp_get_ui_config","MsgBody":"{\"RecMode\":\"auto\",\"StableTimeToRec\":\"3\",\"ZeroRange\":\"5\",\"DateFormat\":\"1\"}"}
 14. update ui configuration => {"Req": "update_ui_conf", "ReqData": "{\"RecMode\":\"auto\",\"DateFormat\":\"1\",\"ZeroRange\":\"5\", \"StableTimeToRec\":\"3\"}"}
@@ -138,10 +138,49 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 
 13. output format =>{
 	"Req": "set_output_format",
-	"ReqData": "outputFormat.json"
+	"ReqData": "{\"FilePaths\":[\"/1OL.json\", \"/2UL.json\"]}"
 }
 
 response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
+
+14. To open passthrough scale's serial output data
+    {"Req":"open_scale_passthrough", "ReqData":""}
+    response:
+    {"ScaleId":1,"MsgType":resp_open_scale_passthrough,"MsgBody":"ok"}
+
+15. To close passthrough scale's serial output data
+    {"Req":"close_scale_passthrough", "ReqData":""}
+    response:
+    {"ScaleId":1,"MsgType":resp_close_scale_passthrough,"MsgBody":"ok"}
+
+16. To change scale passthrough data encoding mode
+    {"Req":"change_scale_passth_mode", "ReqData":"hex"}
+    response:
+    {"ScaleId":1,"MsgType":resp_change_scale_passth_mode,"MsgBody":"ok"}
+
+17. To get scale info  
+    {"Req":"get_scale_info", "ReqData":"hex"}
+    response:
+    {"ScaleId":1,"MsgType":resp_get_scale_info,"MsgBody":"{
+    "ScaleSn":"sdfsdfsdsdfs",
+    "ModelName":"sdfsdfsdsdfs",
+    "PrnFmtDefAddr":4564646465465,
+    "PrnFmtDefLen":2048,
+    "PrnFmtDefEraseLen":2048,
+    "PrnFmtFreeAddr":4564646465465,
+    "PrnFmtFreeLen":2048,
+    "PrnFmtFreeEraseLen":2048,
+    "PluAddr":4564646465465,
+    "PluLen":2048,
+    "PluEraseLen":2048
+}"}	
+
+18. download plu to scale =>{
+	"Req": "down_plu_to_scale",
+	"ReqData": "{ \"ScaleModel\": \"tmax\", \"FilePaths\": [\"./plu.xlsx\"]}"
+}
+	response: {"MsgType":"resp_down_plu","MsgBody":"ok", "ScaleId":1}
+	
 
 To configure scale's wifi to connect to specific AP
 ws://127.0.0.1:7878/tmax?scaleid=1
@@ -210,6 +249,13 @@ or   {"MsgType":"resp_get_ip_mode","MsgBody":"{\"IPMode\":\"static\"}","ScaleId"
    {"MsgType":"resp_get_wifi_info","MsgBody":"{\"ssid\":\"guest1\",\"rssi\":2,\"bssid\":\"11:22:33:44:55:66\"}","ScaleId":1}
 
 9. SetWifiInfo
+
+10.ChangeWifiMode   
+   {"Req":"change_wifi_mode", "ReqData":"Station"}
+   //Station = 1   AP = 2  AP+Station =3
+   response
+   { "ScaleId":1, "MsgType":"resp_change_wifi_mode, "MsgBody":"ok"}
+
 
 To configure scale's BT configuration
 ws://127.0.0.1:7878/tmax?scaleid=1

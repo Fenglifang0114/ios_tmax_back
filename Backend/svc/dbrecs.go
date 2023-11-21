@@ -13,13 +13,22 @@ type DbScaleRec struct {
 }
 
 type ScaleRec struct {
-	RecId      uint `gorm:"primaryKey;autoincrement;not null"`
-	ScaleModel string
-	ScaleSn    string
-	Product    string
-	Weight     string
-	Price      string
-	CreatedAt  time.Time
+	RecId       uint `gorm:"primaryKey;autoincrement;not null"`
+	ScaleModel  string
+	ScaleSn     string
+	Product     string
+	Weight      string
+	Price       string
+	PluNo       string
+	PluRemarks  string
+	WeightUnit  string
+	Pretare     string
+	UserNo      string
+	UserName    string
+	UserRemarks string
+	ScaleMode   string //0 =DC500 1=check Weigher 2=take in  3=take out
+
+	CreatedAt time.Time
 }
 
 func NewDbScaleRec(dbName string) (*DbScaleRec, error) {
@@ -151,5 +160,31 @@ func (d *DbScaleRec) DeleteScaleRec(id uint) error {
 	var rec ScaleRec
 	rec.RecId = id
 	db.Where("rec_id=?", id).Delete((&rec))
+	return nil
+}
+
+func (d *DbScaleRec) DeleteAllScaleRec() error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	if err != nil {
+		panic("failed to connect database")
+	}
+
+	err = db.Migrator().DropTable(&ScaleRec{})
+	if err != nil {
+		panic("failed to drop database")
+	}
+
 	return nil
 }

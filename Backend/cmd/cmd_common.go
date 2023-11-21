@@ -3,10 +3,14 @@ package cmd
 import "tmaxsrv/comm"
 
 const (
-	PRN_FMT_FLASH_ADDR_T2200 = 0x0801e000
-	PRN_FMT_SIZE_T2200       = 2048
-	PRN_FMT_FLASH_ADDR_TMAX  = 0x0801e000
-	PRN_FMT_SIZE_TMAX        = 2048
+	PRN_FMT_FLASH_ADDR_T2200   = 0x1801e000
+	PRN_FMT_SIZE_T2200         = 2048
+	PRN_FMT_FLASH_ADDR_TMAX    = 0x1801e000
+	PRN_FMT_SIZE_TMAX          = 2048
+	SERIAL_FMT_FLASH_ADDR_TMAX = 0x1801d800
+	SERIAL_FMT_SIZE_TMAX       = 2048
+	PLU_ROM_ADDR_TMAX          = 0x2006A000
+	PLU_ROM_SIZE_TMAX          = 4096
 )
 
 const (
@@ -25,6 +29,21 @@ func GetPrnFmtAddrNSize(scaleCat comm.ScaleCat, orderNo int) (int, int) {
 	case comm.SCALE_TMAX:
 		return PRN_FMT_FLASH_ADDR_TMAX + (orderNo-1)*PRN_FMT_SIZE_TMAX, PRN_FMT_SIZE_TMAX
 	}
+	return -1, -1
+}
 
+func GetSerialFmtAddrNSize(scaleCat comm.ScaleCat) (int, int) {
+	switch scaleCat {
+	case comm.SCALE_TMAX:
+		return SERIAL_FMT_FLASH_ADDR_TMAX, SERIAL_FMT_SIZE_TMAX
+	}
+	return -1, -1
+}
+
+func GetPluRomAddrNSize(scaleCat comm.ScaleCat) (int, int) {
+	switch scaleCat {
+	case comm.SCALE_TMAX:
+		return PLU_ROM_ADDR_TMAX, PLU_ROM_SIZE_TMAX
+	}
 	return -1, -1
 }

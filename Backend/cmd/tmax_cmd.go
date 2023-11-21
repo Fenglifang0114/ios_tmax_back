@@ -24,6 +24,8 @@ var (
 	EN_PASSTH_MODE_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf3, 0x00, 0x59, 0xE4, 0xC9, 0x51, 0xa5, 0x5a}
 	DIS_PASSTH_MODE_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf4, 0x00, 0x6E, 0x2B, 0xB7, 0x2B, 0xa5, 0x5a}
 	GET_BUILD_INFO_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0x56, 0x00, 0x6C, 0xF6, 0xC7, 0x9A, 0xa5, 0x5a} //20230926@FLF
+	GET_SCALE_INFO_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf0, 0x00, 0x2B, 0x0F, 0x96, 0x82, 0xa5, 0x5a} //20231101@FLF
+
 )
 
 func NewComposerTMAX() *m.CmdComposer {
@@ -62,7 +64,8 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return DIS_PASSTH_MODE_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil
 	case m.CMD_GET_BUILD_INFO:
 		return GET_BUILD_INFO_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20230926@FLF
-
+	case m.CMD_GET_SCALE_INFO:
+		return GET_SCALE_INFO_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20231101@FLF
 	case m.CMD_ERASE_FLASH:
 		addr := cmdData.Data.(int)
 		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
@@ -82,6 +85,8 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return setWifiStaticIpCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_GET_IP_INFO:
 		return getIpInfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
+	case m.CMD_CHANGE_WIFI_MODE:
+		return changeWifiModeCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_GET_AP_INFO:
 		return getApInfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_GET_IP_MODE:
@@ -108,6 +113,7 @@ var GET_IP_MODE_CMD []byte = []byte("AT+CWDHCP_CUR?\r\n")
 var EN_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,1\r\n")
 var DIS_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,0")
 var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=\"%s\",\"%s\",\"%s\"\r\n") // ip, gateway, netmask
+var CHANGE_WIFI_MODE_CMD []byte = []byte("AT+CWMODE=1\r\n")
 
 const (
 	PACKET_HEAD_TMAX      = 0x5AA5
@@ -154,6 +160,9 @@ const (
 	CMDID_READ_ROM_TMAX     = 0xF107
 	CMDID_WRITE_ROM_TMAX    = 0xF108
 	CMDID_ERASE_ROM_TMAX    = 0xF109
+
+	CMDID_SCALE_PASSTH_DATA_TMAX = 0xFF23 // virtual command ID
+	CMDID_DOWN_PLU_TMAX          = 0xFF24
 )
 
 const (
@@ -265,6 +274,12 @@ func modifyBTNameCmdTMAX(name string) []byte {
 func getApListCmdTMAX() []byte {
 	l.Log.Debug("compose Get AP list cmd")
 	return composeCmd(0xf202, 0, GET_AP_LIST_CMD)
+}
+
+// Change Wifi Mode
+func changeWifiModeCmdTMAX() []byte {
+	l.Log.Debug("compose change wifi mode cmd")
+	return composeCmd(0xf202, 0, CHANGE_WIFI_MODE_CMD)
 }
 
 // Send data to BT

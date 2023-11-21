@@ -13,6 +13,13 @@ import (
 	"tmaxsrv/util"
 )
 
+const (
+	NORMAL_WEIGHT_MODE = 0
+	CHECK_WEIGHT_MODE  = 1
+	TACKE_IN_MODE      = 2
+	TACKE_OUT_MODE     = 3
+)
+
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	EnFacMode(c)
 	Reboot(c)
@@ -101,7 +108,6 @@ func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
 	reqMsg, _ := excuteSimpCmd(c, m.CMD_EN_FAC_MODE, m.EN_FAC_MODE_RESP)
 	if reqMsg.MsgBody == "ok" {
 		return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
-
 	}
 	return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
 }
@@ -109,6 +115,12 @@ func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
 func (c *Scale) GetBuildInfo() (*ScaleRespMsg, error) {
 	l.Log.Debug("get build info")
 	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_BUILD_INFO, m.GET_BUILD_INFO_RESP)
+	return reqMsg, err
+}
+
+func (c *Scale) GetScaleInfo() (*ScaleRespMsg, error) {
+	l.Log.Debug("get scale info")
+	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_SCALE_INFO, m.GET_SCALE_INFO_RESP)
 	return reqMsg, err
 }
 
@@ -129,19 +141,19 @@ func getPercentage(data string) string {
 
 func (c *Scale) PerfZero() (*ScaleRespMsg, error) {
 	l.Log.Debug("perform zero")
-	_, err := EnFacMode(c)
-	if err != nil {
-		return &ScaleRespMsg{}, err //FLF
-	}
+	// _, err := EnFacMode(c)
+	// if err != nil {
+	// 	return &ScaleRespMsg{}, err //FLF
+	// }
 	return excuteSimpCmd(c, m.CMD_ZERO, m.ZERO_CMD_RESP)
 }
 
 func (c *Scale) PerfTare() (*ScaleRespMsg, error) {
 	l.Log.Debug("perform tare")
-	_, err := EnFacMode(c)
-	if err != nil {
-		return &ScaleRespMsg{}, err //FLF
-	}
+	// _, err := EnFacMode(c)
+	// if err != nil {
+	// 	return &ScaleRespMsg{}, err //FLF
+	// }
 	return excuteSimpCmd(c, m.CMD_TARE, m.TARE_CMD_RESP)
 }
 
@@ -158,10 +170,10 @@ func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 	l.Log.Debug("register weight data")
 	c.isSendUnolicitedData = true
-	_, err := EnFacMode(c)
-	if err != nil {
-		return &ScaleRespMsg{}, err //FLF
-	}
+	// _, err := EnFacMode(c)
+	// if err != nil {
+	// 	return &ScaleRespMsg{}, err //FLF
+	// }
 	// DisFacMode(c) // TODO: check return value
 	// enable scale sending weighing info continually
 	return excuteSimpCmd(c, m.CMD_EN_CONTINUE_MODE, m.REG_WEIGHT_RESP)
@@ -178,29 +190,115 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	c.isSendUnolicitedData = false
-	_, err := EnFacMode(c)
-	if err != nil {
-		return &ScaleRespMsg{}, err
-	}
+	// _, err := EnFacMode(c)
+	// if err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// }
 	// enable scale sending weighing info continually
 	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP)
 	//sendErrMsg(c, msg)
-	_, _ = EnFacMode(c)
+	// _, _ = EnFacMode(c)
 	return msg, err
 }
 
-func (c *Scale) GetRecs() ([]ScaleRec, error) {
+func (c *Scale) OpenScalePassth() (*ScaleRespMsg, error) { //FLF
+	l.Log.Debug("register weight data")
+	c.isSendUnolicitedData = true
+	// _, err := EnFacMode(c)
+	// if err != nil {
+	// 	return &ScaleRespMsg{}, err //FLF
+	// }
+	// DisFacMode(c) // TODO: check return value
+	// enable scale sending weighing info continually
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_DIS_FAC_MODE, m.DIS_FAC_MODE_RESP)
+	if reqMsg.MsgBody == "ok" {
+		return &ScaleRespMsg{MsgType: m.OPEN_SCALE_PASSTHROUGH_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+
+	}
+	return &ScaleRespMsg{MsgType: m.OPEN_SCALE_PASSTHROUGH_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
+}
+
+func (c *Scale) CloseScalePassth() (*ScaleRespMsg, error) {
+	c.isSendUnolicitedData = false
+	// _, err := EnFacMode(c)
+	// if err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// }
+	// enable scale sending weighing info continually
+	//sendErrMsg(c, msg)
+	// _, _ = EnFacMode(c)
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_EN_FAC_MODE, m.EN_FAC_MODE_RESP)
+	if reqMsg.MsgBody == "ok" {
+		return &ScaleRespMsg{MsgType: m.CLOSE_SCALE_PASSTHROUGH_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+	}
+	return &ScaleRespMsg{MsgType: m.CLOSE_SCALE_PASSTHROUGH_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
+}
+
+func (c *Scale) GetRecs(scaleMode string) ([]ScaleRec, error) {
+	scaleModeInt, _ := strconv.Atoi(scaleMode)
+	if scaleModeInt == NORMAL_WEIGHT_MODE {
+		return c.scaleMgr.recPb.GetRecsList(*c)
+	}
+	if scaleModeInt == CHECK_WEIGHT_MODE {
+		return c.scaleMgr.recCheckWeigherPb.GetRecsList(*c)
+	}
+	if scaleModeInt == TACKE_IN_MODE {
+		return c.scaleMgr.recTakeInPb.GetRecsList(*c)
+	}
+	if scaleModeInt == TACKE_OUT_MODE {
+		return c.scaleMgr.recTakeOutPb.GetRecsList(*c)
+	}
 	return c.scaleMgr.recPb.GetRecsList(*c)
 }
 
 func (c *Scale) AddRec(rec ScaleRec) error {
 	rec.ScaleModel = c.Model
 	rec.ScaleSn = c.Sn
+	scaleModeInt, _ := strconv.Atoi(rec.ScaleMode)
+	if scaleModeInt == NORMAL_WEIGHT_MODE {
+		return c.scaleMgr.recPb.InsertRec(rec)
+	} else if scaleModeInt == CHECK_WEIGHT_MODE {
+		return c.scaleMgr.recCheckWeigherPb.InsertRec(rec)
+	} else if scaleModeInt == TACKE_IN_MODE {
+		return c.scaleMgr.recTakeInPb.InsertRec(rec)
+	} else if scaleModeInt == TACKE_OUT_MODE {
+		return c.scaleMgr.recTakeOutPb.InsertRec(rec)
+	}
 	return c.scaleMgr.recPb.InsertRec(rec)
 }
 
-func (c *Scale) DelRec(recId uint) error {
-	return c.scaleMgr.recPb.DeleteRec(recId)
+func (c *Scale) DelRec(recId uint, scaleMode uint) error {
+	if scaleMode == NORMAL_WEIGHT_MODE {
+		if recId == 999999999 {
+			return c.scaleMgr.recPb.DeleteAllRec()
+		} else {
+			return c.scaleMgr.recPb.DeleteRec(recId)
+
+		}
+	} else if scaleMode == CHECK_WEIGHT_MODE {
+		if recId == 999999999 {
+			return c.scaleMgr.recCheckWeigherPb.DeleteAllRec()
+		} else {
+			return c.scaleMgr.recCheckWeigherPb.DeleteRec(recId)
+
+		}
+	} else if scaleMode == TACKE_IN_MODE {
+		if recId == 999999999 {
+			return c.scaleMgr.recTakeInPb.DeleteAllRec()
+		} else {
+			return c.scaleMgr.recTakeInPb.DeleteRec(recId)
+
+		}
+	} else if scaleMode == TACKE_OUT_MODE {
+		if recId == 999999999 {
+			return c.scaleMgr.recTakeOutPb.DeleteAllRec()
+		} else {
+			return c.scaleMgr.recTakeOutPb.DeleteRec(recId)
+		}
+
+	}
+	return nil
+
 }
 
 // 重启
@@ -327,6 +425,12 @@ func GetIpInfo(s *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO, m.GET_IP_INFO_RESP)
 }
 
+func ChangeWifiMode(s *Scale) (*ScaleRespMsg, error) {
+	l.Log.Debug("Change wifi mode from Scale")
+	GExpectWifiResp = m.CHANGE_WIFI_MODE_RESP
+	return excuteSimpCmd(s, m.CMD_CHANGE_WIFI_MODE, m.CHANGE_WIFI_MODE_RESP)
+}
+
 func GetIpMode(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Get IP mode from Scale")
 	GExpectWifiResp = m.GET_IP_MODE_RESP
@@ -341,44 +445,99 @@ func perfCmd(c *Scale, cmd []byte) bool {
 	return true
 }
 
+//原来的机制
+// func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeoutMs ...int) (*ScaleRespMsg, error) {
+// 	curTimeoutMs := 3000 // 3000 ms
+// 	if len(timeoutMs) > 0 {
+// 		curTimeoutMs = timeoutMs[0]
+// 	}
+
+// 	if curTimeoutMs == mcmd.CMD_TIMEOUT_IMMEDIATE {
+// 		if err := writeScale(c, cmd); err != nil {
+// 			l.Log.Error(err.Error())
+// 			return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "error"}, err
+// 		}
+// 		return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "done"}, nil
+// 	}
+
+// 	ch := make(chan *ScaleRespMsg, 10)
+// 	c.RegisterNotif(waitMsgType, ch)
+// 	defer func() {
+// 		c.UnRegisterNotif(waitMsgType, ch)
+// 		c.isWaintingResp = false
+// 	}()
+
+// 	GlastWantRespMsgType = waitMsgType
+// 	c.isWaintingResp = true
+// 	if err := writeScale(c, cmd); err != nil {
+// 		l.Log.Error(err.Error())
+// 		return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "error"}, err
+// 	}
+
+// 	var ret *ScaleRespMsg
+// 	fmt.Printf("================wait: %v\n", waitMsgType)
+// 	select {
+// 	case ret = <-ch:
+// 	case <-time.After(time.Duration(curTimeoutMs) * time.Millisecond):
+// 		ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "timeout"}
+// 		return ret, fmt.Errorf("no response, time out")
+// 	}
+// 	fmt.Printf("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
+// 	return ret, nil
+// }
+
 func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeoutMs ...int) (*ScaleRespMsg, error) {
 	curTimeoutMs := 3000 // 3000 ms
+	var ret *ScaleRespMsg
+	var err error = nil
+
 	if len(timeoutMs) > 0 {
 		curTimeoutMs = timeoutMs[0]
 	}
 
-	if curTimeoutMs == mcmd.CMD_TIMEOUT_IMMEDIATE {
-		if err := writeScale(c, cmd); err != nil {
-			l.Log.Error(err.Error())
-			return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "error"}, err
+	for i := 0; i < 3; i++ {
+		if curTimeoutMs == mcmd.CMD_TIMEOUT_IMMEDIATE {
+			if err = writeScale(c, cmd); err != nil {
+				l.Log.Error(err.Error())
+				ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "error"}
+				time.Sleep(500 * time.Millisecond)
+				continue
+
+			}
+			return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "done"}, nil
 		}
-		return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "done"}, nil
+
+		ch := make(chan *ScaleRespMsg, 10)
+		c.RegisterNotif(waitMsgType, ch)
+		defer func() {
+			c.UnRegisterNotif(waitMsgType, ch)
+			c.isWaintingResp = false
+		}()
+
+		GlastWantRespMsgType = waitMsgType
+		c.isWaintingResp = true
+		if err = writeScale(c, cmd); err != nil {
+			l.Log.Error(err.Error())
+			ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "error"}
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+
+		fmt.Printf("================wait: %v\n", waitMsgType)
+		select {
+		case ret = <-ch:
+		case <-time.After(time.Duration(curTimeoutMs) * time.Millisecond):
+			ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "timeout"}
+			err = fmt.Errorf("no response, time out")
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+		fmt.Printf("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
+		break
+
 	}
 
-	ch := make(chan *ScaleRespMsg, 10)
-	c.RegisterNotif(waitMsgType, ch)
-	defer func() {
-		c.UnRegisterNotif(waitMsgType, ch)
-		c.isWaintingResp = false
-	}()
-
-	GlastWantRespMsgType = waitMsgType
-	c.isWaintingResp = true
-	if err := writeScale(c, cmd); err != nil {
-		l.Log.Error(err.Error())
-		return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "error"}, err
-	}
-
-	var ret *ScaleRespMsg
-	fmt.Printf("================wait: %v\n", waitMsgType)
-	select {
-	case ret = <-ch:
-	case <-time.After(time.Duration(curTimeoutMs) * time.Millisecond):
-		ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "timeout"}
-		return ret, fmt.Errorf("no response, time out")
-	}
-	fmt.Printf("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
-	return ret, nil
+	return ret, err
 }
 
 func writeScale(c *Scale, data []byte) error {

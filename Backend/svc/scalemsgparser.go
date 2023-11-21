@@ -2,6 +2,7 @@ package svc
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -26,6 +27,8 @@ const (
 	GET_AP_INFO_OK_RESP         string = "\r\nOK\r\n"
 	GET_IP_INFO_OK_RESP         string = "\r\nOK\r\n"
 	GET_IP_MODE_OK_RESP         string = "\r\nOK\r\n"
+	CHANG_WIFI_MODE_OK_RESP     string = "\r\nOK\r\n"
+	CHANG_WIFI_MODE_FAIL_RESP   string = "\r\n+CWMODE:\r\n"
 )
 
 const (
@@ -33,39 +36,52 @@ const (
 	RSSI_MIN = -100 // minimum strength of signal in dBm
 )
 
+// SI_  代表scale info 的缩写
+const (
+	SI_MODEL_NAME    = 1
+	SI_SCALE_SN      = 2
+	SI_DEF_PRN_INFO  = 3
+	SI_FREE_PRN_INFO = 4
+	SI_SERIAL_OUTPUT = 5
+	SI_PLU_INFO      = 6
+)
+
 var responseHandlerMap map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int)
 
 func init() {
 	util.CmdsRespMap = util.CmdMap{
-		0xe107:                     m.WEIGHT_DATA,
-		0xe103:                     m.ZERO_CMD_RESP,
-		0xe105:                     m.TARE_CMD_RESP,
-		0xe101:                     m.WEIGHT_DATA_RESP,
-		0xfff3:                     m.REG_WEIGHT_RESP,
-		0xe108:                     m.UNREG_WEIGHT_RESP,
-		0xfff6:                     m.GET_RECS_RESP,
-		0xfff7:                     m.ADD_REC_RESP,
-		0xfff8:                     m.DEL_REC_RESP,
-		0x0556:                     m.GET_BUILD_INFO_RESP,
-		0x05f1:                     m.EN_FAC_MODE_RESP,
-		0x05f2:                     m.DIS_FAC_MODE_RESP,
-		0x05f3:                     m.EN_PASSTH_MODE_RESP,
-		0x05f4:                     m.DIS_PASSTH_MODE_RESP,
-		cmd.CMDID_ERASE_FLASH_TMAX: m.ERASE_FLASH_RESP, //FLF//
-		cmd.CMDID_WRITE_FLASH_TMAX: m.WRITE_DATA_FLASH_RESP,
-		0xff11:                     m.DOWN_PRN_FMT_RESP,
-		0xff12:                     m.ERR_SERIAL_RESP,
-		0xff13:                     m.GET_AP_LIST_RESP,
-		0xff14:                     m.RESCAN_AP_LIST_RESP,
-		0xff15:                     m.SET_WIFI_DYNAMIC_IP_RESP,
-		0xff16:                     m.SET_WIFI_STATIC_IP_RESP,
-		0xff17:                     m.GET_IP_INFO_RESP,
-		0xff18:                     m.MODIFY_BT_NAME_RESP,
-		0xff19:                     m.NO_RESP,
-		0xf201:                     m.BT_PASSTH_DATA_RESP,
-		0xf202:                     m.WIFI_PASSTH_DATA_RESP,
-		0xff22:                     m.PRT_PASSTH_DATA_RESP,
-		0xff23:                     m.UNKNOWN_DATA,
+		0xe107:                           m.WEIGHT_DATA,
+		0xe103:                           m.ZERO_CMD_RESP,
+		0xe105:                           m.TARE_CMD_RESP,
+		0xe101:                           m.WEIGHT_DATA_RESP,
+		0xfff3:                           m.REG_WEIGHT_RESP,
+		0xe108:                           m.UNREG_WEIGHT_RESP,
+		0xfff6:                           m.GET_RECS_RESP,
+		0xfff7:                           m.ADD_REC_RESP,
+		0xfff8:                           m.DEL_REC_RESP,
+		0x0556:                           m.GET_BUILD_INFO_RESP,
+		cmd.CMDID_READ_SCALE_INFO_TMAX:   m.GET_SCALE_INFO_RESP,
+		0x05f1:                           m.EN_FAC_MODE_RESP,
+		0x05f2:                           m.DIS_FAC_MODE_RESP,
+		0x05f3:                           m.EN_PASSTH_MODE_RESP,
+		0x05f4:                           m.DIS_PASSTH_MODE_RESP,
+		cmd.CMDID_ERASE_FLASH_TMAX:       m.ERASE_FLASH_RESP, //FLF//
+		cmd.CMDID_WRITE_FLASH_TMAX:       m.WRITE_DATA_FLASH_RESP,
+		0xff11:                           m.DOWN_PRN_FMT_RESP,
+		0xff12:                           m.ERR_SERIAL_RESP,
+		0xff13:                           m.GET_AP_LIST_RESP,
+		0xff14:                           m.RESCAN_AP_LIST_RESP,
+		0xff15:                           m.SET_WIFI_DYNAMIC_IP_RESP,
+		0xff16:                           m.SET_WIFI_STATIC_IP_RESP,
+		0xff17:                           m.GET_IP_INFO_RESP,
+		0xff18:                           m.MODIFY_BT_NAME_RESP,
+		0xff19:                           m.NO_RESP,
+		0xf201:                           m.BT_PASSTH_DATA_RESP,
+		0xf202:                           m.WIFI_PASSTH_DATA_RESP,
+		0xff22:                           m.PRT_PASSTH_DATA_RESP,
+		cmd.CMDID_SCALE_PASSTH_DATA_TMAX: m.SCALE_PASSTH_DATA,
+		cmd.CMDID_DOWN_PLU_TMAX:          m.DOWN_PLU_RESP,
+		0xff25:                           m.UNKNOWN_DATA,
 	}
 
 	responseHandlerMap = map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
@@ -96,6 +112,8 @@ func init() {
 		m.BT_PASSTH_DATA_RESP:      handleBTPassthResp,
 		m.WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
 		m.GET_BUILD_INFO_RESP:      handleGetBuildInfoResp,
+		m.GET_SCALE_INFO_RESP:      handleGetScaleInfoResp,
+		m.DOWN_PLU_RESP:            handleDownPluResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -110,6 +128,14 @@ func extractMessageTMAX(scaleId int64, bufs *util.CircularBuffer, msgType m.Resp
 		log.Error("handler not found, msgType: %v", msgType)
 	}
 	resp, shouldRemoveLen := handler(scaleId, data)
+	bufs.DequeueN(shouldRemoveLen)
+
+	return resp
+}
+
+func extractScalePassthDataTMAX(s *Scale, bufs *util.CircularBuffer, msgType m.RespMsgType) ScaleRespMsg {
+	data := bufs.PeekAll()
+	resp, shouldRemoveLen := handleScalePassthData(s.Id, data, s.IsScalePassthHex)
 	bufs.DequeueN(shouldRemoveLen)
 
 	return resp
@@ -146,7 +172,7 @@ func retrieveWeight(data []byte) (WeightMsg, error) {
 		}
 
 		// Regex pattern to match "ST,NT90PCS" or "ST,GS 80%"
-		pattern := `^ST,\s*([A-Za-z0-9]+)\s*([%A-Za-z]+)$`
+		pattern := `^ZE,ST,\s*([A-Za-z0-9]+)\s*([%A-Za-z]+)$`
 		re := regexp.MustCompile(pattern)
 		match := re.FindStringSubmatch(weightVal)
 		if len(match) == 3 {
@@ -159,15 +185,16 @@ func retrieveWeight(data []byte) (WeightMsg, error) {
 	}
 
 	weightMsg := WeightMsg{}
-	weightMsg.IsStable = strings.Contains(strings.TrimSpace(fields[0]), "ST")
-	weightMsg.IsNet = strings.Contains(strings.TrimSpace(fields[1]), "NT")
+	weightMsg.IsZero = strings.Contains(strings.TrimSpace(fields[0]), "ZE")
+	weightMsg.IsStable = strings.Contains(strings.TrimSpace(fields[1]), "ST")
+	weightMsg.IsNet = strings.Contains(strings.TrimSpace(fields[2]), "NT")
 
-	regexp, err := regexp.Compile(`([0-9:.-]+)\s*([a-zA-Z%]+)`)
+	regexp, err := regexp.Compile(`([0-9:.-]+)\s*([a-zA-Z%:]+)`)
 	if err != nil {
 		return WeightMsg{}, err
 	}
 
-	match := regexp.FindStringSubmatch(strings.TrimSpace(fields[2]))
+	match := regexp.FindStringSubmatch(strings.ReplaceAll(fields[2], " ", ""))
 	if len(match) != 3 {
 		return WeightMsg{}, fmt.Errorf("finding substring error: %v", fields[2])
 	}
@@ -258,6 +285,71 @@ func handleGetBuildInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	return msg, len(data)
 }
 
+type SIFromScale struct {
+	ScaleSn   string   `json:"ScaleSn"`
+	ModelName string   `json:"ModelName"`
+	AddrInfos []string `json:"AddrInfos"`
+}
+
+type SIAddrInfos struct {
+	Type     int `json:"Type"`
+	Addr     int `json:"Addr"`
+	Lenth    int `json:"Lenth"`
+	EraseLen int `json:"EraseLen"`
+}
+
+func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	//TODO:       20231101@FLF
+	//此处处理收到的数据
+	var scaleInfo SIFromScale
+	var siAddrInfos SIAddrInfos
+	msg := ScaleRespMsg{}
+	// 0 75 1 5 84 45 77 65 88 2 10 84 45 83 67 65 76 69 48 48 49 3 12 8 0 48 0 0 0 32 0 0 0 8 0 4 12 8 1 224 0 0 0 32 0 0 0 8 0 5 12 8 1 216 0 0 0 8 0 0 0 8 0 6 12 0 6 160 0 0 16 0 0 0 0 16 0
+	if data[0] == 0x15 || data[0] == 0x06 {
+		msg.MsgType = m.GET_SCALE_INFO_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+
+	}
+	dataLen := int(binary.BigEndian.Uint16(data[:2]))
+	var byteLen int
+	fmt.Println(dataLen)
+	for i := 2; i < dataLen; i++ {
+		switch data[i] {
+		case SI_MODEL_NAME:
+			byteLen = int(data[i+1])
+			scaleInfo.ModelName = string(data[i+2 : i+2+byteLen])
+			i = i + 1 + byteLen
+		case SI_SCALE_SN:
+			byteLen = int(data[i+1])
+			scaleInfo.ScaleSn = string(data[i+2 : i+2+byteLen])
+			i = i + 1 + byteLen
+		case SI_DEF_PRN_INFO, SI_FREE_PRN_INFO, SI_SERIAL_OUTPUT, SI_PLU_INFO:
+			byteLen = int(data[i+1])
+			var infoByte = data[i+2 : i+2+byteLen]
+			siAddrInfos.Type = int(data[i])
+			siAddrInfos.Addr, siAddrInfos.Lenth, siAddrInfos.EraseLen = getInfoAddrLen(infoByte)
+			addrInfoStr, _ := json.MarshalToString(siAddrInfos)
+			scaleInfo.AddrInfos = append(scaleInfo.AddrInfos, addrInfoStr)
+			i = i + 1 + byteLen
+		default:
+
+		}
+	}
+
+	msg.MsgType = m.GET_SCALE_INFO_RESP
+	msg.ScaleId = scaleId
+	msg.MsgBody, _ = json.MarshalToString(scaleInfo)
+
+	return msg, len(data)
+}
+
+func getInfoAddrLen(data []byte) (int, int, int) {
+	return int(binary.BigEndian.Uint32(data[:4])), int(binary.BigEndian.Uint32(data[4:8])), int(binary.BigEndian.Uint32(data[8:12]))
+
+}
+
 func handleGetRecsResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
@@ -326,9 +418,37 @@ func handleDownPrnFmtResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	return ScaleRespMsg{}, 0
 }
 
+func handleDownPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	// TODO: Implement function
+	return ScaleRespMsg{}, 0
+}
+
 func handleErrSerialResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
+}
+
+func handleScalePassthData(scaleId int64, data []byte, isHexMode bool) (ScaleRespMsg, int) {
+	// find \r\n
+	target := []byte{0x0d, 0x0a}
+
+	index := bytes.LastIndex(data, target)
+	if index == -1 {
+		return ScaleRespMsg{}, 0
+	}
+	var passthStr string
+	if isHexMode {
+		for _, b := range data[0 : index+2] {
+			passthStr += fmt.Sprintf("%02X ", b)
+		}
+
+	} else {
+		passthStr = string(data[0 : index+2])
+	}
+
+	respMsg := ScaleRespMsg{MsgType: m.SCALE_PASSTH_DATA, MsgBody: passthStr, ScaleId: scaleId}
+
+	return respMsg, index + 2
 }
 
 var okBytes = []byte("\r\nOK\r\n")
@@ -472,6 +592,9 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return handleGetIpModeResp(scaleId, data)
 	case m.SET_WIFI_STATIC_IP_RESP:
 		return handleSetWifiStaticIpResp(scaleId, data)
+	case m.CHANGE_WIFI_MODE_RESP:
+		return handleChangeWifiModeResp(scaleId, data)
+
 	default:
 		return ScaleRespMsg{}, 0
 	}
@@ -514,6 +637,16 @@ func handleConnectApResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "ok"}, len(data)
 	} else if strings.Contains(string(data), CONNECT_AP_FAIL_RESP) { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, len(data)
+	}
+}
+
+func handleChangeWifiModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), CHANG_WIFI_MODE_OK_RESP) { // success
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CHANGE_WIFI_MODE_RESP, MsgBody: "ok"}, len(data)
+	} else if strings.Contains(string(data), CONNECT_AP_FAIL_RESP) { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CHANGE_WIFI_MODE_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
 		return ScaleRespMsg{}, len(data)
 	}

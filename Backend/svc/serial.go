@@ -222,6 +222,10 @@ func (s *TSerial) write() {
 	}
 }
 
+func (s *TSerial) ChangePickFunc(pickerFn picker.PickerFunc) {
+	s.pickerFn = pickerFn
+}
+
 func comInfo2SerialMode(pcnf ComInfo) *serial.Mode {
 	var mode serial.Mode
 	mode.BaudRate = pcnf.Baud

@@ -2,7 +2,11 @@ package svc
 
 import (
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
+	"tmaxsrv/comm"
 	"tmaxsrv/log"
 
 	"github.com/spf13/viper"
@@ -13,7 +17,9 @@ const (
 		"dateformat": "1",
 		"recmode": "auto",
 		"stabletimetorec": "2",
-		"zerorange": "1"
+		"zerorange": "1",
+		"dateseparator":"-",
+		"scalemode":"1"
 	  }`
 	CFG_FILE_NAME = "config"
 )
@@ -27,19 +33,26 @@ type Config struct {
 	StableTimeToRec string
 	ZeroRange       string
 	DateFormat      string
+	DateSeparator   string
+	ScaleMode       string
 }
 
 func NewUiConfig() *UiConfig {
+	file, _ := exec.LookPath(os.Args[0])
+	path, _ := filepath.Abs(file)
+	index := strings.LastIndex(path, string(os.PathSeparator))
+	currentPath := path[:index]
+	currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
 	cnf := viper.New()
-	cnf.AddConfigPath("./")
+	cnf.AddConfigPath(currentPath + "/")
 	cnf.SetConfigName(CFG_FILE_NAME)
 	cnf.SetConfigType("json")
 
 	var config Config
 	if err := cnf.ReadInConfig(); err != nil {
 		// create a config.json file with default
-		os.WriteFile(CFG_FILE_NAME+".json", []byte(DEFAULT_UI_CFG_STR), 0o644)
-		config := Config{RecMode: "auto", StableTimeToRec: "2", ZeroRange: "1", DateFormat: "1"}
+		os.WriteFile(currentPath+"/"+CFG_FILE_NAME+".json", []byte(DEFAULT_UI_CFG_STR), 0o644)
+		config := Config{RecMode: "auto", StableTimeToRec: "2", ZeroRange: "1", DateFormat: "1", DateSeparator: "-", ScaleMode: "1"}
 		uiCfg := &UiConfig{Config: &config}
 		uiCfg.UpdateConfig(&config)
 
@@ -58,8 +71,13 @@ func (c *UiConfig) GetConfig() (*Config, error) {
 }
 
 func (c *UiConfig) UpdateConfig(config *Config) error {
+	file, _ := exec.LookPath(os.Args[0])
+	path, _ := filepath.Abs(file)
+	index := strings.LastIndex(path, string(os.PathSeparator))
+	currentPath := path[:index]
+	currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
 	cnf := viper.New()
-	cnf.AddConfigPath("./")
+	cnf.AddConfigPath(currentPath + "/")
 	cnf.SetConfigName("config")
 	cnf.SetConfigType("json")
 	c.Config = config
@@ -67,5 +85,7 @@ func (c *UiConfig) UpdateConfig(config *Config) error {
 	cnf.Set("StableTimeToRec", config.StableTimeToRec)
 	cnf.Set("ZeroRange", config.ZeroRange)
 	cnf.Set("DateFormat", config.DateFormat)
+	cnf.Set("DateSeparator", config.DateSeparator)
+	cnf.Set("ScaleMode", config.ScaleMode)
 	return cnf.WriteConfig()
 }

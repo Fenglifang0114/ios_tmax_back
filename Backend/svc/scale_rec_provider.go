@@ -12,8 +12,29 @@ type ScaleRecProvider struct {
 	recPb *DbScaleRec
 }
 
+type ScaleRecCheckWeigherProvider struct {
+	mu    sync.Mutex
+	myId  string
+	recPb *DbScaleRec
+}
+
+type ScaleRecTakeInProvider struct {
+	mu    sync.Mutex
+	myId  string
+	recPb *DbScaleRec
+}
+
+type ScaleRecTakeOutProvider struct {
+	mu    sync.Mutex
+	myId  string
+	recPb *DbScaleRec
+}
+
 const (
-	SCALE_REC_DB_FILE = comm.SRV_DATA_PATH + "/" + "scalerec.db"
+	SCALE_REC_DB_FILE          = comm.SRV_DATA_PATH + "/" + "scalerec.db"
+	SCALE_REC_DB_CHECK_FILE    = comm.SRV_DATA_PATH + "/" + "scalereccheck.db"
+	SCALE_REC_DB_TAKE_IN_FILE  = comm.SRV_DATA_PATH + "/" + "scalerectakein.db"
+	SCALE_REC_DB_TAKE_OUT_FILE = comm.SRV_DATA_PATH + "/" + "scalerectakeout.db"
 )
 
 func NewScaleRecProvider() *ScaleRecProvider {
@@ -38,4 +59,97 @@ func (p *ScaleRecProvider) DeleteRec(recId uint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.recPb.DeleteScaleRec(recId)
+}
+func (p *ScaleRecProvider) DeleteAllRec() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.DeleteAllScaleRec()
+}
+
+func NewScaleRecCheckWeigherProvider() *ScaleRecCheckWeigherProvider {
+	recPb, _ := NewDbScaleRec(SCALE_REC_DB_CHECK_FILE)
+	return &ScaleRecCheckWeigherProvider{myId: "ScaleRecCheckWeigherProvider", recPb: recPb}
+}
+
+func (p *ScaleRecCheckWeigherProvider) GetRecsList(scale Scale) ([]ScaleRec, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.GetScaleRecsList(scale.Model, scale.Sn)
+	return recs, err
+}
+
+func (p *ScaleRecCheckWeigherProvider) InsertRec(rec ScaleRec) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.InsertScaleRec(rec)
+}
+
+func (p *ScaleRecCheckWeigherProvider) DeleteRec(recId uint) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.DeleteScaleRec(recId)
+}
+func (p *ScaleRecCheckWeigherProvider) DeleteAllRec() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.DeleteAllScaleRec()
+}
+
+func NewScaleRecTakeInProvider() *ScaleRecTakeInProvider {
+	recPb, _ := NewDbScaleRec(SCALE_REC_DB_TAKE_IN_FILE)
+	return &ScaleRecTakeInProvider{myId: "ScaleRecTakeInProvider", recPb: recPb}
+}
+
+func (p *ScaleRecTakeInProvider) GetRecsList(scale Scale) ([]ScaleRec, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.GetScaleRecsList(scale.Model, scale.Sn)
+	return recs, err
+}
+
+func (p *ScaleRecTakeInProvider) InsertRec(rec ScaleRec) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.InsertScaleRec(rec)
+}
+
+func (p *ScaleRecTakeInProvider) DeleteRec(recId uint) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.DeleteScaleRec(recId)
+}
+func (p *ScaleRecTakeInProvider) DeleteAllRec() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.DeleteAllScaleRec()
+}
+
+func NewScaleRecTakeOutProvider() *ScaleRecTakeOutProvider {
+	recPb, _ := NewDbScaleRec(SCALE_REC_DB_TAKE_OUT_FILE)
+	return &ScaleRecTakeOutProvider{myId: "ScaleRecTakeOutProvider", recPb: recPb}
+}
+
+func (p *ScaleRecTakeOutProvider) GetRecsList(scale Scale) ([]ScaleRec, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.GetScaleRecsList(scale.Model, scale.Sn)
+	return recs, err
+}
+
+func (p *ScaleRecTakeOutProvider) InsertRec(rec ScaleRec) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.InsertScaleRec(rec)
+}
+
+func (p *ScaleRecTakeOutProvider) DeleteRec(recId uint) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.DeleteScaleRec(recId)
+}
+
+func (p *ScaleRecTakeOutProvider) DeleteAllRec() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.DeleteAllScaleRec()
 }

@@ -13,18 +13,24 @@ import (
 
 var nextScaleId int64 = 1 // this scale id will be incremented as new scale is added, 0 is reserved for not used
 type ScaleMgr struct {
-	srvMgr *SrvMgr
-	scales map[int64]*Scale // map with scale id
-	connPb *ScaleConnProvider
-	recPb  *ScaleRecProvider
-	medias []*ScaleConnMedia // scale connections meida
+	srvMgr            *SrvMgr
+	scales            map[int64]*Scale // map with scale id
+	connPb            *ScaleConnProvider
+	recPb             *ScaleRecProvider
+	recCheckWeigherPb *ScaleRecCheckWeigherProvider
+	recTakeInPb       *ScaleRecTakeInProvider
+	recTakeOutPb      *ScaleRecTakeOutProvider
+	medias            []*ScaleConnMedia // scale connections meida
 }
 
 func NewScaleMgr() *ScaleMgr {
 	connPb := NewScaleConnProvider()
 	recPb := NewScaleRecProvider()
+	recCheckWeigherPb := NewScaleRecCheckWeigherProvider()
+	recTakeInPb := NewScaleRecTakeInProvider()
+	recTakeOutPb := NewScaleRecTakeOutProvider()
 	scales := make(map[int64]*Scale)
-	return &ScaleMgr{connPb: connPb, recPb: recPb, scales: scales}
+	return &ScaleMgr{connPb: connPb, recPb: recPb, recCheckWeigherPb: recCheckWeigherPb, recTakeInPb: recTakeInPb, recTakeOutPb: recTakeOutPb, scales: scales}
 }
 
 func (s *ScaleMgr) SetSrvMsg(srvMgr *SrvMgr) {
