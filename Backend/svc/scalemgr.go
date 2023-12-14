@@ -5,8 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"go.bug.st/serial"
-
 	"tmaxsrv/comm"
 	"tmaxsrv/log"
 )
@@ -256,21 +254,6 @@ func contains(s []string, e string) (int, bool) {
 		}
 	}
 	return -1, false
-}
-
-func getPortsList() ([]string, error) {
-	ports, err := serial.GetPortsList()
-	if err != nil {
-		log.Log.Error(err)
-	}
-	if len(ports) == 0 {
-		// log.Fatal("No serial ports found!")
-	}
-	// for _, port := range ports {
-	// 	fmt.Printf("Found port: %v\n", port)
-	// }
-
-	return ports, err
 }
 
 func (m *ScaleMgr) GetScale(id int64) (*Scale, error) {

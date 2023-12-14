@@ -49,6 +49,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/viper v1.15.0
+	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 	github.com/xuri/excelize/v2 v2.7.0
 	golang.org/x/sys v0.5.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect

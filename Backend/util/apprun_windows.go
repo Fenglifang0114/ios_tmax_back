@@ -13,10 +13,6 @@ func RunCommand(output chan<- string, done chan<- error, command string, args ..
 	//隐藏窗口
 	if runtime.GOOS == "windows" {
 		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	} else if runtime.GOOS == "darwin" {
-		cmd = exec.Command("osascript", "-e", "tell app \"Terminal\" to set miniaturized of window 1 to true", "-e", "tell application \"System Events\" to keystroke \"m\" using {command down, option down}")
-	} else if runtime.GOOS == "linux" {
-		cmd = exec.Command("xdotool", "getactivewindow", "windowminimize")
 	}
 
 	stdout, err := cmd.StdoutPipe()
