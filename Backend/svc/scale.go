@@ -313,8 +313,8 @@ func (s *Scale) procToScaleMsg() {
 }
 
 func (s *Scale) ModifyMedia(conf MediaConf) bool {
-	//	c.Lock()
-	//	defer c.Unlock()
+	mu.Lock()
+	defer mu.Unlock()
 	if conf.Type == MEDIA_COM {
 		var pcnf ComInfo
 		var err error

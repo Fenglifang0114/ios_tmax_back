@@ -6,8 +6,10 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/exec"
+	"os/signal"
 	"runtime/pprof"
 	"strings"
+	"syscall"
 	"time"
 
 	"tmaxsrv/build"
@@ -46,7 +48,7 @@ func main() {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", INSTANCE_PORT))
 	if err != nil {
-		if strings.Index(err.Error(), "in use") != -1 {
+		if strings.Contains(err.Error(), "in use") {
 			// optionally send command line arguments to the other instance
 			fmt.Fprintln(os.Stderr, "Already running.")
 			return
@@ -56,6 +58,8 @@ func main() {
 	}
 	defer listener.Close()
 
+	// Create a channel to receive the completion status of the application
+	doneChan := make(chan error, 1)
 	app := exec.Command("./ui/_ui.exe")
 	go app.Run()
 
@@ -80,13 +84,36 @@ func main() {
 	go h.Run()
 	ws := svc.NewWsServer()
 	go ws.Start(&h)
-	// <-quitch // wait for user to quit this application
-	// Wait for the process to complete
-	time.Sleep(10 * time.Second)
 
-	err = app.Wait()
-	if err != nil {
-		log.Log.Errorf("Error: %v\n", err)
+	// Create a channel to receive signals
+	sigChan := make(chan os.Signal, 10)
+
+	// Notify the signal channel for specific OS signals
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Wait for the process to complete and send the completion status to the doneChan channel
+	go func() {
+		time.Sleep(10 * time.Second)
+		doneChan <- app.Wait()
+	}()
+
+	// Wait for either completion or a signal
+	select {
+	case <-sigChan:
+		// Signal received, handle it as needed
+		log.Log.Errorln("Received signal. Terminating...")
+		err := app.Process.Kill()
+		if err != nil {
+			fmt.Println("Failed to kill the application:", err)
+			return
+		}
+	case err := <-doneChan:
+		// Application completed, handle the completion status
+		if err != nil {
+			log.Log.Errorf("Application completed with an error: %v", err)
+		} else {
+			log.Log.Infoln("Application completed successfully.")
+		}
 	}
 	log.Log.Info("Process completed.")
 
@@ -96,5 +123,6 @@ func main() {
 		memprof.Close()
 	}
 
-	return
+	// Exit the program gracefully
+	os.Exit(0)
 }
