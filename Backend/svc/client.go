@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"math/big"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,7 +57,10 @@ type Client struct {
 	sendCh chan []byte
 	recvCh chan []byte
 	// scale ID
-	scaleId int64
+	scaleId  int64
+	wgSndCh  sync.WaitGroup
+	wgRecvCh sync.WaitGroup
+	isQuit   bool
 
 	User
 }
@@ -67,6 +71,7 @@ type Client struct {
 // ensures that there is at most one reader on a connection by executing all
 // reads from this goroutine.
 func (c *Client) readPump() {
+	c.wgRecvCh.Add(1)
 	defer func() {
 		c.srvMgr.unregister <- c
 		//	c.sendCh = nil
@@ -76,6 +81,9 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
+		if c.isQuit {
+			break
+		}
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -100,6 +108,7 @@ func (c *Client) readPump() {
 		}
 		// log.Log.Debugf("got user message: %v", userMessage)
 	}
+	c.wgRecvCh.Done()
 }
 
 // writePump pumps messages from the hub to the websocket connection.
@@ -108,12 +117,16 @@ func (c *Client) readPump() {
 // application ensures that there is at most one writer to a connection by
 // executing all writes from this goroutine.
 func (c *Client) writePump() {
+	c.isQuit = false
+	c.wgSndCh.Add(1)
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
 	}()
 	for {
+		if c.isQuit {
+			break
+		}
 		select {
 		case message, ok := <-c.sendCh:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
@@ -146,15 +159,21 @@ func (c *Client) writePump() {
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+		default:
+			continue
 		}
 	}
+	c.wgSndCh.Done()
 }
 
 func (c *Client) Close() error {
+	c.isQuit = true
 	if c.sendCh != nil {
+		c.wgSndCh.Wait()
 		close(c.sendCh)
 	}
 	if c.recvCh != nil {
+		c.wgRecvCh.Wait()
 		close(c.recvCh)
 	}
 
