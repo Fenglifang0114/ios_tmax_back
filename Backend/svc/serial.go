@@ -2,6 +2,7 @@ package svc
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"go.bug.st/serial"
@@ -40,12 +41,14 @@ type TSerial struct {
 	// send to scale channel, message will be json string
 	sendCh     chan []byte
 	recvCh     chan comm.Packet
+	wg         sync.WaitGroup
 	queue      *util.CircularBuffer
 	pickerFn   picker.PickerFunc
 	baud       int    // for calculating time out
 	tmpbuf     []byte // for storing temporary data read from scale
 	toQuit     bool   // for informing the read/write goroutine to quit
 	maxPackLen int    // max package size that scale can receive on time
+
 }
 
 // NewScale creates a new scale
@@ -84,9 +87,12 @@ func NewSerial(pconf ComInfo, pickerFn picker.PickerFunc) (*TSerial, error) {
 func (s *TSerial) Close() error {
 	// inform read/write goroutines to quit
 	s.toQuit = true
-	time.Sleep(2 * time.Millisecond) // to let read/write goroutines to quit
-	// close recv/write channels
+	time.Sleep(10 * time.Millisecond) // to let goroutines run
 
+	// waiting s.read() goroutine to quit
+	s.wg.Wait()
+
+	// close recv/write channels
 	if !IsClosed(s.sendCh) {
 		close(s.sendCh)
 	}
@@ -139,6 +145,7 @@ func (s *TSerial) Write(data []byte) error {
 // ensures that there is at most one reader on a scale by executing all
 // reads from this goroutine.
 func (c *TSerial) read() {
+	c.wg.Add(1)
 	packCnt := 0
 	// readTimeOut := time.Duration(float64(256)*1000/float64(c.baud)) * time.Millisecond // read 256 bytes time
 	for {
@@ -181,6 +188,7 @@ func (c *TSerial) read() {
 			}
 		}
 	}
+	c.wg.Done()
 }
 
 func (s *TSerial) readScale() (int, error) {
