@@ -42,6 +42,7 @@ const (
 	CMD_WIFI_GET_IP_INFO
 	CMD_WIFI_GET_IP_MODE
 	CMD_WIFI_CONN_AP
+	CMD_WIFI_CONN_AP_ONE_KEY
 	CMD_WIFI_DISCONN_AP
 	CMD_CHANGE_WIFI_MODE
 
@@ -52,7 +53,15 @@ const (
 	CMD_WRITE_EEPROM
 	CMD_ERASE_FLASH
 	CMD_READ_FLASH
-	CMD_WRITE_FLASH
+	CMD_WRITE_FLASH_256
+	CMD_WRITE_FLASH_512
+	CMD_DEL_PLU
+	CMD_INSERT_PLU_ADDR
+	CMD_GET_PLU_HEAD
+	CMD_ERASE_INSERT_PLU
+	CMD_GET_WEIGHT_ERR
+	CMD_GET_SCALE_TIME
+	CMD_SET_SCALE_TIME
 )
 
 type DataType int
@@ -71,6 +80,7 @@ type CmdData struct {
 const (
 	LICENSE_FILE  = "tmaxlic.txt"
 	SRV_DATA_PATH = "srvdata"
+	PLU_BACK_PATH = "plufiles"
 )
 
 type CmdComposer struct {
@@ -110,6 +120,7 @@ const (
 	GET_AP_LIST_RESP              RespMsgType = "resp_get_ap_list"
 	RESCAN_AP_LIST_RESP           RespMsgType = "resp_rescan_ap_list"
 	CONNECT_AP_RESP               RespMsgType = "resp_connect_ap"
+	CONNECT_AP_ONE_KEY_RESP       RespMsgType = "resp_connect_ap_one_key"
 	SET_WIFI_DYNAMIC_IP_RESP      RespMsgType = "resp_set_wifi_dynamic_ip"
 	SET_WIFI_STATIC_IP_RESP       RespMsgType = "resp_set_wifi_static_ip"
 	GET_WIFI_AP_INFO_RESP         RespMsgType = "resp_get_wifi_ap_info"
@@ -126,16 +137,25 @@ const (
 	UPDATE_FIRMWARE_PROGRESS      RespMsgType = "resp_update_firmware_progress"
 	CHECK_SERIAL_PORT_RESP        RespMsgType = "resp_check_serial_port"
 	GET_BUILD_INFO_RESP           RespMsgType = "resp_get_build_info"
+	GET_SCALE_TIME_RESP           RespMsgType = "resp_get_scale_time" //20240112@FLF
+	SET_SCALE_TIME_RESP           RespMsgType = "resp_set_scale_time" //20240112@FLF
 	SET_OUTPUT_FMT_RESP           RespMsgType = "resp_set_output_fmt"
 	OPEN_SCALE_PASSTHROUGH_RESP   RespMsgType = "resp_open_scale_passthrough" //20231023@FLF
 	CLOSE_SCALE_PASSTHROUGH_RESP  RespMsgType = "resp_close_scale_passthrough"
 	SCALE_PASSTH_DATA             RespMsgType = "scale_passth_data"
 	CHANGE_SCALE_PASSTH_MODE_RESP RespMsgType = "resp_change_scale_passth_mode"
 	GET_SCALE_INFO_RESP           RespMsgType = "resp_get_scale_info"
+	GET_WEIGHT_ERR_RESP           RespMsgType = "resp_get_weight_err"
 	DOWN_PLU_RESP                 RespMsgType = "resp_down_plu"
+	DEL_PLU_RESP                  RespMsgType = "resp_del_plu"
+	INSERT_PLU_RESP               RespMsgType = "resp_insert_plu"
 	GET_UI_CONF_RESP              RespMsgType = "resp_get_ui_conf"
 	UPDATE_UI_CONF_RESP           RespMsgType = "resp_update_ui_conf"
 	CHANGE_WIFI_MODE_RESP         RespMsgType = "resp_change_wifi_mode"
+	INSERT_PLU_ADDR_RESP          RespMsgType = "resp_insert_plu_addr"
+	READ_FLASH_DATA_RESP          RespMsgType = "resp_read_flash_data"
+	ERASE_INSERT_PLU_RESP         RespMsgType = "resp_erase_insert_plu"
+	REBOOT_RESP                   RespMsgType = "resp_reboot"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

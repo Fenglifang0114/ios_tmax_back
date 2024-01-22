@@ -44,6 +44,8 @@ const (
 	SI_FREE_PRN_INFO = 4
 	SI_SERIAL_OUTPUT = 5
 	SI_PLU_INFO      = 6
+	SI_OL_INFO       = 7
+	SI_UL_INFO       = 8
 )
 
 var responseHandlerMap map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int)
@@ -59,8 +61,10 @@ func init() {
 		0xfff6:                           m.GET_RECS_RESP,
 		0xfff7:                           m.ADD_REC_RESP,
 		0xfff8:                           m.DEL_REC_RESP,
+		cmd.CMDID_REBOOT_TMAX:            m.REBOOT_RESP,
 		0x0556:                           m.GET_BUILD_INFO_RESP,
 		cmd.CMDID_READ_SCALE_INFO_TMAX:   m.GET_SCALE_INFO_RESP,
+		cmd.CMDID_GET_SCALE_TIME_TMAX:    m.GET_SCALE_TIME_RESP,
 		0x05f1:                           m.EN_FAC_MODE_RESP,
 		0x05f2:                           m.DIS_FAC_MODE_RESP,
 		0x05f3:                           m.EN_PASSTH_MODE_RESP,
@@ -81,6 +85,11 @@ func init() {
 		0xff22:                           m.PRT_PASSTH_DATA_RESP,
 		cmd.CMDID_SCALE_PASSTH_DATA_TMAX: m.SCALE_PASSTH_DATA,
 		cmd.CMDID_DOWN_PLU_TMAX:          m.DOWN_PLU_RESP,
+		cmd.CMDID_DEL_PLU_TMAX:           m.DEL_PLU_RESP,
+		cmd.CMDID_SET_SCALE_TIME_TMAX:    m.SET_SCALE_TIME_RESP,
+		cmd.CMDID_INSERT_PLU_TMAX:        m.INSERT_PLU_ADDR_RESP,
+		cmd.CMDID_READ_FLASH_TMAX:        m.READ_FLASH_DATA_RESP,
+		cmd.CMDID_ERASE_INSERT_PLU_TMAX:  m.ERASE_INSERT_PLU_RESP,
 		0xff25:                           m.UNKNOWN_DATA,
 	}
 
@@ -113,7 +122,14 @@ func init() {
 		m.WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
 		m.GET_BUILD_INFO_RESP:      handleGetBuildInfoResp,
 		m.GET_SCALE_INFO_RESP:      handleGetScaleInfoResp,
+		m.GET_SCALE_TIME_RESP:      handleGetScaleTimeResp,
+		m.SET_SCALE_TIME_RESP:      handleSetScaleTimeResp,
 		m.DOWN_PLU_RESP:            handleDownPluResp,
+		m.DEL_PLU_RESP:             handleDelPluResp,
+		m.INSERT_PLU_ADDR_RESP:     handleInsertPluResp,
+		m.READ_FLASH_DATA_RESP:     handleReadFlashDataResp,
+		m.ERASE_INSERT_PLU_RESP:    handleEraseInsertPluResp,
+		m.REBOOT_RESP:              handleRebootResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -298,6 +314,15 @@ type SIAddrInfos struct {
 	EraseLen int `json:"EraseLen"`
 }
 
+func handleSetScaleTimeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_SCALE_TIME_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_SCALE_TIME_RESP, MsgBody: "fail"}, len(data)
+	}
+	// TODO: Implement function
+}
+
 func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	//TODO:       20231101@FLF
 	//此处处理收到的数据
@@ -316,6 +341,7 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	var byteLen int
 	fmt.Println(dataLen)
 	for i := 2; i < dataLen; i++ {
+		println(data[i])
 		switch data[i] {
 		case SI_MODEL_NAME:
 			byteLen = int(data[i+1])
@@ -325,7 +351,7 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 			byteLen = int(data[i+1])
 			scaleInfo.ScaleSn = string(data[i+2 : i+2+byteLen])
 			i = i + 1 + byteLen
-		case SI_DEF_PRN_INFO, SI_FREE_PRN_INFO, SI_SERIAL_OUTPUT, SI_PLU_INFO:
+		case SI_DEF_PRN_INFO, SI_FREE_PRN_INFO, SI_SERIAL_OUTPUT, SI_PLU_INFO, SI_OL_INFO, SI_UL_INFO:
 			byteLen = int(data[i+1])
 			var infoByte = data[i+2 : i+2+byteLen]
 			siAddrInfos.Type = int(data[i])
@@ -341,6 +367,33 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	msg.MsgType = m.GET_SCALE_INFO_RESP
 	msg.ScaleId = scaleId
 	msg.MsgBody, _ = json.MarshalToString(scaleInfo)
+
+	return msg, len(data)
+}
+
+func handleGetScaleTimeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	//TODO:       20231101@FLF
+	//此处处理收到的数据
+	msg := ScaleRespMsg{}
+
+	if len(data) < 4 {
+		msg.MsgType = m.GET_SCALE_TIME_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+	dataTimeInt := int(binary.BigEndian.Uint32(data[0:4]))
+	strTime := strconv.Itoa(dataTimeInt)
+	if strTime == "" {
+		msg.MsgType = m.GET_SCALE_TIME_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+
+	msg.MsgType = m.GET_SCALE_TIME_RESP
+	msg.ScaleId = scaleId
+	msg.MsgBody = "ok" + "," + strTime
 
 	return msg, len(data)
 }
@@ -370,6 +423,14 @@ func handleEnFacModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_FAC_MODE_RESP, MsgBody: "ok"}, len(data)
 	} else {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_FAC_MODE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleRebootResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REBOOT_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REBOOT_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
@@ -421,6 +482,58 @@ func handleDownPrnFmtResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 func handleDownPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
+}
+
+func handleDelPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DEL_PLU_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DEL_PLU_RESP, MsgBody: "fail"}, len(data)
+	}
+	// TODO: Implement function
+}
+
+func handleEraseInsertPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.ERASE_INSERT_PLU_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.ERASE_INSERT_PLU_RESP, MsgBody: "fail"}, len(data)
+	}
+
+}
+
+func handleInsertPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	msg := ScaleRespMsg{}
+	str := string(data)
+	if len(str) >= 12 {
+		msg.MsgType = m.INSERT_PLU_ADDR_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = str[:12]
+	} else if data[0] == 0x06 {
+
+	} else {
+		msg.MsgType = m.INSERT_PLU_ADDR_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+	}
+	return msg, len(data)
+}
+
+func handleReadFlashDataResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	msg := ScaleRespMsg{}
+	str := string(data)
+	if len(str) >= 0 {
+		msg.MsgType = m.READ_FLASH_DATA_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = str[:len(data)]
+	} else if data[0] == 0x06 {
+
+	} else {
+		msg.MsgType = m.READ_FLASH_DATA_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+	}
+	return msg, len(data)
 }
 
 func handleErrSerialResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
@@ -580,6 +693,8 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return handleGetApListResp(scaleId, data)
 	case m.CONNECT_AP_RESP:
 		return handleConnectApResp(scaleId, data)
+	case m.CONNECT_AP_ONE_KEY_RESP:
+		return handleConnectApOneKeyResp(scaleId, data)
 	case m.SET_WIFI_DYNAMIC_IP_RESP:
 		return handleSetWifiDynamicIpResp(scaleId, data)
 	case m.SEND_DATA_TO_WIFI_RESP:
@@ -637,6 +752,16 @@ func handleConnectApResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "ok"}, len(data)
 	} else if strings.Contains(string(data), CONNECT_AP_FAIL_RESP) { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, len(data)
+	}
+}
+
+func handleConnectApOneKeyResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), CONNECT_AP_OK_RESP) { // success
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_ONE_KEY_RESP, MsgBody: "ok"}, len(data)
+	} else if strings.Contains(string(data), CONNECT_AP_FAIL_RESP) { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_ONE_KEY_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
 		return ScaleRespMsg{}, len(data)
 	}

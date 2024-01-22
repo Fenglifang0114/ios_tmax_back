@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
 	"tmaxsrv/comm"
 	"tmaxsrv/log"
 )
@@ -15,6 +14,7 @@ type ScaleMgr struct {
 	scales            map[int64]*Scale // map with scale id
 	connPb            *ScaleConnProvider
 	recPb             *ScaleRecProvider
+	pluFilePb         *PluRecProvider
 	recCheckWeigherPb *ScaleRecCheckWeigherProvider
 	recTakeInPb       *ScaleRecTakeInProvider
 	recTakeOutPb      *ScaleRecTakeOutProvider
@@ -24,11 +24,12 @@ type ScaleMgr struct {
 func NewScaleMgr() *ScaleMgr {
 	connPb := NewScaleConnProvider()
 	recPb := NewScaleRecProvider()
+	pluFilePb := NewPluRecProvider()
 	recCheckWeigherPb := NewScaleRecCheckWeigherProvider()
 	recTakeInPb := NewScaleRecTakeInProvider()
 	recTakeOutPb := NewScaleRecTakeOutProvider()
 	scales := make(map[int64]*Scale)
-	return &ScaleMgr{connPb: connPb, recPb: recPb, recCheckWeigherPb: recCheckWeigherPb, recTakeInPb: recTakeInPb, recTakeOutPb: recTakeOutPb, scales: scales}
+	return &ScaleMgr{connPb: connPb, recPb: recPb, pluFilePb: pluFilePb, recCheckWeigherPb: recCheckWeigherPb, recTakeInPb: recTakeInPb, recTakeOutPb: recTakeOutPb, scales: scales}
 }
 
 func (s *ScaleMgr) SetSrvMsg(srvMgr *SrvMgr) {

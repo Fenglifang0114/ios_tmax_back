@@ -63,7 +63,7 @@ func ComposeCmdT2200(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) 
 	case m.CMD_ERASE_FLASH:
 		addr := cmdData.Data.(int)
 		return eraseCmdT2200(uint32(addr))
-	case m.CMD_WRITE_FLASH:
+	case m.CMD_WRITE_FLASH_256:
 		addr, data := parseWrDataT2200(cmdData.Data.(string))
 		return wrDataCmdT2200(uint32(addr), data)
 	}

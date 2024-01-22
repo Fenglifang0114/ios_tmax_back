@@ -180,6 +180,38 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"ReqData": "{ \"ScaleModel\": \"tmax\", \"FilePaths\": [\"./plu.xlsx\"]}"
 }
 	response: {"MsgType":"resp_down_plu","MsgBody":"ok", "ScaleId":1}
+
+19. insert plu to scale =>{
+	"Req": "insert_plu_to_scale",
+	"ReqData": "{ \"ScaleModel\": \"tmax\", \"FilePaths\": [\"./plu.xlsx\"]}"
+}
+	response: {"MsgType":"resp_insert_plu","MsgBody":"ok", "ScaleId":1}
+20. delete plu from scale =>{
+	"Req": "del_plu_from_scale",
+	"ReqData": "{ \"ScaleModel\": \"tmax\", \"PluId\": [\"10100\",\"10101\",\"10103\",\"10102\"]}"
+}
+	response: {"MsgType":"resp_del_plu","MsgBody":"ok", "ScaleId":1}
+
+21. get weight err info =>{
+	"Req": "get_weight_err",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_get_weight_err","MsgBody":"{    
+    "OlCnt":50,
+    "OlTime":200,
+    "UlCnt":45,
+    "UlTime":1000,    
+}","ScaleId":1
+}
+
+22. get scale time info =>{
+	"Req": "get_scale_time",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_get_scale_time","MsgBody":"{ok,1705023530}","ScaleId":1
+}
 	
 
 To configure scale's wifi to connect to specific AP

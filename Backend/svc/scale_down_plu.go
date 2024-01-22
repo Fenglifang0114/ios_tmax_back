@@ -2,8 +2,12 @@ package svc
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"sort"
 
@@ -26,7 +30,7 @@ var VarNumberMap = map[string]byte{
 
 var VarLenthMap = map[string]byte{
 	"ProductNumber": 4,
-	"ProductName":   30,
+	"ProductName":   80,
 	"PriceUnit":     1,
 	"TaxModel":      1,
 	"TaxType":       1,
@@ -80,6 +84,7 @@ func ParserPluFile(excelFileName string) bool {
 		"LimitLow",
 		"isUSED",
 	}
+	md5Str := fileToMd5(excelFileName)
 
 	products, err := readExcelToJSON(excelFileName, columnNames)
 	if err != nil {
@@ -99,9 +104,25 @@ func ParserPluFile(excelFileName string) bool {
 	mapLength := byte(len(VarNumberMap))
 	// 创建bytes.Buffer
 	buf := new(bytes.Buffer)
+
+	buf.Write([]byte(md5Str))
+
+	pluNameMaxLenth := 64
+	var tempProduct []Product
+	//删除空行
+	for _, product := range products {
+		if product.ProductNumber != 0 {
+			tempProduct = append(tempProduct, product)
+		}
+	}
+	products = tempProduct
+	// 将plu数量写入bytes.Buffer
+	pluCount := make([]byte, 2)
+	binary.LittleEndian.PutUint16(pluCount, uint16(len(products)))
+	buf.Write(pluCount)
 	// 将长度写入bytes.Buffer
 	buf.WriteByte(mapLength)
-	pluNameMaxLenth := 0
+
 	for _, product := range products {
 		// 计算ProductName字段的长度
 		nameLength := len(product.ProductName)
@@ -110,7 +131,13 @@ func ParserPluFile(excelFileName string) bool {
 			pluNameMaxLenth = nameLength
 		}
 	}
-
+	if pluNameMaxLenth > 64 && pluNameMaxLenth < 128 {
+		pluNameMaxLenth = 128
+	} else if pluNameMaxLenth > 128 && pluNameMaxLenth < 256 {
+		pluNameMaxLenth = 256
+	} else if pluNameMaxLenth > 256 && pluNameMaxLenth < 512 {
+		pluNameMaxLenth = 512
+	}
 	varKeys := make([]string, 0, len(VarNumberMap))
 	for key := range VarNumberMap {
 		varKeys = append(varKeys, key)
@@ -168,6 +195,20 @@ func ParserPluFile(excelFileName string) bool {
 	print(products)
 	print(pluNameMaxLenth)
 	return true
+}
+
+func fileToMd5(filePath string) string {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func readExcelToJSON(fileName string, columnNames []string) ([]Product, error) {
@@ -235,7 +276,7 @@ func indexToCellName(row, col int) string {
 	colName := ""
 	for col > 0 {
 		remainder := (col - 1) % 26
-		colName = string('A'+remainder) + colName
+		colName = string(rune('A'+remainder)) + colName
 		col = (col - 1) / 26
 	}
 	return colName + fmt.Sprint(row)
@@ -246,7 +287,7 @@ func convertToInt(value string) int {
 	if value != "" {
 		_, err := fmt.Sscanf(value, "%d", &result)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}
 	return result
@@ -257,7 +298,7 @@ func convertToByte(value string) byte {
 	if value != "" {
 		_, err := fmt.Sscanf(value, "%d", &result)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}
 	return result
@@ -268,8 +309,143 @@ func convertToFloat64(value string) float64 {
 	if value != "" {
 		_, err := fmt.Sscanf(value, "%f", &result)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	}
 	return result
+}
+
+func ParserDelPlu(pluIdList []string) ([]byte, bool) {
+	buf := new(bytes.Buffer)
+	for i := 0; i < len(pluIdList); i++ {
+		idNum := convertToInt(pluIdList[i])
+		binary.Write(buf, binary.BigEndian, int32(idNum))
+	}
+
+	return buf.Bytes(), true
+}
+
+func ParserInsertPlu(excelFileName string) ([]byte, []byte, bool) {
+	columnNames := []string{
+		"ProductNumber",
+		"ProductName",
+		"PriceUnit",
+		"TaxModel",
+		"TaxType",
+		"Price",
+		"UnitWeight",
+		"PreTare",
+		"LimitHigh",
+		"LimitLow",
+		"isUSED",
+	}
+
+	pluNumBuf := new(bytes.Buffer)
+	insertHeadBuf := new(bytes.Buffer)
+
+	products, err := readExcelToJSON(excelFileName, columnNames)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return pluNumBuf.Bytes(), insertHeadBuf.Bytes(), false
+	}
+
+	jsonData, err := json.Marshal(products)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return pluNumBuf.Bytes(), insertHeadBuf.Bytes(), false
+	}
+
+	fmt.Println(string(jsonData))
+	// 获取VarNumberMap长度
+	// mapLength := byte(len(VarNumberMap))
+	// 创建bytes.Buffer
+	buf := new(bytes.Buffer)
+	// 将长度写入bytes.Buffer
+	// buf.WriteByte(mapLength)
+	pluNameMaxLenth := 64
+	var tempProduct []Product
+	//删除空行
+	for _, product := range products {
+		if product.ProductNumber != 0 {
+			tempProduct = append(tempProduct, product)
+		}
+	}
+	products = tempProduct
+
+	for _, product := range products {
+		// 计算ProductName字段的长度
+		nameLength := len(product.ProductName)
+		// 更新最大长度
+		if nameLength > pluNameMaxLenth {
+			pluNameMaxLenth = nameLength
+		}
+	}
+	if pluNameMaxLenth > 64 && pluNameMaxLenth < 128 {
+		pluNameMaxLenth = 128
+	} else if pluNameMaxLenth > 128 && pluNameMaxLenth < 256 {
+		pluNameMaxLenth = 256
+	} else if pluNameMaxLenth > 256 && pluNameMaxLenth < 512 {
+		pluNameMaxLenth = 512
+	}
+
+	varKeys := make([]string, 0, len(VarNumberMap))
+	for key := range VarNumberMap {
+		varKeys = append(varKeys, key)
+	}
+	sort.Slice(varKeys, func(i, j int) bool {
+		return VarNumberMap[varKeys[i]] < VarNumberMap[varKeys[j]]
+	})
+
+	for _, key := range varKeys {
+		// 按1个字节写入VarNumberMap的值
+		// buf.WriteByte(VarNumberMap[key])
+		insertHeadBuf.WriteByte(VarNumberMap[key])
+		// 按2个字节写入VarLenthMap的值，以小端序列化
+		b := make([]byte, 2)
+		if key == "ProductName" {
+			binary.LittleEndian.PutUint16(b, uint16(pluNameMaxLenth))
+		} else {
+			binary.LittleEndian.PutUint16(b, uint16(VarLenthMap[key]))
+		}
+		// buf.Write(b)
+		insertHeadBuf.Write(b)
+	}
+
+	for _, product := range products {
+		// 按照VarLenthMap的字节数写入buf，以小端序列化
+		// 写入ProductNumber，4字节
+		binary.Write(pluNumBuf, binary.BigEndian, int32(product.ProductNumber)) //获取PLU number先删除，后插入
+		binary.Write(buf, binary.LittleEndian, int32(product.ProductNumber))
+		// 写入ProductName，根据pluNameMaxLenth的值计算字节数
+		productNameBytes := []byte(product.ProductName)
+		productNameBytes = append(productNameBytes, make([]byte, pluNameMaxLenth-len(productNameBytes))...)
+		buf.Write(productNameBytes)
+		// 写入PriceUnit，1字节
+		buf.WriteByte(byte(product.PriceUnit))
+		// 写入TaxModel，1字节
+		buf.WriteByte(byte(product.TaxModel))
+		// 写入TaxType，1字节
+		buf.WriteByte(byte(product.TaxType))
+		// 写入Price，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.Price))
+		// 写入UnitWeight，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.UnitWeight))
+		// 写入PreTare，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.PreTare))
+		// 写入LimitHigh，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.LimitHigh))
+		// 写入LimitLow，8字节
+		binary.Write(buf, binary.LittleEndian, float64(product.LimitLow))
+		// 写入isUSED，1字节  0xFF plu有效   0x00 plu无效
+		buf.WriteByte(0xFF)
+	}
+
+	err = os.WriteFile("plu.bin", buf.Bytes(), 0644)
+	if err != nil {
+		fmt.Println("Write file error:", err)
+		return pluNumBuf.Bytes(), insertHeadBuf.Bytes(), false
+	}
+	print(products)
+	print(pluNameMaxLenth)
+	return pluNumBuf.Bytes(), insertHeadBuf.Bytes(), true
 }

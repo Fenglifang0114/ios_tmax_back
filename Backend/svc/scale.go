@@ -1,14 +1,18 @@
 package svc
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"math/big"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,7 +31,8 @@ const (
 	// 	CMD_IDENTIFY_TMAX              = 0xA0
 	// 	CMD_TYPE_TMAX                  = 0xB0
 	// 	PACKET_TAIL_TMAX               = 0xA55A
-	DATA_LENGTH_TMAX = 256
+	DATA_LENGTH_256_TMAX = 256
+	DATA_LENGTH_512_TMAX = 512
 
 // FILE_CHUNK_SIZE_TMAX           = 272
 // OPEN_FAC_CHUNK_SIZE_TMAX       = 6
@@ -471,6 +476,17 @@ func ReqConnectAp(s *Scale, ssid string, password string, bssid string) (*ScaleR
 	return res, err
 }
 
+func ReqConnectApOneKey(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
+	//defer DisPassthrough(s)
+	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
+	if msg.MsgBody != "ok" {
+		return msg, err
+	}
+
+	res, err := ConnectWifiApOneKey(s, ssid, password, bssid)
+	return res, err
+}
+
 func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
@@ -558,9 +574,6 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				l.Log.Fatal(err)
 			}
 
-			// 打开工厂模式
-			// time.Sleep(300 * time.Millisecond)
-
 			l.Log.Debug("send enable factory mode cmd to scale")
 			composer := c.composer
 			fn := composer.ComposeCmd
@@ -600,8 +613,8 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 
 			// 计算数据包数量
-			packetCount := len(data) / DATA_LENGTH_TMAX
-			if len(data)%DATA_LENGTH_TMAX != 0 {
+			packetCount := len(data) / DATA_LENGTH_256_TMAX
+			if len(data)%DATA_LENGTH_256_TMAX != 0 {
 				packetCount += 1
 			}
 
@@ -609,8 +622,8 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			l.Log.Debug("send data package to scale")
 			for i := 0; i < packetCount; i++ {
 				// 计算本包数据
-				start := i * DATA_LENGTH_TMAX
-				end := start + DATA_LENGTH_TMAX
+				start := i * DATA_LENGTH_256_TMAX
+				end := start + DATA_LENGTH_256_TMAX
 				if end > len(data) {
 					end = len(data)
 				}
@@ -619,7 +632,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				// 构建数据包
 				// dataPackCmd := buildSendDataPacket(addr, packetData)
 				packDataHexStr := hex.EncodeToString(packetData)
-				cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_FLASH, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+				cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
@@ -635,10 +648,166 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				addr += 0x100
 			}
 			l.Log.Info("send bin ok")
+
 		}
 	}
 
 	return &ScaleRespMsg{m.DOWN_PRN_FMT_RESP, "ok", c.Id}, nil
+}
+
+func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	var reqData ReqPluData
+
+	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	var file = reqData.FilePath
+	var headBytes []byte
+	composer := c.composer
+
+	l.Log.Debug("get plu address to scale")
+	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_GET_PLU_HEAD, m.CmdData{})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+
+	if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody == "fail" {
+		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+	} else {
+		strData := res.MsgBody
+		if str, ok := strData.(string); ok {
+			addrBytes := []byte(str)
+			if len(addrBytes) >= 100 {
+				for i := 0; i < len(addrBytes); i++ {
+					if i+2 < len(addrBytes) {
+						if addrBytes[i] == 0xff && addrBytes[i+1] == 0x01 && addrBytes[i+2] == 0x00 {
+							headBytes = addrBytes[35 : i+3]
+						}
+					}
+				}
+				if len(headBytes) == 0 {
+					return &ScaleRespMsg{}, fmt.Errorf("get plu head fail")
+				}
+
+				//前4个是起始地址，中间4个字节是现在可用的地址，最后四个是可用空间大小
+				// insertPluAddr = int(binary.BigEndian.Uint32(addrBytes[4:8]))
+				// insertPluSize = int(binary.BigEndian.Uint32(addrBytes[8:12]))
+			} else {
+
+				return &ScaleRespMsg{}, fmt.Errorf("get plu head fail")
+			}
+
+		} else {
+			return &ScaleRespMsg{}, fmt.Errorf("get plu head fail")
+		}
+	}
+
+	bufPluNumData, insertHeadBytes, resParser := ParserInsertPlu(string(file))
+
+	if !bytes.Equal(headBytes, insertHeadBytes) {
+		return &ScaleRespMsg{}, fmt.Errorf("plu head is inconsistent,fail")
+	}
+
+	if resParser {
+		// 读取bin文件
+		data, err := os.ReadFile("plu.bin")
+		if err != nil {
+			l.Log.Fatal(err)
+		}
+		l.Log.Debug("send enable factory mode cmd to scale")
+		composer := c.composer
+		fn := composer.ComposeCmd
+		cmd, timeoutMs, err := fn(composer, m.CMD_EN_FAC_MODE, m.CmdData{})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		if res, err := perfCmdNwaitResult(c, cmd, m.EN_FAC_MODE_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+		} else {
+			// do nothing
+		}
+		l.Log.Debug("get plu address to scale")
+		cmd, timeoutMs, err = composer.ComposeCmd(composer, m.CMD_INSERT_PLU_ADDR, m.CmdData{})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+
+		var insertPluAddr int
+		var insertPluSize int
+		if res, err := perfCmdNwaitResult(c, cmd, m.INSERT_PLU_ADDR_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody == "fail" {
+			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+		} else {
+			strData := res.MsgBody
+			if str, ok := strData.(string); ok {
+				addrBytes := []byte(str)
+				if len(addrBytes) >= 12 {
+					//前4个是起始地址，中间4个字节是现在可用的地址，最后四个是可用空间大小
+					insertPluAddr = int(binary.BigEndian.Uint32(addrBytes[4:8]))
+					insertPluSize = int(binary.BigEndian.Uint32(addrBytes[8:12]))
+				} else {
+					insertPluAddr = 0
+					insertPluSize = 0
+					return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+				}
+
+			} else {
+				return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+			}
+		}
+
+		// 比较空间大小
+		addr := insertPluAddr
+		totalSize := insertPluSize
+		size := len(data)
+		if totalSize < size {
+			return &ScaleRespMsg{}, fmt.Errorf("no enough space to insert")
+		}
+		l.Log.Debug("delete plu number cmd to scale")
+		cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_DEL_PLU, m.CmdData{Type: m.DATA_TYPE_STR, Data: string(bufPluNumData)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+
+		if res, err := perfCmdNwaitResult(c, cmd, m.DEL_PLU_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("delete plu id fail")
+		}
+
+		packetCount := len(data) / DATA_LENGTH_256_TMAX
+		if len(data)%DATA_LENGTH_256_TMAX != 0 {
+			packetCount += 1
+		}
+		l.Log.Debug("send data package to scale")
+		for i := 0; i < packetCount; i++ {
+			// 计算本包数据
+			start := i * DATA_LENGTH_256_TMAX
+			end := start + DATA_LENGTH_256_TMAX
+			if end > len(data) {
+				end = len(data)
+			}
+			packetData := data[start:end]
+			packDataHexStr := hex.EncodeToString(packetData)
+			cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+				return &ScaleRespMsg{}, err
+			} else if res.MsgBody != "ok" {
+				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+			}
+			addr += 0x100
+		}
+		l.Log.Info("send bin ok")
+	}
+	return &ScaleRespMsg{m.INSERT_PLU_RESP, "ok", c.Id}, nil
 }
 
 func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -646,7 +815,6 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
 		return &ScaleRespMsg{}, err
 	}
-
 	var file = reqData.FilePath
 	// csvFmtContent, err := os.ReadFile(file)
 	// if err != nil {
@@ -672,9 +840,50 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		} else {
 			// do nothing
 		}
-		// 擦除原本秤上的打印格式
-		addr, size := mycmd.GetPluRomAddrNSize(c.ScaleCat)
-		size = len(data)
+
+		//获取秤上的PLU地址
+		reqMsg, err := excuteSimpCmd(c, m.CMD_GET_SCALE_INFO, m.GET_SCALE_INFO_RESP)
+
+		var scaleInfo SIFromScale
+		pluStartAddr := 0
+		pluMaxLenth := 0
+
+		strData := reqMsg.MsgBody
+		if str, ok := strData.(string); ok {
+			if err := json.UnmarshalFromString(str, &scaleInfo); err != nil {
+				l.Log.Error(err)
+				return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+			}
+
+		} else {
+			return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+		}
+
+		siAddrInfos := scaleInfo.AddrInfos
+		fmt.Println(siAddrInfos)
+
+		for _, jsonStr := range siAddrInfos {
+			addrInfo, err := parseJSON(jsonStr)
+			if err != nil {
+				return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+			}
+
+			if addrInfo.Type == SI_PLU_INFO {
+				pluStartAddr = addrInfo.Addr
+				pluMaxLenth = addrInfo.Lenth
+			}
+		}
+		if pluStartAddr == 0 || pluMaxLenth == 0 {
+			return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+		}
+		// 擦除原本秤上的PLU
+		// addr, size := mycmd.GetPluRomAddrNSize(c.ScaleCat)
+		addr := pluStartAddr
+		maxSize := pluMaxLenth
+		size := len(data)
+		if maxSize < size {
+			return &ScaleRespMsg{}, fmt.Errorf("no enough space to download")
+		}
 		loopCnt := size/4096 + 1
 		addrInLoop := addr
 		for i := 0; i < loopCnt; i++ {
@@ -689,21 +898,21 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 			addrInLoop += 4096
 		}
-		packetCount := len(data) / DATA_LENGTH_TMAX
-		if len(data)%DATA_LENGTH_TMAX != 0 {
+		packetCount := len(data) / DATA_LENGTH_512_TMAX
+		if len(data)%DATA_LENGTH_512_TMAX != 0 {
 			packetCount += 1
 		}
 		l.Log.Debug("send data package to scale")
 		for i := 0; i < packetCount; i++ {
 			// 计算本包数据
-			start := i * DATA_LENGTH_TMAX
-			end := start + DATA_LENGTH_TMAX
+			start := i * DATA_LENGTH_512_TMAX
+			end := start + DATA_LENGTH_512_TMAX
 			if end > len(data) {
 				end = len(data)
 			}
 			packetData := data[start:end]
 			packDataHexStr := hex.EncodeToString(packetData)
-			cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_FLASH, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+			cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_FLASH_512, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 			if err != nil {
 				return &ScaleRespMsg{}, err
 			}
@@ -712,35 +921,419 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			} else if res.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 			}
-			addr += 0x100
+			addr += 0x200
 		}
 		l.Log.Info("send bin ok")
 	}
+	//备份PLU表格 记录md5值和文件的对应关系
+	destPath := getPluFilePath(getCurrPath())
+	CopyFile(string(file), destPath) //备份plu下发的数据
+	md5Str := fileToMd5(destPath)
+	var pluDown PluRec
+	pluDown.FileName = destPath
+	pluDown.Md5 = md5Str
+	c.AddPluDownRec(pluDown)
+	l.Log.Info("erase insert addr")
+	//下命令让秤擦除新增区
+	composer := c.composer
+	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_INSERT_PLU, m.CmdData{})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
 
+	if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_INSERT_PLU_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody == "fail" {
+		return &ScaleRespMsg{}, fmt.Errorf("erase insert plu fail")
+	}
 	return &ScaleRespMsg{m.DOWN_PLU_RESP, "ok", c.Id}, nil
+}
+
+func parseJSON(jsonStr string) (SIAddrInfos, error) {
+	var addrInfo SIAddrInfos
+	err := json.Unmarshal([]byte(jsonStr), &addrInfo)
+	return addrInfo, err
+}
+
+func getPluFilePath(currPath string) string {
+	timestamp := time.Now().Unix()
+	timeStr := strconv.FormatInt(timestamp, 10)
+	currPath = currPath + string(os.PathSeparator) + timeStr + ".xlsx"
+	return currPath
+}
+
+func getCurrPath() string {
+	file, _ := exec.LookPath(os.Args[0])
+	path, _ := filepath.Abs(file)
+	index := strings.LastIndex(path, string(os.PathSeparator))
+	currentPath := path[:index]
+	currentPath = filepath.Join(currentPath, m.SRV_DATA_PATH)
+	pluBackPath := filepath.Join(currentPath, m.PLU_BACK_PATH)
+	if _, err := os.Stat(pluBackPath); os.IsNotExist(err) {
+		os.MkdirAll(pluBackPath, os.ModePerm)
+	}
+	currentPath = filepath.Join(currentPath, m.PLU_BACK_PATH)
+	return currentPath
+}
+
+func CopyFile(srcFilePath, dstFilePath string) (written int64, err error) {
+
+	srcfile, err := os.Open(srcFilePath)
+	defer func() {
+		if err = srcfile.Close(); err != nil {
+			l.Log.Info(err)
+		}
+	}()
+	if err != nil {
+		l.Log.Info(err)
+	}
+	// 构建 src Reader
+	srcReaer := bufio.NewReader(srcfile)
+
+	//打开dstFilePath
+	dstfile, err := os.OpenFile(dstFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	defer func() {
+		if err := dstfile.Close(); err != nil {
+			l.Log.Info(err)
+		}
+	}()
+	if err != nil {
+		l.Log.Info(err)
+	}
+	// 构建 src Writer
+	dstWriter := bufio.NewWriter(dstfile)
+
+	return io.Copy(dstWriter, srcReaer)
+
+}
+
+func ReqSetScaleTime(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+
+	num, err := strconv.ParseUint(reqData, 10, 32)
+	if err != nil {
+		return &ScaleRespMsg{m.SET_SCALE_TIME_RESP, "fail, data error", c.Id}, nil
+	}
+	bytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(bytes, uint32(num))
+	l.Log.Debug("send cmd to scale")
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_SCALE_TIME, m.CmdData{Type: m.DATA_TYPE_STR, Data: string(bytes)})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_SCALE_TIME_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{}, fmt.Errorf("set time fail")
+	}
+	return &ScaleRespMsg{m.SET_SCALE_TIME_RESP, "ok", c.Id}, nil
+}
+
+func ReqDelPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	var reqData ReqDelPLuData
+	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
+		return &ScaleRespMsg{}, err
+	}
+
+	if len(reqData.PluId) == 0 {
+		return &ScaleRespMsg{m.DEL_PLU_RESP, "fail, no PLU id", c.Id}, nil
+	}
+
+	bufData, _ := ParserDelPlu(reqData.PluId)
+
+	l.Log.Debug("send cmd to scale")
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_DEL_PLU, m.CmdData{Type: m.DATA_TYPE_STR, Data: string(bufData)})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+
+	if res, err := perfCmdNwaitResult(c, cmd, m.DEL_PLU_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{}, fmt.Errorf("delete plu id fail")
+	}
+
+	return &ScaleRespMsg{m.DEL_PLU_RESP, "ok", c.Id}, nil
 }
 
 func deleteFile(fileName string) error {
 	currentDir, err := os.Getwd()
 	if err != nil {
-		fmt.Println("获取当前运行路径失败:", err)
+		l.Log.Debug("failed get current path")
 		return nil
 	}
 	// 拼接文件的完整路径
 	fullPath := filepath.Join(currentDir, fileName)
 	// 检查文件是否存在
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		fmt.Printf("文件 %s 不存在\n", fullPath)
+		l.Log.Debug("file does not exist ")
 		return nil
 	}
 	// 删除文件
 	err = os.Remove(fullPath)
 	if err != nil {
-		fmt.Printf("删除文件 %s 失败: %v\n", fullPath, err)
+		l.Log.Debug("delete file failed")
 		return err
 	}
 	return nil
 }
+
+func ReqGetWeightErr(c *Scale) (*ScaleRespMsg, error) {
+	l.Log.Debug("send enable factory mode cmd to scale")
+	composer := c.composer
+	fn := composer.ComposeCmd
+	cmd, timeoutMs, err := fn(composer, m.CMD_EN_FAC_MODE, m.CmdData{})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.EN_FAC_MODE_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+	} else {
+		// do nothing
+	}
+
+	//获取秤上的OLUL地址
+	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_SCALE_INFO, m.GET_SCALE_INFO_RESP)
+	var scaleInfo SIFromScale
+	olAddr := 0
+	ulAddr := 0
+
+	strData := reqMsg.MsgBody
+	if str, ok := strData.(string); ok {
+		if err := json.UnmarshalFromString(str, &scaleInfo); err != nil {
+			l.Log.Error(err)
+			return &ScaleRespMsg{}, fmt.Errorf("get ol/ul address fail")
+		}
+
+	} else {
+		return &ScaleRespMsg{}, fmt.Errorf("get ol/ul address fail")
+	}
+
+	siAddrInfos := scaleInfo.AddrInfos
+	fmt.Println(siAddrInfos)
+
+	for _, jsonStr := range siAddrInfos {
+		addrInfo, err := parseJSON(jsonStr)
+		if err != nil {
+			return &ScaleRespMsg{}, fmt.Errorf("get ol/ul address fail")
+		}
+
+		if addrInfo.Type == SI_OL_INFO {
+			olAddr = addrInfo.Addr
+		}
+		if addrInfo.Type == SI_UL_INFO {
+			ulAddr = addrInfo.Addr
+		}
+	}
+	if olAddr == 0 || ulAddr == 0 {
+		return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+	}
+
+	byteOLArray, resOL := getOlUlFromScale(c, olAddr)
+	if !resOL {
+		return &ScaleRespMsg{}, fmt.Errorf("get data fail")
+	}
+	byteULArray, resUL := getOlUlFromScale(c, ulAddr)
+	if !resUL {
+		return &ScaleRespMsg{}, fmt.Errorf("get data fail")
+	}
+
+	var respInfo OlUlInfo
+	if len(byteOLArray) == 8 && len(byteULArray) == 8 {
+		respInfo.OlTime = int(binary.LittleEndian.Uint32(byteOLArray[0:4]))
+		respInfo.OlCnt = int(binary.LittleEndian.Uint32(byteOLArray[4:8]))
+		respInfo.UlTime = int(binary.LittleEndian.Uint32(byteULArray[0:4]))
+		respInfo.UlCnt = int(binary.LittleEndian.Uint32(byteULArray[4:8]))
+	}
+
+	respInfoStr, err := json.MarshalToString(respInfo)
+	if err != nil {
+		return &ScaleRespMsg{}, fmt.Errorf("get data fail")
+	}
+
+	return &ScaleRespMsg{m.GET_WEIGHT_ERR_RESP, respInfoStr, c.Id}, nil
+}
+
+func getOlUlFromScale(c *Scale, addr int) ([]byte, bool) {
+	var byteArray []byte
+	composer := c.composer
+	fn := composer.ComposeCmd
+	l.Log.Debug("read flash from scale")
+	getData8Len := []byte{0x00, 0x08}
+	getData256Len := []byte{0x01, 0x00}
+	packDataHexStr := hex.EncodeToString(getData8Len)
+	packData256HexStr := hex.EncodeToString(getData256Len)
+	totalSpace := (8 * 1024)
+	loopCnt := totalSpace / DATA_LENGTH_256_TMAX
+	if totalSpace%DATA_LENGTH_256_TMAX != 0 {
+		loopCnt += 1
+	}
+	addrInLoop := addr
+	for i := 0; i < loopCnt; i++ {
+		cmd, timeoutMs, err := fn(composer, m.CMD_GET_WEIGHT_ERR, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addrInLoop, packDataHexStr)})
+		if err != nil {
+			return byteArray, false
+		}
+		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+			return byteArray, false
+		} else if res.MsgBody == "fail" {
+			return byteArray, false
+		} else {
+			strData := res.MsgBody
+			if str, ok := strData.(string); ok {
+				addrBytes := []byte(str)
+				if len(addrBytes) == 8 &&
+					addrBytes[0] == 0xFF && addrBytes[1] == 0xFF && addrBytes[2] == 0xFF && addrBytes[3] == 0xFF &&
+					addrBytes[4] == 0xFF && addrBytes[5] == 0xFF && addrBytes[6] == 0xFF && addrBytes[7] == 0xFF {
+					// 0到7位置都是 FF
+					break
+				} else if len(addrBytes) != 8 {
+					return byteArray, false
+				}
+			} else {
+				return byteArray, false
+			}
+		}
+		addrInLoop += 256
+	}
+
+	if addrInLoop > addr {
+		cmd, timeoutMs, err := fn(composer, m.CMD_GET_WEIGHT_ERR, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addrInLoop-256, packData256HexStr)})
+		if err != nil {
+			return byteArray, false
+		}
+
+		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+			return byteArray, false
+		} else if res.MsgBody == "fail" {
+			return byteArray, false
+		} else {
+			strData := res.MsgBody
+			if str, ok := strData.(string); ok {
+				addrBytes := []byte(str)
+				if len(addrBytes) == 256 {
+					len := 0
+					for i := 0; i < 256/8; i++ {
+						if addrBytes[len] == 0xFF && addrBytes[len+1] == 0xFF && addrBytes[len+2] == 0xFF && addrBytes[len+3] == 0xFF &&
+							addrBytes[len+4] == 0xFF && addrBytes[len+5] == 0xFF && addrBytes[len+6] == 0xFF && addrBytes[len+7] == 0xFF {
+
+							byteArray = addrBytes[len-8 : len]
+							break
+
+						} else if len+8 == 256 {
+							byteArray = addrBytes[256-8 : 256]
+							break
+						}
+						len += 8
+					}
+				} else if len(addrBytes) != 256 {
+					return byteArray, false
+				}
+			} else {
+				return byteArray, false
+			}
+		}
+
+	} else {
+		byteArray = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	}
+	return byteArray, true
+
+}
+
+//暂时留着原始拿到OLUL的做法
+// l.Log.Debug("read flash from scale")
+// 	getData8Len := []byte{0x00, 0x08}
+// 	getData256Len := []byte{0x01, 0x00}
+// 	var byteOLArray []byte
+// 	var byteULArray []byte
+
+// 	packDataHexStr := hex.EncodeToString(getData8Len)
+// 	packData256HexStr := hex.EncodeToString(getData256Len)
+
+// 	addr := 0x2004C000
+// 	totalSpace := (8 * 1024)
+// 	loopCnt := totalSpace / DATA_LENGTH_256_TMAX
+// 	if totalSpace%DATA_LENGTH_256_TMAX != 0 {
+// 		loopCnt += 1
+// 	}
+
+// 	addrInLoop := addr
+// 	for i := 0; i < loopCnt; i++ {
+// 		cmd, timeoutMs, err = fn(composer, m.CMD_GET_WEIGHT_ERR, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addrInLoop, packDataHexStr)})
+// 		if err != nil {
+// 			return &ScaleRespMsg{}, err
+// 		}
+
+// 		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+// 			return &ScaleRespMsg{}, err
+// 		} else if res.MsgBody == "fail" {
+// 			return &ScaleRespMsg{}, fmt.Errorf("get weight error data fail")
+// 		} else {
+// 			strData := res.MsgBody
+// 			if str, ok := strData.(string); ok {
+// 				addrBytes := []byte(str)
+// 				if len(addrBytes) == 8 &&
+// 					addrBytes[0] == 0xFF && addrBytes[1] == 0xFF && addrBytes[2] == 0xFF && addrBytes[3] == 0xFF &&
+// 					addrBytes[4] == 0xFF && addrBytes[5] == 0xFF && addrBytes[6] == 0xFF && addrBytes[7] == 0xFF {
+// 					// 0到7位置都是 FF
+// 					break
+// 				} else if len(addrBytes) != 8 {
+// 					return &ScaleRespMsg{}, fmt.Errorf("get data fail")
+
+// 				}
+
+// 			} else {
+// 				return &ScaleRespMsg{}, fmt.Errorf("get data fail")
+// 			}
+// 		}
+
+// 		addrInLoop += 256
+// 	}
+
+// 	if addrInLoop > addr {
+// 		cmd, timeoutMs, err = fn(composer, m.CMD_GET_WEIGHT_ERR, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addrInLoop-256, packData256HexStr)})
+// 		if err != nil {
+// 			return &ScaleRespMsg{}, err
+// 		}
+
+// 		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+// 			return &ScaleRespMsg{}, err
+// 		} else if res.MsgBody == "fail" {
+// 			return &ScaleRespMsg{}, fmt.Errorf("get weight error data fail")
+// 		} else {
+// 			strData := res.MsgBody
+// 			if str, ok := strData.(string); ok {
+// 				addrBytes := []byte(str)
+// 				if len(addrBytes) == 256 {
+// 					len := 0
+// 					for i := 0; i < 256/8; i++ {
+// 						if addrBytes[len] == 0xFF && addrBytes[len+1] == 0xFF && addrBytes[len+2] == 0xFF && addrBytes[len+3] == 0xFF &&
+// 							addrBytes[len+4] == 0xFF && addrBytes[len+5] == 0xFF && addrBytes[len+6] == 0xFF && addrBytes[len+7] == 0xFF {
+
+// 							byteOLArray = addrBytes[len-8 : len]
+// 							break
+
+// 						} else if len+8 == 256 {
+// 							byteOLArray = addrBytes[256-8 : 256]
+// 							break
+// 						}
+// 						len += 8
+// 					}
+// 				} else if len(addrBytes) != 256 {
+// 					return &ScaleRespMsg{}, fmt.Errorf("get data fail")
+// 				}
+// 			} else {
+// 				return &ScaleRespMsg{}, fmt.Errorf("get data fail")
+// 			}
+// 		}
+// 		fmt.Println(byteOLArray)
+
+// 	} else {
+// 		byteOLArray = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+// 	}
 
 type SerialOutputInfo struct {
 	Id   [1]byte // 序号
@@ -862,16 +1455,16 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 
 		// 计算数据包数量
-		packetCount := len(data) / DATA_LENGTH_TMAX
-		if len(data)%DATA_LENGTH_TMAX != 0 {
+		packetCount := len(data) / DATA_LENGTH_256_TMAX
+		if len(data)%DATA_LENGTH_256_TMAX != 0 {
 			packetCount += 1
 		}
 		// 遍历所有数据包
 		l.Log.Debug("send data package to scale")
 		for i := 0; i < packetCount; i++ {
 			// 计算本包数据
-			start := i * DATA_LENGTH_TMAX
-			end := start + DATA_LENGTH_TMAX
+			start := i * DATA_LENGTH_256_TMAX
+			end := start + DATA_LENGTH_256_TMAX
 			if end > len(data) {
 				end = len(data)
 			}
@@ -879,7 +1472,7 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			// 构建数据包
 			// dataPackCmd := buildSendDataPacket(addr, packetData)
 			packDataHexStr := hex.EncodeToString(packetData)
-			cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_FLASH, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+			cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 			if err != nil {
 				return &ScaleRespMsg{}, err
 			}
@@ -893,9 +1486,7 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			addr += 0x100
 		}
 		l.Log.Info("send bin ok")
-
 	}
-
 	return &ScaleRespMsg{m.SET_OUTPUT_FMT_RESP, "ok", c.Id}, nil
 }
 

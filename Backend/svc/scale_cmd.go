@@ -22,7 +22,12 @@ const (
 
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	EnFacMode(c)
-	Reboot(c)
+	// Reboot(c)
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP)
+	if reqMsg.MsgBody == "ok" {
+
+	}
+
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()
 
@@ -118,6 +123,12 @@ func (c *Scale) GetBuildInfo() (*ScaleRespMsg, error) {
 	return reqMsg, err
 }
 
+func (c *Scale) GetScaleTime() (*ScaleRespMsg, error) {
+	l.Log.Debug("get scale time")
+	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_SCALE_TIME, m.GET_SCALE_TIME_RESP)
+	return reqMsg, err
+}
+
 func (c *Scale) GetScaleInfo() (*ScaleRespMsg, error) {
 	l.Log.Debug("get scale info")
 	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_SCALE_INFO, m.GET_SCALE_INFO_RESP)
@@ -195,7 +206,7 @@ func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	// 	return &ScaleRespMsg{}, err
 	// }
 	// enable scale sending weighing info continually
-	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP)
+	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_100_MS)
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)
 	return msg, err
@@ -304,7 +315,7 @@ func (c *Scale) DelRec(recId uint, scaleMode uint) error {
 // 重启
 func Reboot(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("send reboot cmd to scale")
-	return excuteSimpCmd(s, m.CMD_REBOOT, m.UNKNOWN_DATA)
+	return excuteSimpCmd(s, m.CMD_REBOOT, m.REBOOT_RESP)
 }
 
 // 打开工厂模式
@@ -319,14 +330,18 @@ func DisFacMode(s *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(s, m.CMD_DIS_FAC_MODE, m.DIS_FAC_MODE_RESP)
 }
 
-func excuteSimpCmd(s *Scale, cmdType m.CmdType, respType m.RespMsgType) (*ScaleRespMsg, error) {
+func excuteSimpCmd(s *Scale, cmdType m.CmdType, respType m.RespMsgType, perfTimes ...int) (*ScaleRespMsg, error) {
 	scaleCmdExtractorFn := s.composer.ComposeCmd
 	cmd, timeoutMs, err := scaleCmdExtractorFn(s.composer, cmdType, m.CmdData{})
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
+	var curTimeoutMs = 3
+	if len(perfTimes) > 0 {
+		curTimeoutMs = perfTimes[0]
+	}
 
-	if res, err := perfCmdNwaitResult(s, cmd, respType, timeoutMs); err != nil {
+	if res, err := perfCmdNwaitResult(s, cmd, respType, timeoutMs, curTimeoutMs); err != nil {
 		return &ScaleRespMsg{}, err
 	} else {
 		return res, nil
@@ -394,7 +409,7 @@ func SendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
 func SetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("set wifi to dynamic IP")
 	GExpectWifiResp = m.SET_WIFI_DYNAMIC_IP_RESP
-	return excuteSimpCmd(s, m.CMD_WIFI_EN_DHCP, m.SET_WIFI_DYNAMIC_IP_RESP)
+	return excuteSimpCmd(s, m.CMD_WIFI_EN_DHCP, m.SET_WIFI_DYNAMIC_IP_RESP, 1)
 }
 
 func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
@@ -404,7 +419,7 @@ func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*Scal
 		return &ScaleRespMsg{}, err
 	}
 	GExpectWifiResp = m.SET_WIFI_STATIC_IP_RESP
-	return perfCmdNwaitResult(s, cmd, m.SET_WIFI_STATIC_IP_RESP, timeoutMs)
+	return perfCmdNwaitResult(s, cmd, m.SET_WIFI_STATIC_IP_RESP, timeoutMs, 1)
 }
 
 // Connect to specifi AP
@@ -415,7 +430,17 @@ func ConnectWifiAp(s *Scale, ssid string, bssid string, passwd string) (*ScaleRe
 		return &ScaleRespMsg{}, err
 	}
 	GExpectWifiResp = m.CONNECT_AP_RESP
-	return perfCmdNwaitResult(s, cmd, m.CONNECT_AP_RESP, timeoutMs)
+	return perfCmdNwaitResult(s, cmd, m.CONNECT_AP_RESP, timeoutMs, 1)
+}
+
+func ConnectWifiApOneKey(s *Scale, ssid string, bssid string, passwd string) (*ScaleRespMsg, error) {
+	l.Log.Debug("Connect to Wifi AP")
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_CONN_AP_ONE_KEY, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ssid, bssid, passwd)})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.CONNECT_AP_ONE_KEY_RESP
+	return perfCmdNwaitResult(s, cmd, m.CONNECT_AP_ONE_KEY_RESP, timeoutMs, 1)
 }
 
 // Get IP info from scale
@@ -445,57 +470,29 @@ func perfCmd(c *Scale, cmd []byte) bool {
 	return true
 }
 
-//原来的机制
-// func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeoutMs ...int) (*ScaleRespMsg, error) {
-// 	curTimeoutMs := 3000 // 3000 ms
-// 	if len(timeoutMs) > 0 {
-// 		curTimeoutMs = timeoutMs[0]
-// 	}
+func (c *Scale) AddPluDownRec(rec PluRec) error {
+	return c.scaleMgr.pluFilePb.InsertRec(rec) //@FLF20240107
+}
 
-// 	if curTimeoutMs == mcmd.CMD_TIMEOUT_IMMEDIATE {
-// 		if err := writeScale(c, cmd); err != nil {
-// 			l.Log.Error(err.Error())
-// 			return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "error"}, err
-// 		}
-// 		return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "done"}, nil
-// 	}
-
-// 	ch := make(chan *ScaleRespMsg, 10)
-// 	c.RegisterNotif(waitMsgType, ch)
-// 	defer func() {
-// 		c.UnRegisterNotif(waitMsgType, ch)
-// 		c.isWaintingResp = false
-// 	}()
-
-// 	GlastWantRespMsgType = waitMsgType
-// 	c.isWaintingResp = true
-// 	if err := writeScale(c, cmd); err != nil {
-// 		l.Log.Error(err.Error())
-// 		return &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "error"}, err
-// 	}
-
-// 	var ret *ScaleRespMsg
-// 	fmt.Printf("================wait: %v\n", waitMsgType)
-// 	select {
-// 	case ret = <-ch:
-// 	case <-time.After(time.Duration(curTimeoutMs) * time.Millisecond):
-// 		ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "timeout"}
-// 		return ret, fmt.Errorf("no response, time out")
-// 	}
-// 	fmt.Printf("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
-// 	return ret, nil
-// }
+func (c *Scale) GetPluDownRec(md5Str string) ([]PluRec, error) {
+	return c.scaleMgr.pluFilePb.GetPluPath(md5Str) //@FLF20240107
+}
 
 func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeoutMs ...int) (*ScaleRespMsg, error) {
 	curTimeoutMs := 3000 // 3000 ms
 	var ret *ScaleRespMsg
 	var err error = nil
+	var sendCmdTimes = 3
 
 	if len(timeoutMs) > 0 {
 		curTimeoutMs = timeoutMs[0]
 	}
 
-	for i := 0; i < 3; i++ {
+	if len(timeoutMs) > 1 {
+		sendCmdTimes = timeoutMs[1]
+	}
+
+	for i := 0; i < sendCmdTimes; i++ {
 		if curTimeoutMs == mcmd.CMD_TIMEOUT_IMMEDIATE {
 			if err = writeScale(c, cmd); err != nil {
 				l.Log.Error(err.Error())

@@ -25,7 +25,10 @@ var (
 	DIS_PASSTH_MODE_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf4, 0x00, 0x6E, 0x2B, 0xB7, 0x2B, 0xa5, 0x5a}
 	GET_BUILD_INFO_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0x56, 0x00, 0x6C, 0xF6, 0xC7, 0x9A, 0xa5, 0x5a} //20230926@FLF
 	GET_SCALE_INFO_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf0, 0x00, 0x2B, 0x0F, 0x96, 0x82, 0xa5, 0x5a} //20231101@FLF
-
+	GET_INSERT_PLU_ADDR_TMAX []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xf3, 0x02, 0x00, 0xc0, 0xf4, 0xc0, 0xae, 0xA5, 0x5A}
+	GET_PLU_HEAD_TMAX        []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x20, 0x06, 0xa0, 0x00, 0x00, 0x64, 0x6c, 0xb0, 0xb0, 0x36, 0xa5, 0x5a}
+	ERASE_INSERT_PLU_TMAX    []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xf3, 0x03, 0x00, 0x12, 0xED, 0x01, 0x72, 0xA5, 0x5A}
+	GET_SCALE_TIME_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xF4, 0x02, 0x00, 0xC5, 0xFF, 0x87, 0x3B, 0xa5, 0x5a} //20230112@FLF
 )
 
 func NewComposerTMAX() *m.CmdComposer {
@@ -57,21 +60,35 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 	case m.CMD_DIS_CONTINUE_MODE:
 		return DIS_CONT_MODE_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil
 	case m.CMD_REBOOT:
-		return REBOOT_CMD_TMAX, CMD_TIMEOUT_IMMEDIATE, nil
+		return REBOOT_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil
 	case m.CMD_EN_PASSTH:
 		return EN_PASSTH_MODE_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil
 	case m.CMD_DIS_PASSTH:
 		return DIS_PASSTH_MODE_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil
 	case m.CMD_GET_BUILD_INFO:
 		return GET_BUILD_INFO_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20230926@FLF
+	case m.CMD_GET_SCALE_TIME:
+		return GET_SCALE_TIME_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20230926@FLF
 	case m.CMD_GET_SCALE_INFO:
 		return GET_SCALE_INFO_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20231101@FLF
+	case m.CMD_INSERT_PLU_ADDR:
+		return GET_INSERT_PLU_ADDR_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20231101@FLF
+	case m.CMD_GET_PLU_HEAD:
+		return GET_PLU_HEAD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20230103@FLF
+	case m.CMD_ERASE_INSERT_PLU:
+		return ERASE_INSERT_PLU_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20230109@FLF
+	case m.CMD_GET_WEIGHT_ERR:
+		addr, data := parseReadFlashTMAX(cmdData.Data.(string))
+		return readFlashCmdTMAX(uint32(addr), data), CMD_TIMEOUT_SHORT_100_MS, nil
 	case m.CMD_ERASE_FLASH:
 		addr := cmdData.Data.(int)
 		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
-	case m.CMD_WRITE_FLASH:
+	case m.CMD_WRITE_FLASH_256:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
-		return wrDataCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_256_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WRITE_FLASH_512:
+		addr, data := parseWrDataTMAX(cmdData.Data.(string))
+		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_512_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_DATA_PASSTH:
 		return sendDataToWifiCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_GET_AP_LIST:
@@ -93,13 +110,21 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getIpModCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_CONN_AP:
 		fields := strings.Split(cmdData.Data.(string), ",")
-		return connectWifiApCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_VERY_LONG_60000_MS, nil
+		return connectWifiApCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_LONG_20000_MS, nil //ESP8266 默认超时15秒
+	case m.CMD_WIFI_CONN_AP_ONE_KEY:
+		fields := strings.Split(cmdData.Data.(string), ",")
+		return connectWifiApCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_MEDIUM_2000_MS, nil //ESP8266
 	case m.CMD_WIFI_DISCONN_AP:
 		return disconnectWifiApCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_BT_DATA_PASSTH:
 		return sendDataToBTCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_MODIFY_BT_NAME:
 		return modifyBTNameCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_DEL_PLU:
+		return getDelPluCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_SET_SCALE_TIME:
+		return getSetScaleTimeCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+
 	}
 	return nil, CMD_TIMEOUT_IMMEDIATE, nil
 }
@@ -116,11 +141,12 @@ var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=\"%s\",\"%s\",\"%s
 var CHANGE_WIFI_MODE_CMD []byte = []byte("AT+CWMODE=1\r\n")
 
 const (
-	PACKET_HEAD_TMAX      = 0x5AA5
-	PACKET_TAIL_TMAX      = 0xA55A
-	FILE_CHUNK_SIZE_TMAX  = 275 //FLF
-	EARSE_CHUNK_SIZE_TMAX = 0x13
-	ERASE_SIZE_TMAX       = 0x800
+	PACKET_HEAD_TMAX         = 0x5AA5
+	PACKET_TAIL_TMAX         = 0xA55A
+	FILE_CHUNK_SIZE_256_TMAX = 275 //FLF
+	FILE_CHUNK_SIZE_512_TMAX = 531 //@FLF20240110
+	EARSE_CHUNK_SIZE_TMAX    = 0x13
+	ERASE_SIZE_TMAX          = 0x800
 )
 
 const (
@@ -143,6 +169,7 @@ const (
 )
 
 const (
+	CMDID_REBOOT_TMAX            = 0x0555
 	CMDID_READ_SCALE_INFO_TMAX   = 0x05F0
 	CMDID_EN_FAC_TMAX            = 0x05F1
 	CMDID_DIS_FAC_TMAX           = 0x05F2
@@ -151,15 +178,20 @@ const (
 	CMDID_GET_MAX_PACK_SIZE_TMAX = 0x05F5
 )
 const (
-	CMDID_READ_FLASH_TMAX   = 0xF101
-	CMDID_WRITE_FLASH_TMAX  = 0xF102
-	CMDID_ERASE_FLASH_TMAX  = 0xF103
-	CMDID_READ_EEPROM_TMAX  = 0xF104
-	CMDID_WRITE_EEPROM_TMAX = 0xF105
-	CMDID_ERASE_EEPROM_TMAX = 0xF106
-	CMDID_READ_ROM_TMAX     = 0xF107
-	CMDID_WRITE_ROM_TMAX    = 0xF108
-	CMDID_ERASE_ROM_TMAX    = 0xF109
+	CMDID_READ_FLASH_TMAX       = 0xF101
+	CMDID_WRITE_FLASH_TMAX      = 0xF102
+	CMDID_ERASE_FLASH_TMAX      = 0xF103
+	CMDID_READ_EEPROM_TMAX      = 0xF104
+	CMDID_WRITE_EEPROM_TMAX     = 0xF105
+	CMDID_ERASE_EEPROM_TMAX     = 0xF106
+	CMDID_READ_ROM_TMAX         = 0xF107
+	CMDID_WRITE_ROM_TMAX        = 0xF108
+	CMDID_ERASE_ROM_TMAX        = 0xF109
+	CMDID_DEL_PLU_TMAX          = 0xF301
+	CMDID_INSERT_PLU_TMAX       = 0xF302
+	CMDID_ERASE_INSERT_PLU_TMAX = 0xF303
+	CMDID_SET_SCALE_TIME_TMAX   = 0xF401
+	CMDID_GET_SCALE_TIME_TMAX   = 0xF402
 
 	CMDID_SCALE_PASSTH_DATA_TMAX = 0xFF23 // virtual command ID
 	CMDID_DOWN_PLU_TMAX          = 0xFF24
@@ -198,12 +230,12 @@ func composeCmd(cmdID uint16, seqNo byte, data []byte) []byte {
 }
 
 // 构建一个数据包   //FLF
-func wrDataCmdTMAX(addr uint32, data []byte) []byte {
+func wrDataCmdTMAX(addr uint32, data []byte, packetLen uint16) []byte {
 	// 构建包头
-	packet := make([]byte, FILE_CHUNK_SIZE_TMAX)
+	packet := make([]byte, packetLen)
 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
 	//构建数据长度  总长度-包头
-	binary.BigEndian.PutUint16(packet[2:4], FILE_CHUNK_SIZE_TMAX-2)
+	binary.BigEndian.PutUint16(packet[2:4], packetLen-2)
 
 	// 构建命令ID与命令类型
 	binary.BigEndian.PutUint16(packet[4:6], uint16(CMDID_WRITE_FLASH_TMAX))
@@ -219,11 +251,37 @@ func wrDataCmdTMAX(addr uint32, data []byte) []byte {
 	copy(packet[13:], data)
 
 	// 计算与添加校验码
-	checksum := util.Crc32MPEG2(packet[2 : FILE_CHUNK_SIZE_TMAX-6])
-	binary.BigEndian.PutUint32(packet[FILE_CHUNK_SIZE_TMAX-6:], checksum)
+	checksum := util.Crc32MPEG2(packet[2 : packetLen-6])
+	binary.BigEndian.PutUint32(packet[packetLen-6:], checksum)
 
 	// 添加包尾
-	binary.BigEndian.PutUint16(packet[FILE_CHUNK_SIZE_TMAX-2:], PACKET_TAIL_TMAX)
+	binary.BigEndian.PutUint16(packet[packetLen-2:], PACKET_TAIL_TMAX)
+
+	return packet
+}
+
+// CMD:  5a a5 00 11 f1 01 00 20 04 C0 00 00 08 5C F9 F4 7B a5 5a   //FLF
+// 读取flash组命令
+func readFlashCmdTMAX(addr uint32, data []byte) []byte { // erase size will 2K
+	// 构建包头
+	packet := make([]byte, EARSE_CHUNK_SIZE_TMAX)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
+	//构建数据长度  总长度-包头
+	binary.BigEndian.PutUint16(packet[2:4], EARSE_CHUNK_SIZE_TMAX-2)
+	// 构建命令ID与命令类型
+	binary.BigEndian.PutUint16(packet[4:6], uint16(CMDID_READ_FLASH_TMAX))
+	//构建保留数据 00
+	binary.BigEndian.PutUint16(packet[6:8], 0x00)
+	// 构建地址
+	binary.BigEndian.PutUint32(packet[7:11], addr)
+	// 读取长度
+	copy(packet[11:13], data)
+	// 计算与添加校验码
+	checksum := util.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE_TMAX-6])
+	binary.BigEndian.PutUint32(packet[EARSE_CHUNK_SIZE_TMAX-6:], checksum)
+
+	// 添加包尾
+	binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE_TMAX-2:], PACKET_TAIL_TMAX)
 
 	return packet
 }
@@ -338,7 +396,34 @@ func getIpModCmdTMAX() []byte {
 	return composeCmd(0xf202, 0, GET_IP_MODE_CMD)
 }
 
+func getDelPluCmdTMAX(data string) []byte {
+	l.Log.Debug("compose get IP mode cmd")
+	return composeCmd(0xf301, 0, []byte(data))
+}
+
+func getSetScaleTimeCmdTMAX(data string) []byte {
+	l.Log.Debug("compose get IP mode cmd")
+	return composeCmd(0xf401, 0, []byte(data))
+}
+
 func parseWrDataTMAX(inData string) (addr int64, data []byte) { // inData is hex ascii
+	addr, err := strconv.ParseInt(inData[0:8], 16, 64)
+	if err != nil {
+		fmt.Println("Invalid offset number")
+		return -1, nil
+	}
+
+	// Extract byte array
+	data, err = hex.DecodeString(inData[9:])
+	if err != nil {
+		fmt.Println("Invalid hex string")
+		return -1, nil
+	}
+
+	return
+}
+
+func parseReadFlashTMAX(inData string) (addr int64, data []byte) { // inData is hex ascii
 	addr, err := strconv.ParseInt(inData[0:8], 16, 64)
 	if err != nil {
 		fmt.Println("Invalid offset number")

@@ -116,12 +116,24 @@ func procDownPlu(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownPlu(scale, req)
 }
 
+func procDelPlu(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDelPlu(scale, req)
+}
+
+func procInsertPlu(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqInsertPlu(scale, req)
+}
+
 func ProcSetOutputFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetOutputFmt(scale, req)
 }
 
 func procGetApList(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetApList(scale)
+}
+
+func procGetWeightErr(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetWeightErr(scale)
 }
 
 func procRescanAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -131,6 +143,11 @@ func procRescanAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 func procConnectAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	data := utils.JsonToMap(req.ReqData)
 	return ReqConnectAp(scale, data["ssid"].(string), data["bssid"].(string), data["password"].(string))
+}
+
+func procConnectApOneKey(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	data := utils.JsonToMap(req.ReqData)
+	return ReqConnectApOneKey(scale, data["ssid"].(string), data["bssid"].(string), data["password"].(string))
 }
 
 func procSetWifiDynamicIp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -242,8 +259,19 @@ func procGetBuildInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return scale.GetBuildInfo()
 }
 
+func procGetScaleTime(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return scale.GetScaleTime()
+}
+func procSetScaleTime(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetScaleTime(scale, req)
+}
+
 func procGetScaleInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return scale.GetScaleInfo()
+}
+
+func procGetWeighErr(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetWeightErr(scale)
 }
 
 func procGetUiConf(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -292,6 +320,7 @@ func init() {
 		SREQ_GET_AP_LIST:              procGetApList,
 		SREQ_RESCAN_AP_LIST:           procRescanAp,
 		SREQ_CONNECT_AP:               procConnectAp,
+		SREQ_CONNECT_AP_ONE_KEY:       procConnectApOneKey,
 		SREQ_SET_WIFI_DYNAMIC_IP:      procSetWifiDynamicIp,
 		SREQ_SET_WIFI_STATIC_IP:       procSetWifiStaticIp,
 		SREQ_GET_IP_INFO:              procGetIpInfo,
@@ -303,32 +332,39 @@ func init() {
 		SREQ_UPDATE_FIRMWARE:          procUpdateFirmware,
 		SREQ_CHECK_SERIAL_PORT:        ProcCheckSerialPort,
 		SREQ_GET_BUILD_INFO:           procGetBuildInfo,
+		SREQ_GET_SCALE_TIME:           procGetScaleTime,
+		SREQ_SET_SCALE_TIME:           procSetScaleTime,
 		SREQ_SET_OUTPUT_FMT:           ProcSetOutputFmt,
 		SREQ_OPNE_SCALE_PASSTHROUGH:   procOpenScalePassth,
 		SREQ_CLOSE_SCALE_PASSTHROUGH:  procCloseScalePassth,
 		SREQ_CHANGE_SCALE_PASSTH_MODE: procChangeScalePassthMode,
 		SREQ_GET_SCALE_INFO:           procGetScaleInfo,
+		SREQ_GET_WEIGHT_ERR:           procGetWeighErr,
 		SREQ_DOWN_PLU:                 procDownPlu,
+		SREQ_DEL_PLU:                  procDelPlu,
+		SREQ_INSERT_PLU:               procInsertPlu,
 		SREQ_GET_UI_CONF:              procGetUiConf,
 		SREQ_UPDATE_UI_CONF:           procUpdateUiConf,
 		SREQ_CHANGE_WIFI_MODE:         procChangeWifiMode,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
-		SREQ_ZERO:                     m.ZERO_CMD_RESP,
-		SREQ_TARE:                     m.TARE_CMD_RESP,
-		SREQ_GET_WEIGHT:               m.WEIGHT_DATA_RESP,
-		SREQ_SEND_WT_CONT:             m.WEIGHT_DATA_RESP,
-		SREQ_STOP_SEND_WT:             m.WEIGHT_DATA_RESP,
-		SREQ_REG_WEIGHT_DATA:          m.REG_WEIGHT_RESP,
-		SREQ_UNREG_WEIGHT_DATA:        m.UNREG_WEIGHT_RESP,
-		SREQ_GET_RECS:                 m.GET_RECS_RESP,
-		SREQ_ADD_REC:                  m.ADD_REC_RESP,
-		SREQ_DEL_REC:                  m.DEL_REC_RESP,
-		SREQ_DOWN_PRN_FMT:             m.DOWN_PRN_FMT_RESP,
-		SREQ_GET_AP_LIST:              m.GET_AP_LIST_RESP,
-		SREQ_RESCAN_AP_LIST:           m.RESCAN_AP_LIST_RESP,
-		SREQ_CONNECT_AP:               m.CONNECT_AP_RESP,
+		SREQ_ZERO:               m.ZERO_CMD_RESP,
+		SREQ_TARE:               m.TARE_CMD_RESP,
+		SREQ_GET_WEIGHT:         m.WEIGHT_DATA_RESP,
+		SREQ_SEND_WT_CONT:       m.WEIGHT_DATA_RESP,
+		SREQ_STOP_SEND_WT:       m.WEIGHT_DATA_RESP,
+		SREQ_REG_WEIGHT_DATA:    m.REG_WEIGHT_RESP,
+		SREQ_UNREG_WEIGHT_DATA:  m.UNREG_WEIGHT_RESP,
+		SREQ_GET_RECS:           m.GET_RECS_RESP,
+		SREQ_ADD_REC:            m.ADD_REC_RESP,
+		SREQ_DEL_REC:            m.DEL_REC_RESP,
+		SREQ_DOWN_PRN_FMT:       m.DOWN_PRN_FMT_RESP,
+		SREQ_GET_AP_LIST:        m.GET_AP_LIST_RESP,
+		SREQ_RESCAN_AP_LIST:     m.RESCAN_AP_LIST_RESP,
+		SREQ_CONNECT_AP:         m.CONNECT_AP_RESP,
+		SREQ_CONNECT_AP_ONE_KEY: m.CONNECT_AP_ONE_KEY_RESP,
+
 		SREQ_SET_WIFI_DYNAMIC_IP:      m.SET_WIFI_DYNAMIC_IP_RESP,
 		SREQ_SET_WIFI_STATIC_IP:       m.SET_WIFI_STATIC_IP_RESP,
 		SREQ_GET_IP_INFO:              m.GET_IP_INFO_RESP,
@@ -338,12 +374,17 @@ func init() {
 		SREQ_GET_IP_MODE:              m.GET_IP_MODE_RESP, //FLF
 		SREQ_GET_WIFI_INFO:            m.GET_IP_INFO_RESP,
 		SREQ_GET_BUILD_INFO:           m.GET_BUILD_INFO_RESP,
+		SREQ_GET_SCALE_TIME:           m.GET_SCALE_TIME_RESP,
+		SREQ_SET_SCALE_TIME:           m.SET_SCALE_TIME_RESP,
 		SREQ_SET_OUTPUT_FMT:           m.SET_OUTPUT_FMT_RESP,
 		SREQ_OPNE_SCALE_PASSTHROUGH:   m.OPEN_SCALE_PASSTHROUGH_RESP, //20231023@FLF
 		SREQ_CLOSE_SCALE_PASSTHROUGH:  m.CLOSE_SCALE_PASSTHROUGH_RESP,
 		SREQ_CHANGE_SCALE_PASSTH_MODE: m.CHANGE_SCALE_PASSTH_MODE_RESP,
 		SREQ_GET_SCALE_INFO:           m.GET_SCALE_INFO_RESP,
+		SREQ_GET_WEIGHT_ERR:           m.GET_WEIGHT_ERR_RESP,
 		SREQ_DOWN_PLU:                 m.DOWN_PLU_RESP,
+		SREQ_DEL_PLU:                  m.DEL_PLU_RESP,
+		SREQ_INSERT_PLU:               m.INSERT_PLU_RESP,
 		SREQ_CHANGE_WIFI_MODE:         m.CHANGE_WIFI_MODE_RESP,
 	}
 }

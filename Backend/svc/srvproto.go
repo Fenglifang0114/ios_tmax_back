@@ -215,6 +215,7 @@ const (
 	SREQ_GET_AP_LIST              SReqType = "get_ap_list"
 	SREQ_RESCAN_AP_LIST           SReqType = "rescan_ap_list"
 	SREQ_CONNECT_AP               SReqType = "connect_ap"
+	SREQ_CONNECT_AP_ONE_KEY       SReqType = "connect_ap_one_key"
 	SREQ_SET_WIFI_DYNAMIC_IP      SReqType = "set_wifi_dynamic_ip"
 	SREQ_SET_WIFI_STATIC_IP       SReqType = "set_wifi_static_ip"
 	SREQ_GET_IP_INFO              SReqType = "get_ip_info"
@@ -226,12 +227,17 @@ const (
 	SREQ_UPDATE_FIRMWARE          SReqType = "update_firmware"
 	SREQ_CHECK_SERIAL_PORT        SReqType = "check_serial_port"
 	SREQ_GET_BUILD_INFO           SReqType = "get_build_info" //20230926@FLF
+	SREQ_GET_SCALE_TIME           SReqType = "get_scale_time" //20240112@FLF
+	SREQ_SET_SCALE_TIME           SReqType = "set_scale_time" //20240112@FLF
 	SREQ_SET_OUTPUT_FMT           SReqType = "set_output_format"
 	SREQ_OPNE_SCALE_PASSTHROUGH   SReqType = "open_scale_passthrough" //20231023@FLF
 	SREQ_CLOSE_SCALE_PASSTHROUGH  SReqType = "close_scale_passthrough"
 	SREQ_CHANGE_SCALE_PASSTH_MODE SReqType = "change_scale_passth_mode"
 	SREQ_GET_SCALE_INFO           SReqType = "get_scale_info" //20231101@FLF
+	SREQ_GET_WEIGHT_ERR           SReqType = "get_weight_err" //20240111@FLF
 	SREQ_DOWN_PLU                 SReqType = "down_plu_to_scale"
+	SREQ_DEL_PLU                  SReqType = "del_plu_from_scale"
+	SREQ_INSERT_PLU               SReqType = "insert_plu_to_scale"
 	SREQ_GET_UI_CONF              SReqType = "get_ui_conf"
 	SREQ_UPDATE_UI_CONF           SReqType = "update_ui_conf"
 	SREQ_CHANGE_WIFI_MODE         SReqType = "change_wifi_mode"
@@ -256,6 +262,18 @@ type ReqPrnData struct {
 	ScaleModel   string   `json:"ScaleModel"`
 	PrinterModel string   `json:"PrinterModel"`
 	FilePaths    []string `json:"FilePaths"`
+}
+
+type ReqDelPLuData struct {
+	ScaleModel string   `json:"ScaleModel"`
+	PluId      []string `json:"PluId"`
+}
+
+type OlUlInfo struct {
+	OlCnt  int
+	OlTime int
+	UlCnt  int
+	UlTime int
 }
 
 type ReqPluData struct {
