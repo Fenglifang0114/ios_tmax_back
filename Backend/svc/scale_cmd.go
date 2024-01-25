@@ -23,8 +23,9 @@ const (
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	EnFacMode(c)
 	// Reboot(c)
-	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP)
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA)
 	if reqMsg.MsgBody == "ok" {
+		//to do nothing
 
 	}
 

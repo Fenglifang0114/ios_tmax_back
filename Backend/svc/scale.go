@@ -19,6 +19,7 @@ import (
 	"tmaxsrv/cmd"
 	mycmd "tmaxsrv/cmd"
 	m "tmaxsrv/comm"
+	"tmaxsrv/eeprom"
 	l "tmaxsrv/log"
 	"tmaxsrv/picker"
 	"tmaxsrv/prnfmt"
@@ -64,6 +65,11 @@ const (
 
 const (
 	SCALE_TIME_OUT_S = 3 // 3 seconds
+)
+
+const (
+	WIFI_BT_INFO            = "wifi_or_bt"
+	WIFI_BT_INFO_FIELD_NAME = "M_WIRELESS_PERIPHERAL_TYPE"
 )
 
 type APInfo struct {
@@ -1240,6 +1246,70 @@ func getOlUlFromScale(c *Scale, addr int) ([]byte, bool) {
 		byteArray = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	}
 	return byteArray, true
+
+}
+
+func ReqGetOneEepromInfo(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	var eepromAddr int
+	var eepromSize int
+	var dataVal int
+
+	if req.ReqData == WIFI_BT_INFO {
+		eepromAddr, eepromSize = eeprom.GetFuncAddrSize("M_WIRELESS_PERIPHERAL_TYPE")
+	}
+	composer := c.composer
+	fn := composer.ComposeCmd
+
+	cmd, timeoutMs, err := fn(composer, m.CMD_EN_FAC_MODE, m.CmdData{})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.EN_FAC_MODE_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+	}
+
+	if eepromSize > 0 && eepromAddr < 256 {
+
+		l.Log.Debug("get eeprom data from scale")
+		cmd, timeoutMs, err = composer.ComposeCmd(composer, m.CMD_READ_EEPROM_256, m.CmdData{})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+
+		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody == "fail" {
+			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+		} else {
+			strData := res.MsgBody
+			if str, ok := strData.(string); ok {
+				addrBytes := []byte(str)
+				if len(addrBytes) >= 256 {
+					if eepromSize == 1 {
+						dataVal = int(addrBytes[eepromAddr])
+						if dataVal == 0 {
+							return &ScaleRespMsg{m.GET_ONE_EEPROM_INFO_RESP, "ok,off", c.Id}, nil
+						} else if dataVal == 1 {
+							return &ScaleRespMsg{m.GET_ONE_EEPROM_INFO_RESP, "ok,wifi", c.Id}, nil
+						} else if dataVal == 2 {
+							return &ScaleRespMsg{m.GET_ONE_EEPROM_INFO_RESP, "ok,bt", c.Id}, nil
+						}
+					}
+
+				} else {
+
+				}
+
+			} else {
+				return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+			}
+		}
+
+	}
+
+	return &ScaleRespMsg{m.GET_ONE_EEPROM_INFO_RESP, "", c.Id}, nil
 
 }
 

@@ -124,6 +124,10 @@ func procInsertPlu(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqInsertPlu(scale, req)
 }
 
+func procGetOneEepromInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetOneEepromInfo(scale, req)
+}
+
 func ProcSetOutputFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetOutputFmt(scale, req)
 }
@@ -334,6 +338,7 @@ func init() {
 		SREQ_GET_BUILD_INFO:           procGetBuildInfo,
 		SREQ_GET_SCALE_TIME:           procGetScaleTime,
 		SREQ_SET_SCALE_TIME:           procSetScaleTime,
+		SREQ_GET_ONE_EEPROM_INFO:      procGetOneEepromInfo,
 		SREQ_SET_OUTPUT_FMT:           ProcSetOutputFmt,
 		SREQ_OPNE_SCALE_PASSTHROUGH:   procOpenScalePassth,
 		SREQ_CLOSE_SCALE_PASSTHROUGH:  procCloseScalePassth,
@@ -375,7 +380,8 @@ func init() {
 		SREQ_GET_WIFI_INFO:            m.GET_IP_INFO_RESP,
 		SREQ_GET_BUILD_INFO:           m.GET_BUILD_INFO_RESP,
 		SREQ_GET_SCALE_TIME:           m.GET_SCALE_TIME_RESP,
-		SREQ_SET_SCALE_TIME:           m.SET_SCALE_TIME_RESP,
+		SREQ_SET_SCALE_TIME:           m.SET_SCALE_TIME_RESP, //20240125@FLF
+		SREQ_GET_ONE_EEPROM_INFO:      m.GET_ONE_EEPROM_INFO_RESP,
 		SREQ_SET_OUTPUT_FMT:           m.SET_OUTPUT_FMT_RESP,
 		SREQ_OPNE_SCALE_PASSTHROUGH:   m.OPEN_SCALE_PASSTHROUGH_RESP, //20231023@FLF
 		SREQ_CLOSE_SCALE_PASSTHROUGH:  m.CLOSE_SCALE_PASSTHROUGH_RESP,

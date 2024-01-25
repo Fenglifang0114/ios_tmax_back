@@ -226,9 +226,10 @@ const (
 	SREQ_GET_WIFI_INFO            SReqType = "get_wifi_info"
 	SREQ_UPDATE_FIRMWARE          SReqType = "update_firmware"
 	SREQ_CHECK_SERIAL_PORT        SReqType = "check_serial_port"
-	SREQ_GET_BUILD_INFO           SReqType = "get_build_info" //20230926@FLF
-	SREQ_GET_SCALE_TIME           SReqType = "get_scale_time" //20240112@FLF
-	SREQ_SET_SCALE_TIME           SReqType = "set_scale_time" //20240112@FLF
+	SREQ_GET_BUILD_INFO           SReqType = "get_build_info"      //20230926@FLF
+	SREQ_GET_SCALE_TIME           SReqType = "get_scale_time"      //20240112@FLF
+	SREQ_SET_SCALE_TIME           SReqType = "set_scale_time"      //20240112@FLF
+	SREQ_GET_ONE_EEPROM_INFO      SReqType = "get_one_eeprom_info" //20240125@FLF
 	SREQ_SET_OUTPUT_FMT           SReqType = "set_output_format"
 	SREQ_OPNE_SCALE_PASSTHROUGH   SReqType = "open_scale_passthrough" //20231023@FLF
 	SREQ_CLOSE_SCALE_PASSTHROUGH  SReqType = "close_scale_passthrough"
