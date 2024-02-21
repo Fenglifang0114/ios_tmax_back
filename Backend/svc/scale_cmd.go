@@ -23,10 +23,10 @@ const (
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	EnFacMode(c)
 	// Reboot(c)
-	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA)
-	if reqMsg.MsgBody == "ok" {
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP, 1)
+	if reqMsg.MsgBody != "ok" {
 		//to do nothing
-
+		excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA, 1)
 	}
 
 	pickerFn := c.MySerial.pickerFn

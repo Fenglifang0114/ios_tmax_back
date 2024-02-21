@@ -50,6 +50,7 @@ const (
 	CMD_MODIFY_BT_NAME
 
 	CMD_READ_EEPROM_256
+	CMD_READ_EEPROM_512
 	CMD_WRITE_EEPROM
 	CMD_ERASE_FLASH
 	CMD_READ_FLASH
@@ -140,6 +141,7 @@ const (
 	GET_SCALE_TIME_RESP           RespMsgType = "resp_get_scale_time"      //20240112@FLF
 	SET_SCALE_TIME_RESP           RespMsgType = "resp_set_scale_time"      //20240112@FLF
 	GET_ONE_EEPROM_INFO_RESP      RespMsgType = "resp_get_one_eeprom_info" //20240125@FLF
+	GET_ALL_EEPROM_INFO_RESP      RespMsgType = "resp_get_all_eeprom_info" //20240125@FLF
 	SET_OUTPUT_FMT_RESP           RespMsgType = "resp_set_output_fmt"
 	OPEN_SCALE_PASSTHROUGH_RESP   RespMsgType = "resp_open_scale_passthrough" //20231023@FLF
 	CLOSE_SCALE_PASSTHROUGH_RESP  RespMsgType = "resp_close_scale_passthrough"

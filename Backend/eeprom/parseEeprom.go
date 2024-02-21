@@ -44,7 +44,7 @@ func getExcelPath() string {
 }
 
 // 读取excel文件
-func getExcelData() (EepromStruct, bool) {
+func GetExcelData() (EepromStruct, bool) {
 
 	var fieldData EepromStruct
 	var filename = getExcelPath()
@@ -91,7 +91,7 @@ func getExcelData() (EepromStruct, bool) {
 
 func GetFuncAddrSize(fieldName string) (addr int, size int) {
 
-	excelData, res := getExcelData()
+	excelData, res := GetExcelData()
 	if !res {
 		return 0, 0
 	}

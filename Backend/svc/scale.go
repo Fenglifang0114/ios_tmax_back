@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 	"os"
 	"os/exec"
@@ -424,11 +425,7 @@ func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
 	if msg.MsgBody != "ok" {
 		return msg, err
 	}
-
-	if _, err := s.ModifyBTName(name); err != nil {
-		return &ScaleRespMsg{}, err
-	}
-	return &ScaleRespMsg{m.MODIFY_BT_NAME_RESP, "ok", s.Id}, nil
+	return s.ModifyBTName(name)
 }
 
 func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
@@ -773,6 +770,9 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		size := len(data)
 		if totalSize < size {
 			return &ScaleRespMsg{}, fmt.Errorf("no enough space to insert")
+		}
+		if len(bufPluNumData) > 256 {
+			return &ScaleRespMsg{}, fmt.Errorf("The number cannot be more than 60.")
 		}
 		l.Log.Debug("delete plu number cmd to scale")
 		cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_DEL_PLU, m.CmdData{Type: m.DATA_TYPE_STR, Data: string(bufPluNumData)})
@@ -1313,97 +1313,207 @@ func ReqGetOneEepromInfo(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 }
 
-//暂时留着原始拿到OLUL的做法
-// l.Log.Debug("read flash from scale")
-// 	getData8Len := []byte{0x00, 0x08}
-// 	getData256Len := []byte{0x01, 0x00}
-// 	var byteOLArray []byte
-// 	var byteULArray []byte
+type EData struct {
+	FiledName   string `json:"filedName"`
+	Size        int    `json:"size"`
+	Addr        int    `json:"addr"`
+	Type        string `json:"type"`
+	Permission  int    `json:"permission"`
+	Values      string `json:"values"`
+	CurrValue   string `json:"currValue"`
+	Description string `json:"description"`
+	Comment     string `json:"Comment"`
+}
 
-// 	packDataHexStr := hex.EncodeToString(getData8Len)
-// 	packData256HexStr := hex.EncodeToString(getData256Len)
+type EepromDataResp struct {
+	EepromData []EData
+}
 
-// 	addr := 0x2004C000
-// 	totalSpace := (8 * 1024)
-// 	loopCnt := totalSpace / DATA_LENGTH_256_TMAX
-// 	if totalSpace%DATA_LENGTH_256_TMAX != 0 {
-// 		loopCnt += 1
-// 	}
+func ReqGetAllEepromInfo(c *Scale) (*ScaleRespMsg, error) {
 
-// 	addrInLoop := addr
-// 	for i := 0; i < loopCnt; i++ {
-// 		cmd, timeoutMs, err = fn(composer, m.CMD_GET_WEIGHT_ERR, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addrInLoop, packDataHexStr)})
-// 		if err != nil {
-// 			return &ScaleRespMsg{}, err
-// 		}
+	var filedDataLen = 0
+	var eepromResp EepromDataResp
 
-// 		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
-// 			return &ScaleRespMsg{}, err
-// 		} else if res.MsgBody == "fail" {
-// 			return &ScaleRespMsg{}, fmt.Errorf("get weight error data fail")
-// 		} else {
-// 			strData := res.MsgBody
-// 			if str, ok := strData.(string); ok {
-// 				addrBytes := []byte(str)
-// 				if len(addrBytes) == 8 &&
-// 					addrBytes[0] == 0xFF && addrBytes[1] == 0xFF && addrBytes[2] == 0xFF && addrBytes[3] == 0xFF &&
-// 					addrBytes[4] == 0xFF && addrBytes[5] == 0xFF && addrBytes[6] == 0xFF && addrBytes[7] == 0xFF {
-// 					// 0到7位置都是 FF
-// 					break
-// 				} else if len(addrBytes) != 8 {
-// 					return &ScaleRespMsg{}, fmt.Errorf("get data fail")
+	fieldData, res := eeprom.GetExcelData()
 
-// 				}
+	if !res {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,no eeprom data file")
+	}
 
-// 			} else {
-// 				return &ScaleRespMsg{}, fmt.Errorf("get data fail")
-// 			}
-// 		}
+	filedDataLen = len(fieldData.EepromStruct)
+	if filedDataLen <= 0 {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,eeprom data file is empty")
+	}
 
-// 		addrInLoop += 256
-// 	}
+	for i := 0; i < filedDataLen; i++ {
+		var eData EData
+		eData.FiledName = fieldData.EepromStruct[i].FieldName
+		eData.Permission = fieldData.EepromStruct[i].Permission
+		eData.Comment = fieldData.EepromStruct[i].Comments
+		eData.Addr = fieldData.EepromStruct[i].Addr
+		eData.Size = fieldData.EepromStruct[i].Size
+		eData.Description = fieldData.EepromStruct[i].Description
+		eData.Values = fieldData.EepromStruct[i].Values
+		eData.CurrValue = ""
+		eData.Type = fieldData.EepromStruct[i].Type
+		eepromResp.EepromData = append(eepromResp.EepromData, eData)
+	}
 
-// 	if addrInLoop > addr {
-// 		cmd, timeoutMs, err = fn(composer, m.CMD_GET_WEIGHT_ERR, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addrInLoop-256, packData256HexStr)})
-// 		if err != nil {
-// 			return &ScaleRespMsg{}, err
-// 		}
+	eepromStr, _ := json.MarshalToString(eepromResp.EepromData)
 
-// 		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
-// 			return &ScaleRespMsg{}, err
-// 		} else if res.MsgBody == "fail" {
-// 			return &ScaleRespMsg{}, fmt.Errorf("get weight error data fail")
-// 		} else {
-// 			strData := res.MsgBody
-// 			if str, ok := strData.(string); ok {
-// 				addrBytes := []byte(str)
-// 				if len(addrBytes) == 256 {
-// 					len := 0
-// 					for i := 0; i < 256/8; i++ {
-// 						if addrBytes[len] == 0xFF && addrBytes[len+1] == 0xFF && addrBytes[len+2] == 0xFF && addrBytes[len+3] == 0xFF &&
-// 							addrBytes[len+4] == 0xFF && addrBytes[len+5] == 0xFF && addrBytes[len+6] == 0xFF && addrBytes[len+7] == 0xFF {
+	composer := c.composer
+	fn := composer.ComposeCmd
 
-// 							byteOLArray = addrBytes[len-8 : len]
-// 							break
+	cmd, timeoutMs, err := fn(composer, m.CMD_EN_FAC_MODE, m.CmdData{})
+	if err != nil {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.EN_FAC_MODE_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	}
 
-// 						} else if len+8 == 256 {
-// 							byteOLArray = addrBytes[256-8 : 256]
-// 							break
-// 						}
-// 						len += 8
-// 					}
-// 				} else if len(addrBytes) != 256 {
-// 					return &ScaleRespMsg{}, fmt.Errorf("get data fail")
-// 				}
-// 			} else {
-// 				return &ScaleRespMsg{}, fmt.Errorf("get data fail")
-// 			}
-// 		}
-// 		fmt.Println(byteOLArray)
+	l.Log.Debug("get eeprom data from scale")
 
-// 	} else {
-// 		byteOLArray = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-// 	}
+	dataBuffer := make([]byte, 0)
+
+	cmd, timeoutMs, err = composer.ComposeCmd(composer, m.CMD_READ_EEPROM_256, m.CmdData{})
+	if err != nil {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	}
+
+	if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	} else if res.MsgBody == "fail" {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	} else {
+		strData := res.MsgBody
+		if str, ok := strData.(string); ok {
+			addrBytes := []byte(str)
+			if len(addrBytes) >= 256 {
+
+				dataBuffer = append(dataBuffer, addrBytes...)
+
+			} else {
+				return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+
+			}
+
+		} else {
+			return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+		}
+	}
+
+	cmd, timeoutMs, err = composer.ComposeCmd(composer, m.CMD_READ_EEPROM_512, m.CmdData{})
+	if err != nil {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	}
+
+	if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	} else if res.MsgBody == "fail" {
+		return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+	} else {
+		strData := res.MsgBody
+		if str, ok := strData.(string); ok {
+			addrBytes := []byte(str)
+			if len(addrBytes) >= 256 {
+				dataBuffer = append(dataBuffer, addrBytes...)
+			} else {
+				return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+			}
+
+		} else {
+			return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+		}
+	}
+
+	eepromResp, res = paserEepromData(dataBuffer, eepromResp, 0)
+	eepromStr, _ = json.MarshalToString(eepromResp.EepromData)
+
+	return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
+
+}
+
+func paserEepromData(eepromBytes []byte, eepromResp EepromDataResp, startAddr int) (EepromDataResp, bool) {
+	var dataAddr int
+	var dataSize int
+	var dataType string
+
+	for i := 0; i < len(eepromResp.EepromData); i++ {
+		dataAddr = eepromResp.EepromData[i].Addr
+		dataSize = eepromResp.EepromData[i].Size
+		dataType = eepromResp.EepromData[i].Type
+
+		if dataAddr >= startAddr && (dataAddr-startAddr) < len(eepromBytes) && len(eepromBytes) > dataAddr+dataSize {
+
+			if dataType == "int" {
+				if dataSize == 1 {
+					if eepromBytes[dataAddr] == 0xff {
+						eepromResp.EepromData[i].CurrValue = ""
+					} else {
+						dataInt := int(eepromBytes[dataAddr])
+						eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
+					}
+
+				} else if dataSize == 2 {
+					if eepromBytes[dataAddr] == 0xff {
+						eepromResp.EepromData[i].CurrValue = ""
+					} else {
+						dataInt := int(binary.LittleEndian.Uint16(eepromBytes[dataAddr:(dataAddr + 2)]))
+						eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
+					}
+
+				} else if dataSize == 4 {
+					if eepromBytes[dataAddr] == 0xff {
+						eepromResp.EepromData[i].CurrValue = ""
+					} else {
+						dataInt := int(binary.LittleEndian.Uint32(eepromBytes[dataAddr:(dataAddr + 4)]))
+						eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
+					}
+
+				} else if dataSize == 8 {
+					if eepromBytes[dataAddr] == 0xff {
+						eepromResp.EepromData[i].CurrValue = ""
+					} else {
+						dataInt := int(binary.LittleEndian.Uint64(eepromBytes[dataAddr:(dataAddr + 8)]))
+						eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
+
+					}
+
+				}
+
+			} else if dataType == "double" {
+				if dataSize == 8 {
+					dataUint64 := (binary.LittleEndian.Uint64(eepromBytes[dataAddr:(dataAddr + 8)]))
+					dataDouble := math.Float64frombits(dataUint64)
+					eepromResp.EepromData[i].CurrValue = strconv.FormatFloat(dataDouble, 'f', -1, 64)
+				}
+				//  else if dataSize == 4 {
+				// 	dataUint64 := (binary.LittleEndian.Uint32(eepromBytes[dataAddr:(dataAddr + 4)]))
+				// 	dataDouble := math.Float64frombits(dataUint64)
+				// 	eepromResp.EepromData[i].CurrValue = strconv.FormatFloat(dataDouble, 'f', -1, 64)
+				// }
+
+			} else if dataType == "string" {
+				if eepromBytes[dataAddr] == 0xff {
+					eepromResp.EepromData[i].CurrValue = ""
+
+				} else {
+					dataStr := string(eepromBytes[dataAddr:(dataAddr + dataSize)])
+					eepromResp.EepromData[i].CurrValue = dataStr
+				}
+
+			}
+
+		}
+
+	}
+
+	return eepromResp, true
+
+}
 
 type SerialOutputInfo struct {
 	Id   [1]byte // 序号

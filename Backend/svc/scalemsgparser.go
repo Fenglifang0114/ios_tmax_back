@@ -484,6 +484,11 @@ func handleDownPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	return ScaleRespMsg{}, 0
 }
 
+func handleGetAllEepromInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	// TODO: Implement function
+	return ScaleRespMsg{}, 0
+}
+
 func handleDelPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DEL_PLU_RESP, MsgBody: "ok"}, len(data)

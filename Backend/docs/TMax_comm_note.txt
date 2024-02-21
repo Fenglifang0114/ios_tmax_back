@@ -212,6 +212,30 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
  {
 	"MsgType":"resp_get_scale_time","MsgBody":"{ok,1705023530}","ScaleId":1
 }
+
+23. get one function data from eeprom =>{
+	"Req": "get_one_eeprom_info",
+	"ReqData": "wifi_or_bt"
+}
+ {
+	"MsgType":"resp_get_one_eeprom_info","MsgBody":"{ok,bt}","ScaleId":1
+}
+{
+	"MsgType":"resp_get_one_eeprom_info","MsgBody":"{ok,wifi}","ScaleId":1
+}
+{
+	"MsgType":"resp_get_one_eeprom_info","MsgBody":"{ok,off}","ScaleId":1
+}
+
+24. get all eeprom data from eeprom =>{
+	"Req": "get_all_eeprom_info",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_get_all_eeprom_info","MsgBody":"[{\"ssid\":\"T-Scale\",\"rssi\":1,\"mac\":\"11:22:33:44:55:66\",\"enccryptType\":\"WEP\"}, ]",
+										   "ScaleId":1
+}
+
 	
 
 To configure scale's wifi to connect to specific AP
@@ -221,11 +245,10 @@ ws://127.0.0.1:7878/tmax?scaleid=1
     {"Req":"get_ap_list", "ReqData":""}
     response:
 	{ "ScaleId":1, "MsgType":"get_ap_list_resp","MsgBody":"[{\"ssid\":\"T-Scale\",\"rssi\":1,\"mac\":\"11:22:33:44:55:66\",\"enccryptType\":\"WEP\"},
-										   {\"ssid\":\"guest1\",\"rssi\":2,\"mac\":\"11:22:33:44:55:77\",\"encryptType\":\"WPA\"}],
+										   {\"ssid\":\"guest1\",\"rssi\":2,\"mac\":\"11:22:33:44:55:77\",\"encryptType\":\"WPA\"},
 										   {\"ssid\":\"guest2\",\"rssi\":2,\"mac\":\"11:22:33:44:55:78\",\"encryptType\":\"WPA2-PSK\"},
 										   {\"ssid\":\"guest3\",\"rssi\":3,\"mac\":\"11:22:33:44:55:79\",\"encryptType\":\"WPA-WPA2-PSK\"},
-				 					       {''\"ssid\":\"test\",\"rssi\":4,\"mac\":\"11:22:33:44:55:88\",\"encryptType\":\"WPA\"}
-										   ]"
+				 					       {''\"ssid\":\"test\",\"rssi\":4,\"mac\":\"11:22:33:44:55:88\",\"encryptType\":\"WPA\"}]"
 	}
 2. Rescan APs
    {"Req":"rescan_ap_list", "ReqData":""}
