@@ -153,19 +153,11 @@ func getPercentage(data string) string {
 
 func (c *Scale) PerfZero() (*ScaleRespMsg, error) {
 	l.Log.Debug("perform zero")
-	// _, err := EnFacMode(c)
-	// if err != nil {
-	// 	return &ScaleRespMsg{}, err //FLF
-	// }
 	return excuteSimpCmd(c, m.CMD_ZERO, m.ZERO_CMD_RESP)
 }
 
 func (c *Scale) PerfTare() (*ScaleRespMsg, error) {
 	l.Log.Debug("perform tare")
-	// _, err := EnFacMode(c)
-	// if err != nil {
-	// 	return &ScaleRespMsg{}, err //FLF
-	// }
 	return excuteSimpCmd(c, m.CMD_TARE, m.TARE_CMD_RESP)
 }
 

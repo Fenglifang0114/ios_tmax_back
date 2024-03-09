@@ -124,10 +124,15 @@ func (d *DbUserRec) UpdateUserRec(rec UserRec) error {
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
-	rowAffected := db.Model(&rec).Where("rec_id=?", rec.RecId).Updates(&rec).RowsAffected
-	if rowAffected == 0 {
-		return errors.New("@UpdateUserRec failed, mybe record not existing")
+	var oldRec UserRec
+	if err := db.Where("rec_id = ?", rec.RecId).First(&oldRec).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("@UpdateUserRec failed, mybe record not existing")
+		} else {
+			return errors.New("@UpdateUserRec failed, mybe record not existing")
+		}
 	}
+	db.Save(&rec)
 	return nil
 }
 

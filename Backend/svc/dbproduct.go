@@ -124,10 +124,16 @@ func (d *DbProductRec) UpdateProductRec(rec ProductRec) error {
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
-	rowAffected := db.Model(&rec).Where("rec_id=?", rec.RecId).Updates(&rec).RowsAffected
-	if rowAffected == 0 {
-		return errors.New("@UpdateProductRec failed, mybe record not existing")
+	var oldRec ProductRec
+	if err := db.Where("rec_id = ?", rec.RecId).First(&oldRec).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("@UpdateProductRec failed, mybe record not existing")
+		} else {
+			return errors.New("@UpdateProductRec failed, mybe record not existing")
+		}
 	}
+	db.Save(&rec)
+	// rowAffected := db.Model(&rec).Where("rec_id=?", rec.RecId).Updates(&rec).RowsAffected  这个不生效
 	return nil
 }
 

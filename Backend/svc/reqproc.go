@@ -175,6 +175,10 @@ func procChangeWifiMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqChangeWifiMode(scale, req)
 }
 
+func procModifyEepromInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqModifyEepromInfo(scale, req)
+}
+
 func procModifyBTName(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqModifyBTName(scale, req.ReqData)
 }
@@ -356,6 +360,7 @@ func init() {
 		SREQ_GET_UI_CONF:              procGetUiConf,
 		SREQ_UPDATE_UI_CONF:           procUpdateUiConf,
 		SREQ_CHANGE_WIFI_MODE:         procChangeWifiMode,
+		SREQ_MODIFY_EEPROM_INFO:       procModifyEepromInfo,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

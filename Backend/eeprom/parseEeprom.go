@@ -20,10 +20,12 @@ type EepromField struct {
 	Size        int
 	Addr        int
 	Type        string
+	SubType     string
 	Permission  int
 	Values      string
 	Comments    string
 	Description string
+	Category    string
 }
 
 const (
@@ -74,13 +76,16 @@ func GetExcelData() (EepromStruct, bool) {
 			}
 			tempEepromField.Addr = addr
 			tempEepromField.Type = row[10]
-			permission, err := strconv.Atoi(row[11])
+			tempEepromField.SubType = row[11]
+			permission, err := strconv.Atoi(row[12])
 			if err != nil {
 				permission = 0
 			}
 			tempEepromField.Permission = permission
-			tempEepromField.Values = row[12]
-			tempEepromField.Description = row[13]
+			tempEepromField.Values = row[13]
+			tempEepromField.Description = row[14]
+			tempEepromField.Category = row[15]
+
 			if tempEepromField.Size != 0 {
 				fieldData.EepromStruct = append(fieldData.EepromStruct, tempEepromField)
 			}

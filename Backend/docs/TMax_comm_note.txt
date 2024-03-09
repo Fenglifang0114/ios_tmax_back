@@ -236,6 +236,18 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 										   "ScaleId":1
 }
 
+25. get all eeprom data from eeprom =>{
+	"Req": "modify_eeprom_info",
+	"ReqData": "[{\"filedName\":\"M_NET_IP_ADDRESS\",\"size\":4,\"addr\":186,\"type\":\"int\",\"subType\":\"ip\",\"permission\":2,\"values\":\"1\",\"currValue\":\"10.5.52.55\",\"description\":\"description\",\"comment\":\"/*以太网IP地址*/\",\"category\":\"Serial port parameters\"}]"
+}
+ {
+	"MsgType":"resp_modify_eeprom_info","MsgBody":"[{\"ssid\":\"T-Scale\",\"rssi\":1,\"mac\":\"11:22:33:44:55:66\",\"enccryptType\":\"WEP\"}, ]",
+										   "ScaleId":1
+}
+
+
+
+
 	
 
 To configure scale's wifi to connect to specific AP

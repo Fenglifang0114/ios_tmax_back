@@ -159,6 +159,7 @@ const (
 	READ_FLASH_DATA_RESP          RespMsgType = "resp_read_flash_data"
 	ERASE_INSERT_PLU_RESP         RespMsgType = "resp_erase_insert_plu"
 	REBOOT_RESP                   RespMsgType = "resp_reboot"
+	MODIFY_EEPROM_INFO_RESP       RespMsgType = "resp_modify_eeprom_info"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

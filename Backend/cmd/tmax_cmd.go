@@ -72,9 +72,9 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 	case m.CMD_GET_SCALE_TIME:
 		return GET_SCALE_TIME_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20230926@FLF
 	case m.CMD_READ_EEPROM_256:
-		return READ_EEPROM_256_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20240125@FLF
+		return READ_EEPROM_256_CMD_TMAX, CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240125@FLF
 	case m.CMD_READ_EEPROM_512:
-		return READ_EEPROM_256_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20240129@FLF
+		return READ_EEPROM_512_CMD_TMAX, CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240129@FLF
 	case m.CMD_GET_SCALE_INFO:
 		return GET_SCALE_INFO_CMD_TMAX, CMD_TIMEOUT_SHORT_100_MS, nil //20231101@FLF
 	case m.CMD_INSERT_PLU_ADDR:
@@ -128,6 +128,9 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return modifyBTNameCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_DEL_PLU:
 		return getDelPluCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WRITE_EEPROM:
+		addr, data := parseWrDataTMAX(cmdData.Data.(string))
+		return getModifyEepromCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_SET_SCALE_TIME:
 		return getSetScaleTimeCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 
@@ -405,6 +408,13 @@ func getIpModCmdTMAX() []byte {
 func getDelPluCmdTMAX(data string) []byte {
 	l.Log.Debug("compose get IP mode cmd")
 	return composeCmd(0xf301, 0, []byte(data))
+}
+
+func getModifyEepromCmdTMAX(addr uint32, data []byte) []byte {
+	l.Log.Debug("compose modify eeprom info cmd")
+	var dataLen = 19 + len(data)
+	return wrDataCmdTMAX(addr, data, uint16(dataLen))
+
 }
 
 func getSetScaleTimeCmdTMAX(data string) []byte {
