@@ -199,7 +199,7 @@ func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	// 	return &ScaleRespMsg{}, err
 	// }
 	// enable scale sending weighing info continually
-	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_100_MS)
+	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)
 	return msg, err

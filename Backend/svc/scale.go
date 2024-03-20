@@ -562,7 +562,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 				return &ScaleRespMsg{}, err
 			} else if res.MsgBody != "ok" {
-				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+				return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 			}
 		} else if modifyData[i].Type == "int" {
 			if modifyData[i].Size == 1 {
@@ -581,7 +581,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
-					return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 				}
 			} else if modifyData[i].Size == 4 && modifyData[i].SubType == "ip" {
 				packetData := ipv4StringToBytes(modifyData[i].CurrValue)
@@ -594,7 +594,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
-					return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 				}
 			} else if modifyData[i].Size == 2 || modifyData[i].Size == 4 || modifyData[i].Size == 8 {
 				packetData, _ := intToLittleEndianBytes(modifyData[i].CurrValue, modifyData[i].Size)
@@ -607,7 +607,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
-					return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 				}
 			}
 
@@ -623,7 +623,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
-					return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 				}
 
 			}

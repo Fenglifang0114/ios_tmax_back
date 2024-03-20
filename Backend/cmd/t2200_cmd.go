@@ -79,11 +79,11 @@ func tareCmdT2200() ([]byte, int, error) {
 }
 
 func readWeightCmdT2200() ([]byte, int, error) {
-	return []byte(READ_WEIGHT_CMD_T2200), CMD_TIMEOUT_SHORT_100_MS, nil
+	return []byte(READ_WEIGHT_CMD_T2200), CMD_TIMEOUT_SHORT_1500_MS, nil
 }
 
 func rebootCmdT2200() ([]byte, int, error) {
-	return REBOOT_CMD_T2200, CMD_TIMEOUT_SHORT_100_MS, nil
+	return REBOOT_CMD_T2200, CMD_TIMEOUT_SHORT_1500_MS, nil
 }
 
 func parseWrDataT2200(inData string) (addr int64, data []byte) { // inData is hex ascii
@@ -116,7 +116,7 @@ func enFacModeCmdT2200() ([]byte, int, error) {
 	// 添加包尾
 	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE_T2000-2:], PACKET_TAIL_T2000)
 
-	return packet, CMD_TIMEOUT_SHORT_100_MS, nil
+	return packet, CMD_TIMEOUT_SHORT_1500_MS, nil
 }
 
 // 关闭工厂模式
@@ -132,7 +132,7 @@ func disFacModeCmdT2200() ([]byte, int, error) {
 	// 添加包尾
 	binary.BigEndian.PutUint16(packet[OPEN_FAC_CHUNK_SIZE_T2000-2:], PACKET_TAIL_T2000)
 
-	return packet, CMD_TIMEOUT_SHORT_100_MS, nil
+	return packet, CMD_TIMEOUT_SHORT_1500_MS, nil
 }
 
 // 构建一个数据包

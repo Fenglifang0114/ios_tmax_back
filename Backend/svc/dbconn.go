@@ -100,16 +100,11 @@ func (d *DbScaleConn) UpdateScaleConn(conn ScaleConnMedia) error {
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
+	rowAffected := db.Model(&conn).Where("scale_sn=?", conn.ScaleSn).Updates(&conn).RowsAffected
+	if rowAffected == 0 {
+		return errors.New("@UpdateScaleConn failed, mybe record not existing")
+	} //写成save模式不生效，又改回来了
 
-	var oldRec ScaleConnMedia
-	if err := db.Where("scale_sn=?", conn.ScaleSn).First(&oldRec).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("@UpdateScaleConn failed, mybe record not existing")
-		} else {
-			return errors.New("@UpdateScaleConn failed, mybe record not existing")
-		}
-	}
-	db.Save(&conn)
 	return nil
 }
 
