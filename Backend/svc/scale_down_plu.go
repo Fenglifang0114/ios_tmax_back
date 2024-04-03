@@ -233,38 +233,38 @@ func readExcelToJSON(fileName string, columnNames []string) ([]Product, error) {
 			switch colName {
 			case "ProductNumber":
 				product.ProductNumber = convertToInt(cellValue)
-				break
+
 			case "ProductName":
 				product.ProductName = cellValue
-				break
+
 			case "PriceUnit":
 				product.PriceUnit = convertToByte(cellValue)
-				break
+
 			case "TaxModel":
 				product.TaxModel = convertToByte(cellValue)
-				break
-			case "Type":
+
+			case "TaxType":
 				product.TaxType = convertToByte(cellValue)
-				break
+
 			case "Price":
 				product.Price = convertToFloat64(cellValue)
-				break
+
 			case "UnitWeight":
 				product.UnitWeight = convertToFloat64(cellValue)
 			case "PreTare":
 				product.PreTare = convertToFloat64(cellValue)
-				break
+
 			case "LimitHigh":
 				product.LimitHigh = convertToFloat64(cellValue)
-				break
+
 			case "LimitLow":
 				product.LimitLow = convertToFloat64(cellValue)
-				break
+
 			case "isUSED":
 				product.isUSED = convertToByte(cellValue)
-				break
+
 			default:
-				break
+
 			}
 		}
 		products = append(products, product)

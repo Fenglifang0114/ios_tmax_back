@@ -245,6 +245,15 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 										   "ScaleId":1
 }
 
+26. To modify scale name  
+    {"Req":"modify_scale_name", "ReqData":"modelName,scale_sn,scale_name"}
+    response:
+    {"ScaleId":1,"MsgType":resp_modify_scale_name,"MsgBody":"{
+    "ScaleSn":"sdfsdfsdsdfs",
+    "ModelName":"sdfsdfsdsdfs",
+	"ScaleName":"sdfsdfsdsdfs",     
+}"}	
+
 
 
 

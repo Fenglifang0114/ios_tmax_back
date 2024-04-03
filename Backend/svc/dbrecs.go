@@ -27,6 +27,7 @@ type ScaleRec struct {
 	UserName    string
 	UserRemarks string
 	ScaleMode   string //0 =DC500 1=check Weigher 2=take in  3=take out
+	ScaleName   string
 
 	CreatedAt time.Time
 }
@@ -51,7 +52,7 @@ func NewDbScaleRec(dbName string) (*DbScaleRec, error) {
 	return &DbScaleRec{dbName: dbName}, nil
 }
 
-func (d *DbScaleRec) GetScaleRecsList(model string, sn string) ([]ScaleRec, error) {
+func (d *DbScaleRec) GetScaleRecsList(model string, sn string, name string) ([]ScaleRec, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -163,7 +164,7 @@ func (d *DbScaleRec) DeleteScaleRec(id uint) error {
 	return nil
 }
 
-func (d *DbScaleRec) DeleteAllScaleRec() error {
+func (d *DbScaleRec) DeleteAllScaleRec(scaleModel string, scaleSn string) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -181,10 +182,13 @@ func (d *DbScaleRec) DeleteAllScaleRec() error {
 		panic("failed to connect database")
 	}
 
-	err = db.Migrator().DropTable(&ScaleRec{})
-	if err != nil {
-		panic("failed to drop database")
-	}
+	// err = db.Migrator().DropTable(&ScaleRec{})
+	// if err != nil {
+	// 	panic("failed to drop database")
+	// }
+
+	var rec ScaleRec
+	db.Where("scale_model = ? AND scale_sn = ?", scaleModel, scaleSn).Delete(&rec)
 
 	return nil
 }

@@ -14,6 +14,7 @@ type ScaleMgr struct {
 	scales            map[int64]*Scale // map with scale id
 	connPb            *ScaleConnProvider
 	recPb             *ScaleRecProvider
+	infoPb            *ScaleInfosProvider
 	pluFilePb         *PluRecProvider
 	recCheckWeigherPb *ScaleRecCheckWeigherProvider
 	recTakeInPb       *ScaleRecTakeInProvider
@@ -24,12 +25,13 @@ type ScaleMgr struct {
 func NewScaleMgr() *ScaleMgr {
 	connPb := NewScaleConnProvider()
 	recPb := NewScaleRecProvider()
+	infoPb := NewScaleInfosProvider()
 	pluFilePb := NewPluRecProvider()
 	recCheckWeigherPb := NewScaleRecCheckWeigherProvider()
 	recTakeInPb := NewScaleRecTakeInProvider()
 	recTakeOutPb := NewScaleRecTakeOutProvider()
 	scales := make(map[int64]*Scale)
-	return &ScaleMgr{connPb: connPb, recPb: recPb, pluFilePb: pluFilePb, recCheckWeigherPb: recCheckWeigherPb, recTakeInPb: recTakeInPb, recTakeOutPb: recTakeOutPb, scales: scales}
+	return &ScaleMgr{connPb: connPb, recPb: recPb, infoPb: infoPb, pluFilePb: pluFilePb, recCheckWeigherPb: recCheckWeigherPb, recTakeInPb: recTakeInPb, recTakeOutPb: recTakeOutPb, scales: scales}
 }
 
 func (s *ScaleMgr) SetSrvMsg(srvMgr *SrvMgr) {
@@ -329,7 +331,7 @@ func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 func (s *ScaleMgr) GetScaleRecs(scale *Scale) ([]ScaleRec, error) {
 	var recs []ScaleRec
 	var err error
-	if recs, err = s.recPb.GetRecsList(*scale); err != nil {
+	if recs, err = s.recPb.GetRecsList(*scale, "", "", ""); err != nil {
 		return recs, err
 	}
 	return recs, nil

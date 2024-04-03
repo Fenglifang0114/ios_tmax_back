@@ -151,7 +151,7 @@ func TestDbScaleRec_GetScaleRecsList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.d.GetScaleRecsList(tt.args.model, tt.args.sn)
+			got, err := tt.d.GetScaleRecsList(tt.args.model, tt.args.sn, "")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DbScaleRec.GetScaleRecsList() error = %v, wantErr %v", err, tt.wantErr)
 				return

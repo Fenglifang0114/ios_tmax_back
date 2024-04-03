@@ -239,25 +239,34 @@ func (c *Scale) CloseScalePassth() (*ScaleRespMsg, error) {
 }
 
 func (c *Scale) GetRecs(scaleMode string) ([]ScaleRec, error) {
-	scaleModeInt, _ := strconv.Atoi(scaleMode)
-	if scaleModeInt == NORMAL_WEIGHT_MODE {
-		return c.scaleMgr.recPb.GetRecsList(*c)
+	result := strings.Split(scaleMode, ",")
+	var scaleModel = ""
+	var scaleSn = ""
+	var scaleName = ""
+	if len(result) == 4 {
+		scaleModeInt, _ := strconv.Atoi(result[0])
+		scaleModel = result[1]
+		scaleSn = result[2]
+		scaleName = result[3]
+		if scaleModeInt == NORMAL_WEIGHT_MODE {
+			return c.scaleMgr.recPb.GetRecsList(*c, scaleModel, scaleSn, scaleName)
+		}
+		if scaleModeInt == CHECK_WEIGHT_MODE {
+			return c.scaleMgr.recCheckWeigherPb.GetRecsList(*c, scaleModel, scaleSn, scaleName)
+		}
+		if scaleModeInt == TACKE_IN_MODE {
+			return c.scaleMgr.recTakeInPb.GetRecsList(*c, scaleModel, scaleSn, scaleName)
+		}
+		if scaleModeInt == TACKE_OUT_MODE {
+			return c.scaleMgr.recTakeOutPb.GetRecsList(*c, scaleModel, scaleSn, scaleName)
+		}
 	}
-	if scaleModeInt == CHECK_WEIGHT_MODE {
-		return c.scaleMgr.recCheckWeigherPb.GetRecsList(*c)
-	}
-	if scaleModeInt == TACKE_IN_MODE {
-		return c.scaleMgr.recTakeInPb.GetRecsList(*c)
-	}
-	if scaleModeInt == TACKE_OUT_MODE {
-		return c.scaleMgr.recTakeOutPb.GetRecsList(*c)
-	}
-	return c.scaleMgr.recPb.GetRecsList(*c)
+	return c.scaleMgr.recPb.GetRecsList(*c, scaleModel, scaleSn, scaleName)
 }
 
 func (c *Scale) AddRec(rec ScaleRec) error {
-	rec.ScaleModel = c.Model
-	rec.ScaleSn = c.Sn
+	// rec.ScaleModel = c.Model
+	// rec.ScaleSn = c.Sn
 	scaleModeInt, _ := strconv.Atoi(rec.ScaleMode)
 	if scaleModeInt == NORMAL_WEIGHT_MODE {
 		return c.scaleMgr.recPb.InsertRec(rec)
@@ -271,31 +280,31 @@ func (c *Scale) AddRec(rec ScaleRec) error {
 	return c.scaleMgr.recPb.InsertRec(rec)
 }
 
-func (c *Scale) DelRec(recId uint, scaleMode uint) error {
+func (c *Scale) DelRec(recId uint, scaleMode uint, modelName string, scaleSn string) error {
 	if scaleMode == NORMAL_WEIGHT_MODE {
 		if recId == 999999999 {
-			return c.scaleMgr.recPb.DeleteAllRec()
+			return c.scaleMgr.recPb.DeleteAllRec(modelName, scaleSn)
 		} else {
 			return c.scaleMgr.recPb.DeleteRec(recId)
 
 		}
 	} else if scaleMode == CHECK_WEIGHT_MODE {
 		if recId == 999999999 {
-			return c.scaleMgr.recCheckWeigherPb.DeleteAllRec()
+			return c.scaleMgr.recCheckWeigherPb.DeleteAllRec(modelName, scaleSn)
 		} else {
 			return c.scaleMgr.recCheckWeigherPb.DeleteRec(recId)
 
 		}
 	} else if scaleMode == TACKE_IN_MODE {
 		if recId == 999999999 {
-			return c.scaleMgr.recTakeInPb.DeleteAllRec()
+			return c.scaleMgr.recTakeInPb.DeleteAllRec(modelName, scaleSn)
 		} else {
 			return c.scaleMgr.recTakeInPb.DeleteRec(recId)
 
 		}
 	} else if scaleMode == TACKE_OUT_MODE {
 		if recId == 999999999 {
-			return c.scaleMgr.recTakeOutPb.DeleteAllRec()
+			return c.scaleMgr.recTakeOutPb.DeleteAllRec(modelName, scaleSn)
 		} else {
 			return c.scaleMgr.recTakeOutPb.DeleteRec(recId)
 		}

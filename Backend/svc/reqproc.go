@@ -87,7 +87,7 @@ func procDelRec(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 		result, _ := json.Marshal(resp)
 		scale.client.sendCh <- result
 	} else {
-		_ = scale.DelRec(uint(id), uint(scaleMode))
+		_ = scale.DelRec(uint(id), uint(scaleMode), parts[2], parts[3])
 		resp := &ScaleRespMsg{MsgType: m.DEL_REC_RESP, MsgBody: "", ScaleId: scale.Id}
 		result, _ := json.Marshal(resp)
 		scale.client.sendCh <- result

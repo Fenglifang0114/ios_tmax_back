@@ -42,10 +42,10 @@ func NewScaleRecProvider() *ScaleRecProvider {
 	return &ScaleRecProvider{myId: "ScaleRecProvider", recPb: recPb}
 }
 
-func (p *ScaleRecProvider) GetRecsList(scale Scale) ([]ScaleRec, error) {
+func (p *ScaleRecProvider) GetRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	recs, err := p.recPb.GetScaleRecsList(scale.Model, scale.Sn)
+	recs, err := p.recPb.GetScaleRecsList(scaleModel, scaleSn, scaleName)
 	return recs, err
 }
 
@@ -60,10 +60,10 @@ func (p *ScaleRecProvider) DeleteRec(recId uint) error {
 	defer p.mu.Unlock()
 	return p.recPb.DeleteScaleRec(recId)
 }
-func (p *ScaleRecProvider) DeleteAllRec() error {
+func (p *ScaleRecProvider) DeleteAllRec(modelName string, scaleSn string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.recPb.DeleteAllScaleRec()
+	return p.recPb.DeleteAllScaleRec(modelName, scaleSn)
 }
 
 func NewScaleRecCheckWeigherProvider() *ScaleRecCheckWeigherProvider {
@@ -71,10 +71,10 @@ func NewScaleRecCheckWeigherProvider() *ScaleRecCheckWeigherProvider {
 	return &ScaleRecCheckWeigherProvider{myId: "ScaleRecCheckWeigherProvider", recPb: recPb}
 }
 
-func (p *ScaleRecCheckWeigherProvider) GetRecsList(scale Scale) ([]ScaleRec, error) {
+func (p *ScaleRecCheckWeigherProvider) GetRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	recs, err := p.recPb.GetScaleRecsList(scale.Model, scale.Sn)
+	recs, err := p.recPb.GetScaleRecsList(scaleModel, scaleSn, scaleName)
 	return recs, err
 }
 
@@ -89,10 +89,10 @@ func (p *ScaleRecCheckWeigherProvider) DeleteRec(recId uint) error {
 	defer p.mu.Unlock()
 	return p.recPb.DeleteScaleRec(recId)
 }
-func (p *ScaleRecCheckWeigherProvider) DeleteAllRec() error {
+func (p *ScaleRecCheckWeigherProvider) DeleteAllRec(modelName string, scaleSn string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.recPb.DeleteAllScaleRec()
+	return p.recPb.DeleteAllScaleRec(modelName, scaleSn)
 }
 
 func NewScaleRecTakeInProvider() *ScaleRecTakeInProvider {
@@ -100,10 +100,10 @@ func NewScaleRecTakeInProvider() *ScaleRecTakeInProvider {
 	return &ScaleRecTakeInProvider{myId: "ScaleRecTakeInProvider", recPb: recPb}
 }
 
-func (p *ScaleRecTakeInProvider) GetRecsList(scale Scale) ([]ScaleRec, error) {
+func (p *ScaleRecTakeInProvider) GetRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	recs, err := p.recPb.GetScaleRecsList(scale.Model, scale.Sn)
+	recs, err := p.recPb.GetScaleRecsList(scaleModel, scaleSn, scaleName)
 	return recs, err
 }
 
@@ -118,10 +118,10 @@ func (p *ScaleRecTakeInProvider) DeleteRec(recId uint) error {
 	defer p.mu.Unlock()
 	return p.recPb.DeleteScaleRec(recId)
 }
-func (p *ScaleRecTakeInProvider) DeleteAllRec() error {
+func (p *ScaleRecTakeInProvider) DeleteAllRec(modelName string, scaleSn string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.recPb.DeleteAllScaleRec()
+	return p.recPb.DeleteAllScaleRec(modelName, scaleSn)
 }
 
 func NewScaleRecTakeOutProvider() *ScaleRecTakeOutProvider {
@@ -129,10 +129,10 @@ func NewScaleRecTakeOutProvider() *ScaleRecTakeOutProvider {
 	return &ScaleRecTakeOutProvider{myId: "ScaleRecTakeOutProvider", recPb: recPb}
 }
 
-func (p *ScaleRecTakeOutProvider) GetRecsList(scale Scale) ([]ScaleRec, error) {
+func (p *ScaleRecTakeOutProvider) GetRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	recs, err := p.recPb.GetScaleRecsList(scale.Model, scale.Sn)
+	recs, err := p.recPb.GetScaleRecsList(scaleModel, scaleSn, scaleName)
 	return recs, err
 }
 
@@ -148,8 +148,8 @@ func (p *ScaleRecTakeOutProvider) DeleteRec(recId uint) error {
 	return p.recPb.DeleteScaleRec(recId)
 }
 
-func (p *ScaleRecTakeOutProvider) DeleteAllRec() error {
+func (p *ScaleRecTakeOutProvider) DeleteAllRec(modelName string, scaleSn string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.recPb.DeleteAllScaleRec()
+	return p.recPb.DeleteAllScaleRec(modelName, scaleSn)
 }
