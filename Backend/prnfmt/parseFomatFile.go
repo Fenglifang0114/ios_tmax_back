@@ -13,6 +13,36 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
+type VarStruct struct {
+	id       uint16
+	startPos uint16
+	endPos   uint16
+	align    uint16
+	maxlen   uint16
+}
+
+type RptVarStruct struct {
+	id       uint8
+	startPos uint16
+	align    uint8
+	maxLen   uint8
+}
+
+type ScaleVarOrder struct {
+	ScaleVarTable []ScaleVar `json:"var"`
+}
+type ScaleVar struct {
+	ValueVame string `json:"valuename"`
+	Id        int    `json:"id"`
+	Comment   string `json:"comment"`
+}
+
+var (
+	VarList    []VarStruct
+	RptVarList []RptVarStruct
+	VarTable   ScaleVarOrder
+)
+
 func GetFormatLines(fileNames string) ([]string, bool) {
 	var formatArray []string
 	res := false

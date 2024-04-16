@@ -22,19 +22,32 @@ type printInfo struct {
 	varInfo         [30]VarStruct
 }
 
-type printInfoTmax struct {
+type printInfoRpt struct {
 	printerName     [23]byte
 	formatNum       uint8
 	everyFormatInfo [12]InfoStr
-	varInfo         [120]VarStruct
+	varInfo         [60]RptVarStruct
 }
 
+// type printInfoTmax struct {
+// 	printerName     [23]byte
+// 	formatNum       uint8
+// 	everyFormatInfo [12]InfoStr    //最大12个打印格式
+// 	varInfo         [120]VarStruct //最大120个变量
+// }
+
 const (
-	headBufLen = 468
+	headBufLen        = 468 //一个printInfo占用的字节是固定的。
+	headBufLenReceipt = 468 //一个printInfoReceipt占用的字节是固定的。
 )
 
-func ParserFmtToFile(utf8Buff string) bool {
-	buffer := ParserFmtToBuf(utf8Buff)
+func ParserFmtToFile(utf8Buff string, printerModel string) bool {
+	var buffer *bytes.Buffer
+	if printerModel == "EPM205" {
+		buffer = ParserFmtToBuf(utf8Buff, printerModel)
+	} else {
+		buffer = ParserRptFmtToBuf(utf8Buff, printerModel)
+	}
 
 	// 7.创建bin文件
 
@@ -49,7 +62,7 @@ func ParserFmtToFile(utf8Buff string) bool {
 	// 8.写数据到串口
 }
 
-func ParserFmtToBuf(utf8Buff string) *bytes.Buffer {
+func ParserFmtToBuf(utf8Buff string, printerModel string) *bytes.Buffer {
 	var clearList []VarStruct
 	VarList = clearList // 用于清空数据
 
@@ -68,7 +81,10 @@ func ParserFmtToBuf(utf8Buff string) *bytes.Buffer {
 	lastAddr := 0
 
 	buff, _ := Utf8ToGb2312(utf8Buff)
-	formatbuf := ParseEplLines(buff, dataCamp, lastVarPos)
+	var formatbuf *bytes.Buffer
+
+	formatbuf = ParseEplLines(buff, dataCamp, lastVarPos)
+
 	everyBufLen = append(everyBufLen, formatbuf.Len())
 
 	fmt.Println(string(dataCamp.Bytes()))
@@ -121,6 +137,91 @@ func ParserFmtToBuf(utf8Buff string) *bytes.Buffer {
 	binary.Write(buffer, binary.LittleEndian, dataCamp1.Bytes())
 
 	return buffer
+}
+
+func ParserRptFmtToBuf(utf8Buff string, printerModel string) *bytes.Buffer {
+	var clearList []RptVarStruct
+	RptVarList = clearList // 用于清空数据
+
+	var clearTable ScaleVarOrder
+	VarTable = clearTable // 用于清空数据
+
+	var FinalRptFmtInfo printInfoRpt
+	var everyBufLen []int                    // 每个打印格式的命令集合
+	totalbuffer := bytes.NewBufferString("") // 打印命令集合
+	dataCamp := bytes.NewBufferString("")
+	TotalVarDataIndex := 0 // 每个打印格式信息的索引
+
+	fillchar := 0xff
+	lastVarPos := 0
+	lastVarNum := 0
+	lastAddr := 0
+
+	// buff, _ := Utf8ToGb2312(utf8Buff)
+	buff := utf8Buff //用UTF8 做
+	var formatbuf *bytes.Buffer
+
+	formatbuf = ParseEscLines(buff, dataCamp, lastVarPos)
+
+	everyBufLen = append(everyBufLen, formatbuf.Len())
+
+	fmt.Println(string(dataCamp.Bytes()))
+
+	totalbuffer.WriteString(formatbuf.String())
+	div := ((everyBufLen[TotalVarDataIndex] / 4) + 1) * 4
+	for i := formatbuf.Len(); i < div; i++ {
+		totalbuffer.WriteByte(byte(fillchar))
+	}
+
+	if TotalVarDataIndex > 0 {
+		lastVarNum = len(RptVarList) - lastVarNum
+	} else {
+		lastAddr = headBufLen
+		lastVarNum = len(RptVarList)
+	}
+
+	FinalRptFmtInfo.formatNum = 1 ///打印格式总数，根据打印格式文件数量决定
+	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].addr = uint32(lastAddr)
+	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].formatLen = uint32(everyBufLen[TotalVarDataIndex])
+	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].varNum = uint32(lastVarNum)
+	dataCamp.Reset()
+
+	TotalVarDataIndex = TotalVarDataIndex + 1
+	lastVarNum = len(RptVarList)
+	lastAddr = div + lastAddr
+
+	// 4.将变量信息写入结构体
+	for i := 0; i < len(RptVarList); i++ {
+		FinalRptFmtInfo.varInfo[i] = RptVarList[i]
+	}
+	// 5.转换为bin文件
+	buffer := toBinaryDataRpt(FinalRptFmtInfo)
+	binary.Write(buffer, binary.LittleEndian, totalbuffer.Bytes())
+
+	if buffer.Len() < (2048 - 8) {
+		for i := buffer.Len(); i < (2048 - 8); i++ {
+			binary.Write(buffer, binary.LittleEndian, byte(fillchar))
+		}
+	}
+	// 6.写结尾5a a5 a5 5a 00 00 00 00
+	fillTail := []byte{0x5a, 0xa5, 0xa5, 0x5a, 0x00, 0x00, 0x00, 0x00}
+	dataCamp1 := bytes.NewBufferString("")
+
+	for i := 0; i < len(fillTail); i++ {
+		dataCamp1.WriteByte(fillTail[i])
+	}
+	binary.Write(buffer, binary.LittleEndian, dataCamp1.Bytes())
+	return buffer
+}
+
+// 转二进制
+func toBinaryDataRpt(tempInfo printInfoRpt) *bytes.Buffer {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, tempInfo.printerName)
+	binary.Write(buf, binary.LittleEndian, tempInfo.formatNum)
+	binary.Write(buf, binary.LittleEndian, tempInfo.everyFormatInfo)
+	binary.Write(buf, binary.LittleEndian, tempInfo.varInfo)
+	return buf
 }
 
 // 转二进制

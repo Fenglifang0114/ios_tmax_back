@@ -133,7 +133,9 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getModifyEepromCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_SET_SCALE_TIME:
 		return getSetScaleTimeCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
-
+	case m.CMD_WRITE_HEADER_FOOTER:
+		data := parseHeaderTMAX(cmdData.Data.(string))
+		return getModifyHeaderFooterCmdTMAX(data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	}
 	return nil, CMD_TIMEOUT_IMMEDIATE, nil
 }
@@ -204,6 +206,16 @@ const (
 
 	CMDID_SCALE_PASSTH_DATA_TMAX = 0xFF23 // virtual command ID
 	CMDID_DOWN_PLU_TMAX          = 0xFF24
+	CMDID_MODIFY_HEADER1_TMAX    = 0xF501
+	CMDID_MODIFY_HEADER2_TMAX    = 0xF502
+	CMDID_MODIFY_HEADER3_TMAX    = 0xF503
+	CMDID_MODIFY_FOOTER1_TMAX    = 0xF504
+	CMDID_MODIFY_FOOTER2_TMAX    = 0xF505
+	CMDID_MODIFY_FOOTER3_TMAX    = 0xF506
+	CMDID_MODIFY_OPERATOR1_TMAX  = 0xF507
+	CMDID_MODIFY_OPERATOR2_TMAX  = 0xF508
+	CMDID_MODIFY_OPERATOR3_TMAX  = 0xF509
+	CMDID_MODIFY_OPERATOR4_TMAX  = 0xF50a
 )
 
 const (
@@ -234,6 +246,28 @@ func composeCmd(cmdID uint16, seqNo byte, data []byte) []byte {
 	binary.BigEndian.PutUint32(cmd[packLen-6:], checksum)
 	// 添加包尾
 	binary.BigEndian.PutUint16(cmd[packLen-2:], PACKET_TAIL_TMAX)
+	return cmd
+}
+
+const PACK_LEN_HEADER_TMAX = 11 //9 = 2个头+1个f5+2个长度+4个校验位+2个尾巴
+// 构建命令   //FLF
+func composeHeaderCmd(cmdID uint8, data []byte) []byte {
+	// Calculate packet length
+	var packLen uint16 = uint16(PACK_LEN_HEADER_TMAX + len(data))
+	cmd := make([]byte, packLen)
+	binary.BigEndian.PutUint16(cmd[0:2], PACKET_HEAD_TMAX)
+	// 构建命令ID与命令类型
+	binary.BigEndian.PutUint16(cmd[2:4], packLen-2) // packet length without header
+	cmd[4] = cmdID
+	if len(data) > 0 {
+		copy(cmd[5:], data)
+	}
+	// 计算与添加校验码
+	checksum := util.Crc32MPEG2(cmd[2 : packLen-6])
+	binary.BigEndian.PutUint32(cmd[packLen-6:], checksum)
+	// 添加包尾
+	binary.BigEndian.PutUint16(cmd[packLen-2:], PACKET_TAIL_TMAX)
+	fmt.Printf("%x", cmd)
 
 	return cmd
 }
@@ -414,7 +448,11 @@ func getModifyEepromCmdTMAX(addr uint32, data []byte) []byte {
 	l.Log.Debug("compose modify eeprom info cmd")
 	var dataLen = 19 + len(data)
 	return wrDataCmdTMAX(addr, data, uint16(dataLen))
+}
 
+func getModifyHeaderFooterCmdTMAX(data []byte) []byte {
+	l.Log.Debug("compose modify header footer cmd")
+	return composeHeaderCmd(0xf5, data)
 }
 
 func getSetScaleTimeCmdTMAX(data string) []byte {
@@ -437,6 +475,45 @@ func parseWrDataTMAX(inData string) (addr int64, data []byte) { // inData is hex
 	}
 
 	return
+}
+
+func parseHeaderTMAX(inData string) []byte { // inData is hex ascii
+	//34 来源：秤只能打印32个字符，最前面两个是页眉页脚的位置 01 00/02 00等
+	//命令如： f5 01 00
+	//页眉页脚32个字符   操作员20个字符 f507 f508 f509 f50a 是操作员的指令
+	rawData, err := hex.DecodeString(inData)
+	if err != nil {
+		fmt.Println("Invalid hex string")
+		return nil
+	}
+	byteCount := len(inData)
+	if byteCount > 0 && rawData[0] < 0x07 {
+		// 超过34字节时，截取前34字节
+		if byteCount > 68 {
+			return rawData[:68]
+		}
+
+		// 不足34字节时，在末尾补充0
+		if byteCount < 68 {
+			padCount := (68 - byteCount) / 2
+			padBytes := make([]byte, padCount)
+			rawData = append(rawData, padBytes...)
+		}
+
+	} else if rawData[0] >= 0x07 {
+		if byteCount > 44 {
+			return rawData[:44]
+		}
+
+		// 不足34字节时，在末尾补充0
+		if byteCount < 44 {
+			padCount := (44 - byteCount) / 2
+			padBytes := make([]byte, padCount)
+			rawData = append(rawData, padBytes...)
+		}
+	}
+
+	return rawData
 }
 
 func parseReadFlashTMAX(inData string) (addr int64, data []byte) { // inData is hex ascii

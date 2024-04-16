@@ -63,6 +63,7 @@ const (
 	CMD_GET_WEIGHT_ERR
 	CMD_GET_SCALE_TIME
 	CMD_SET_SCALE_TIME
+	CMD_WRITE_HEADER_FOOTER
 )
 
 type DataType int
@@ -160,6 +161,9 @@ const (
 	ERASE_INSERT_PLU_RESP         RespMsgType = "resp_erase_insert_plu"
 	REBOOT_RESP                   RespMsgType = "resp_reboot"
 	MODIFY_EEPROM_INFO_RESP       RespMsgType = "resp_modify_eeprom_info"
+	MODIFY_HEADER_FOOTER1_RESP    RespMsgType = "resp_header_footer1"
+	MODIFY_HEADER_FOOTER_RESP     RespMsgType = "resp_header_footer"
+	SET_SERVER_IP_RESP            RespMsgType = "resp_set_server_ip"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

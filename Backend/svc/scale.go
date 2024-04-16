@@ -625,14 +625,225 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				} else if res.MsgBody != "ok" {
 					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 				}
-
 			}
+		}
+	}
+	return &ScaleRespMsg{m.MODIFY_EEPROM_INFO_RESP, "ok", s.Id}, nil
+}
 
+type ServerIpData struct {
+	Ip         string `json:"ip"`
+	Netmask    string `json:"netmask"`
+	Gateway    string `json:"gateway"`
+	ServerIp   string `json:"serverIp"`
+	ServerPort string `json:"serverPort"`
+}
+
+type ServerIpAddr struct {
+	IpAddr         int
+	NetmaskAddr    int
+	GatewayAddr    int
+	ServerIpAddr   int
+	ServerPortAddr int
+}
+
+func getServerAddr() ServerIpAddr {
+	var serverAddr ServerIpAddr
+	var eepromResp EepromDataResp
+	fieldData, res := eeprom.GetExcelData()
+	if !res {
+		return serverAddr
+	}
+	filedDataLen := len(fieldData.EepromStruct)
+	if filedDataLen <= 0 {
+		return serverAddr
+	}
+	for i := 0; i < filedDataLen; i++ {
+		var eData EData
+		eData.FiledName = fieldData.EepromStruct[i].FieldName
+		eData.Permission = fieldData.EepromStruct[i].Permission
+		eData.Comment = fieldData.EepromStruct[i].Comments
+		eData.Category = fieldData.EepromStruct[i].Category
+		eData.Addr = fieldData.EepromStruct[i].Addr
+		eData.Size = fieldData.EepromStruct[i].Size
+		eData.Description = fieldData.EepromStruct[i].Description
+		eData.Values = fieldData.EepromStruct[i].Values
+		eData.CurrValue = ""
+		eData.Type = fieldData.EepromStruct[i].Type
+		eData.SubType = fieldData.EepromStruct[i].SubType
+		eepromResp.EepromData = append(eepromResp.EepromData, eData)
+	}
+
+	count := 0
+	for _, eData := range eepromResp.EepromData {
+		if eData.FiledName == "M_SCALE_IP" || eData.FiledName == "M_SCALE_MASK" || eData.FiledName == "M_SCALE_GATEWAY" || eData.FiledName == "M_PORT_NUMBER" || eData.FiledName == "M_NET_IP_ADDRESS" {
+			fmt.Printf("FieldName: %s, Addr: %d\n", eData.FiledName, eData.Addr)
+			if eData.FiledName == "M_SCALE_IP" {
+				serverAddr.IpAddr = eData.Addr
+			}
+			if eData.FiledName == "M_SCALE_MASK" {
+				serverAddr.NetmaskAddr = eData.Addr
+			}
+			if eData.FiledName == "M_SCALE_GATEWAY" {
+				serverAddr.GatewayAddr = eData.Addr
+			}
+			if eData.FiledName == "M_NET_IP_ADDRESS" {
+				serverAddr.ServerIpAddr = eData.Addr
+			}
+			if eData.FiledName == "M_PORT_NUMBER" {
+				serverAddr.ServerPortAddr = eData.Addr
+			}
+			count++
+			if count == 6 {
+				break // 找到五个后跳出循环
+			}
+		}
+	}
+	return serverAddr
+
+}
+
+func ReqSetServerIp(s *Scale, req SRequest) (*ScaleRespMsg, error) {
+	var serverData ServerIpData
+	if err := json.UnmarshalFromString(req.ReqData, &serverData); err != nil {
+		return &ScaleRespMsg{}, err
+	}
+
+	serverAddr := getServerAddr()
+	if serverAddr.IpAddr < 1 && serverAddr.GatewayAddr < 1 && serverAddr.NetmaskAddr < 1 && serverAddr.ServerIpAddr < 1 && serverAddr.ServerPortAddr < 1 {
+		return &ScaleRespMsg{}, fmt.Errorf("get eeprom addr fail")
+	}
+
+	composer := s.composer
+	fn := composer.ComposeCmd
+
+	if serverData.Ip != "" {
+		packetData := ipv4StringToBytes(serverData.Ip)
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", serverAddr.IpAddr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		// 发送数据包
+		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+		}
+	}
+	if serverData.Gateway != "" {
+		packetData := ipv4StringToBytes(serverData.Gateway)
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", serverAddr.GatewayAddr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		// 发送数据包
+		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+		}
+	}
+
+	if serverData.Netmask != "" {
+		packetData := ipv4StringToBytes(serverData.Netmask)
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", serverAddr.NetmaskAddr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		// 发送数据包
+		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+		}
+	}
+
+	if serverData.ServerIp != "" {
+		packetData := ipv4StringToBytes(serverData.ServerIp)
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", serverAddr.ServerIpAddr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		// 发送数据包
+		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+		}
+	}
+
+	if serverData.ServerPort != "" {
+		packetData, _ := intToLittleEndianBytes(serverData.ServerPort, 2)
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", serverAddr.ServerPortAddr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		// 发送数据包
+		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+		}
+	}
+
+	return &ScaleRespMsg{m.SET_SERVER_IP_RESP, "ok", s.Id}, nil
+
+}
+
+type HeaderData struct {
+	ID    int    `json:"id"`
+	Value string `json:"value"`
+}
+
+type HeaderList struct {
+	ListData []HeaderData `json:"listData"`
+}
+
+func ReqModifyHeaderFooter(s *Scale, req SRequest) (*ScaleRespMsg, error) {
+	var headerList HeaderList
+	err := json.Unmarshal([]byte(req.ReqData), &headerList)
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+
+	composer := s.composer
+	fn := composer.ComposeCmd
+	for i := 0; i < len(headerList.ListData); i++ {
+		tmpData := headerList.ListData[i]
+		idByte := byte(tmpData.ID)
+		tempByte := byte(0)
+		dataByte := []byte(tmpData.Value)
+		byteArray := make([]byte, 2+len(tmpData.Value))
+
+		byteArray[0] = idByte
+		byteArray[1] = tempByte
+		copy(byteArray[2:], dataByte)
+
+		packDataHexStr := hex.EncodeToString(byteArray)
+
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_HEADER_FOOTER, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s", packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{m.MODIFY_HEADER_FOOTER_RESP, "fail", s.Id}, err
+		}
+		for _, b := range cmd {
+			fmt.Printf("%02x ", b) // 打印每个字节的 16 进制表示并用空格分隔
+		}
+		// 发送数据包
+
+		if res, err := perfCmdNwaitResult(s, cmd, m.MODIFY_HEADER_FOOTER1_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{m.MODIFY_HEADER_FOOTER1_RESP, "fail", s.Id}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{m.MODIFY_HEADER_FOOTER1_RESP, "fail", s.Id}, fmt.Errorf("write eeprom fail")
 		}
 
 	}
 
-	return &ScaleRespMsg{m.MODIFY_EEPROM_INFO_RESP, "ok", s.Id}, nil
+	return &ScaleRespMsg{m.MODIFY_HEADER_FOOTER_RESP, "ok", s.Id}, nil
 }
 
 func StringToFloat64Bytes(s string) []byte {
@@ -766,7 +977,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		if prnfmt.ParserFmtToFile(string(csvFmtContent)) {
+		if prnfmt.ParserFmtToFile(string(csvFmtContent), reqData.PrinterModel) {
 			// 读取bin文件
 			data, err := os.ReadFile("formatBin.bin")
 			if err != nil {
@@ -1580,7 +1791,6 @@ func ReqGetAllEepromInfo(c *Scale) (*ScaleRespMsg, error) {
 		}
 	}
 	eepromResp, res = paserEepromData(dataBuffer, eepromResp, 0)
-	fmt.Printf("%x\n", dataBuffer)
 	eepromStr, _ = json.MarshalToString(eepromResp.EepromData)
 	return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
 
@@ -1620,7 +1830,7 @@ func paserEepromData(eepromBytes []byte, eepromResp EepromDataResp, startAddr in
 					}
 
 				} else if dataSize == 4 {
-					if eepromBytes[dataAddr] == 0xff {
+					if eepromBytes[dataAddr] == 0xff && eepromResp.EepromData[i].SubType != "ip" {
 						eepromResp.EepromData[i].Permission = 0
 						eepromResp.EepromData[i].CurrValue = ""
 					} else {

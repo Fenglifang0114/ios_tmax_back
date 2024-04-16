@@ -179,6 +179,14 @@ func procModifyEepromInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqModifyEepromInfo(scale, req)
 }
 
+func procModifyHeaderFooter(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqModifyHeaderFooter(scale, req)
+}
+
+func procSetServerIp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetServerIp(scale, req)
+}
+
 func procModifyBTName(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqModifyBTName(scale, req.ReqData)
 }
@@ -361,6 +369,8 @@ func init() {
 		SREQ_UPDATE_UI_CONF:           procUpdateUiConf,
 		SREQ_CHANGE_WIFI_MODE:         procChangeWifiMode,
 		SREQ_MODIFY_EEPROM_INFO:       procModifyEepromInfo,
+		SREQ_MODIFY_HEADER_FOOTER:     procModifyHeaderFooter,
+		SREQ_SET_SERVER_IP:            procSetServerIp,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -403,5 +413,7 @@ func init() {
 		SREQ_DEL_PLU:                  m.DEL_PLU_RESP,
 		SREQ_INSERT_PLU:               m.INSERT_PLU_RESP,
 		SREQ_CHANGE_WIFI_MODE:         m.CHANGE_WIFI_MODE_RESP,
+		SREQ_MODIFY_HEADER_FOOTER:     m.MODIFY_HEADER_FOOTER_RESP,
+		SREQ_SET_SERVER_IP:            m.SET_SERVER_IP_RESP,
 	}
 }

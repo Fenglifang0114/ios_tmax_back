@@ -90,46 +90,58 @@ func init() {
 		cmd.CMDID_INSERT_PLU_TMAX:        m.INSERT_PLU_ADDR_RESP,
 		cmd.CMDID_READ_FLASH_TMAX:        m.READ_FLASH_DATA_RESP,
 		cmd.CMDID_ERASE_INSERT_PLU_TMAX:  m.ERASE_INSERT_PLU_RESP,
-		0xff25:                           m.UNKNOWN_DATA,
+		cmd.CMDID_MODIFY_HEADER1_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_HEADER2_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_HEADER3_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_FOOTER1_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_FOOTER2_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_FOOTER3_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_OPERATOR1_TMAX:  m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_OPERATOR2_TMAX:  m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_OPERATOR3_TMAX:  m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_OPERATOR4_TMAX:  m.MODIFY_HEADER_FOOTER1_RESP,
+
+		0xff25: m.UNKNOWN_DATA,
 	}
 
 	responseHandlerMap = map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
-		m.WEIGHT_DATA:              handleWeightDataMsg,
-		m.ZERO_CMD_RESP:            handleZeroCmdResp,
-		m.TARE_CMD_RESP:            handleTareCmdResp,
-		m.WEIGHT_DATA_RESP:         handleWeightDataResp,
-		m.REG_WEIGHT_RESP:          handleRegWeightResp,
-		m.UNREG_WEIGHT_RESP:        handleUnregWeightResp,
-		m.GET_RECS_RESP:            handleGetRecsResp,
-		m.ADD_REC_RESP:             handleAddRecResp,
-		m.DEL_REC_RESP:             handleDelRecResp,
-		m.EN_FAC_MODE_RESP:         handleEnFacModeResp,
-		m.DIS_FAC_MODE_RESP:        handleDisFacModeResp,
-		m.EN_PASSTH_MODE_RESP:      handleEnPassthModeResp,
-		m.DIS_PASSTH_MODE_RESP:     handleDisPassthModeResp,
-		m.ERASE_FLASH_RESP:         handleEraseFlashResp,
-		m.WRITE_DATA_FLASH_RESP:    handleWriteDataFlashResp,
-		m.DOWN_PRN_FMT_RESP:        handleDownPrnFmtResp,
-		m.ERR_SERIAL_RESP:          handleErrSerialResp,
-		m.GET_AP_LIST_RESP:         handleGetApListResp,
-		m.RESCAN_AP_LIST_RESP:      handleRescanApListResp,
-		m.SET_WIFI_DYNAMIC_IP_RESP: handleSetWifiDynamicIpResp,
-		m.SET_WIFI_STATIC_IP_RESP:  handleSetWifiStaticIpResp,
-		m.GET_IP_INFO_RESP:         handleGetIpInfoResp,
-		m.GET_IP_MODE_RESP:         handleGetIpModeResp,
-		m.MODIFY_BT_NAME_RESP:      handleModifyBtNameResp,
-		m.BT_PASSTH_DATA_RESP:      handleBTPassthResp,
-		m.WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
-		m.GET_BUILD_INFO_RESP:      handleGetBuildInfoResp,
-		m.GET_SCALE_INFO_RESP:      handleGetScaleInfoResp,
-		m.GET_SCALE_TIME_RESP:      handleGetScaleTimeResp,
-		m.SET_SCALE_TIME_RESP:      handleSetScaleTimeResp,
-		m.DOWN_PLU_RESP:            handleDownPluResp,
-		m.DEL_PLU_RESP:             handleDelPluResp,
-		m.INSERT_PLU_ADDR_RESP:     handleInsertPluResp,
-		m.READ_FLASH_DATA_RESP:     handleReadFlashDataResp,
-		m.ERASE_INSERT_PLU_RESP:    handleEraseInsertPluResp,
-		m.REBOOT_RESP:              handleRebootResp,
+		m.WEIGHT_DATA:                handleWeightDataMsg,
+		m.ZERO_CMD_RESP:              handleZeroCmdResp,
+		m.TARE_CMD_RESP:              handleTareCmdResp,
+		m.WEIGHT_DATA_RESP:           handleWeightDataResp,
+		m.REG_WEIGHT_RESP:            handleRegWeightResp,
+		m.UNREG_WEIGHT_RESP:          handleUnregWeightResp,
+		m.GET_RECS_RESP:              handleGetRecsResp,
+		m.ADD_REC_RESP:               handleAddRecResp,
+		m.DEL_REC_RESP:               handleDelRecResp,
+		m.EN_FAC_MODE_RESP:           handleEnFacModeResp,
+		m.DIS_FAC_MODE_RESP:          handleDisFacModeResp,
+		m.EN_PASSTH_MODE_RESP:        handleEnPassthModeResp,
+		m.DIS_PASSTH_MODE_RESP:       handleDisPassthModeResp,
+		m.ERASE_FLASH_RESP:           handleEraseFlashResp,
+		m.WRITE_DATA_FLASH_RESP:      handleWriteDataFlashResp,
+		m.DOWN_PRN_FMT_RESP:          handleDownPrnFmtResp,
+		m.ERR_SERIAL_RESP:            handleErrSerialResp,
+		m.GET_AP_LIST_RESP:           handleGetApListResp,
+		m.RESCAN_AP_LIST_RESP:        handleRescanApListResp,
+		m.SET_WIFI_DYNAMIC_IP_RESP:   handleSetWifiDynamicIpResp,
+		m.SET_WIFI_STATIC_IP_RESP:    handleSetWifiStaticIpResp,
+		m.GET_IP_INFO_RESP:           handleGetIpInfoResp,
+		m.GET_IP_MODE_RESP:           handleGetIpModeResp,
+		m.MODIFY_BT_NAME_RESP:        handleModifyBtNameResp,
+		m.BT_PASSTH_DATA_RESP:        handleBTPassthResp,
+		m.WIFI_PASSTH_DATA_RESP:      handleWifiPassthResp,
+		m.GET_BUILD_INFO_RESP:        handleGetBuildInfoResp,
+		m.GET_SCALE_INFO_RESP:        handleGetScaleInfoResp,
+		m.GET_SCALE_TIME_RESP:        handleGetScaleTimeResp,
+		m.SET_SCALE_TIME_RESP:        handleSetScaleTimeResp,
+		m.DOWN_PLU_RESP:              handleDownPluResp,
+		m.DEL_PLU_RESP:               handleDelPluResp,
+		m.INSERT_PLU_ADDR_RESP:       handleInsertPluResp,
+		m.READ_FLASH_DATA_RESP:       handleReadFlashDataResp,
+		m.ERASE_INSERT_PLU_RESP:      handleEraseInsertPluResp,
+		m.REBOOT_RESP:                handleRebootResp,
+		m.MODIFY_HEADER_FOOTER1_RESP: handleHeaderFooter1Resp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -471,6 +483,14 @@ func handleWriteDataFlashResp(scaleId int64, data []byte) (ScaleRespMsg, int) { 
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.WRITE_DATA_FLASH_RESP, MsgBody: "ok"}, len(data)
 	} else {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.WRITE_DATA_FLASH_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleHeaderFooter1Resp(scaleId int64, data []byte) (ScaleRespMsg, int) { //FLF
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.MODIFY_HEADER_FOOTER1_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.MODIFY_HEADER_FOOTER1_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 

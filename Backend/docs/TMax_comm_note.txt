@@ -254,8 +254,25 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"ScaleName":"sdfsdfsdsdfs",     
 }"}	
 
-
-
+27. To modify header and footer 
+    {"Req":"modify_header_footer", "ReqData":"[{\"id\":\"1",\"value\":\"123456\"},
+	                                           {\"id\":\"2",\"value\":\"123456\"},
+	                                           {\"id\":\"3",\"value\":\"123456\"},
+											   {\"id\":\"4",\"value\":\"123456\"},
+											   {\"id\":\"5",\"value\":\"123456\"},
+											   {\"id\":\"6",\"value\":\"123456\"},
+										   ]"}
+    response:
+    {"ScaleId":1,"MsgType":resp_modify_header_footer,"MsgBody":"ok"}	
+27. To set server ip and scale cable ip 
+    {"Req":"set_server_ip","ReqData":"{
+		\"ip\":\"10.5.100.5\",
+	\"netmask\":\"10.5.100.5\",
+	\"gateway\":\"10.5.100.5\",
+	\"ServerIp\":\"10.5.100.5\",
+	\"ServerPort\":\"5456\"}"}
+    response:
+    {"ScaleId":1,"MsgType":resp_set_server_ip,"MsgBody":"ok"}
 
 	
 

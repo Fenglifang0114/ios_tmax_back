@@ -244,6 +244,8 @@ const (
 	SREQ_UPDATE_UI_CONF           SReqType = "update_ui_conf"
 	SREQ_CHANGE_WIFI_MODE         SReqType = "change_wifi_mode"
 	SREQ_MODIFY_EEPROM_INFO       SReqType = "modify_eeprom_info"
+	SREQ_MODIFY_HEADER_FOOTER     SReqType = "modify_header_footer"
+	SREQ_SET_SERVER_IP            SReqType = "set_server_ip"
 )
 
 type ReqScaleRec struct {
