@@ -41,12 +41,12 @@ const (
 	headBufLenReceipt = 468 //一个printInfoReceipt占用的字节是固定的。
 )
 
-func ParserFmtToFile(utf8Buff string, printerModel string) bool {
+func ParserFmtToFile(utf8Buff string, printerModel string, fmtLen int) bool {
 	var buffer *bytes.Buffer
 	if printerModel == "EPM205" {
-		buffer = ParserFmtToBuf(utf8Buff, printerModel)
+		buffer = ParserFmtToBuf(utf8Buff, printerModel, fmtLen)
 	} else {
-		buffer = ParserRptFmtToBuf(utf8Buff, printerModel)
+		buffer = ParserRptFmtToBuf(utf8Buff, printerModel, fmtLen)
 	}
 
 	// 7.创建bin文件
@@ -62,7 +62,7 @@ func ParserFmtToFile(utf8Buff string, printerModel string) bool {
 	// 8.写数据到串口
 }
 
-func ParserFmtToBuf(utf8Buff string, printerModel string) *bytes.Buffer {
+func ParserFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buffer {
 	var clearList []VarStruct
 	VarList = clearList // 用于清空数据
 
@@ -120,8 +120,8 @@ func ParserFmtToBuf(utf8Buff string, printerModel string) *bytes.Buffer {
 	buffer := binaryData(FinalFormatInfo)
 	binary.Write(buffer, binary.LittleEndian, totalbuffer.Bytes())
 
-	if buffer.Len() < (2048 - 8) {
-		for i := buffer.Len(); i < (2048 - 8); i++ {
+	if buffer.Len() < (fmtLen - 8) {
+		for i := buffer.Len(); i < (fmtLen - 8); i++ {
 			binary.Write(buffer, binary.LittleEndian, byte(fillchar))
 		}
 	}
@@ -139,7 +139,7 @@ func ParserFmtToBuf(utf8Buff string, printerModel string) *bytes.Buffer {
 	return buffer
 }
 
-func ParserRptFmtToBuf(utf8Buff string, printerModel string) *bytes.Buffer {
+func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buffer {
 	var clearList []RptVarStruct
 	RptVarList = clearList // 用于清空数据
 
@@ -198,8 +198,8 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string) *bytes.Buffer {
 	buffer := toBinaryDataRpt(FinalRptFmtInfo)
 	binary.Write(buffer, binary.LittleEndian, totalbuffer.Bytes())
 
-	if buffer.Len() < (2048 - 8) {
-		for i := buffer.Len(); i < (2048 - 8); i++ {
+	if buffer.Len() < (fmtLen - 8) {
+		for i := buffer.Len(); i < (fmtLen - 8); i++ {
 			binary.Write(buffer, binary.LittleEndian, byte(fillchar))
 		}
 	}

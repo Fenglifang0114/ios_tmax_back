@@ -254,8 +254,8 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"ScaleName":"sdfsdfsdsdfs",     
 }"}	
 
-27. To modify header and footer 
-    {"Req":"modify_header_footer", "ReqData":"[{\"id\":\"1",\"value\":\"123456\"},
+27. To modify variable value
+    {"Req":"modify_var_value", "ReqData":"[{\"id\":\"1",\"value\":\"123456\"},
 	                                           {\"id\":\"2",\"value\":\"123456\"},
 	                                           {\"id\":\"3",\"value\":\"123456\"},
 											   {\"id\":\"4",\"value\":\"123456\"},
@@ -263,8 +263,9 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 											   {\"id\":\"6",\"value\":\"123456\"},
 										   ]"}
     response:
-    {"ScaleId":1,"MsgType":resp_modify_header_footer,"MsgBody":"ok"}	
-27. To set server ip and scale cable ip 
+    {"ScaleId":1,"MsgType":resp_modify_var_value,"MsgBody":"ok"}	
+	
+28. To set server ip and scale cable ip 
     {"Req":"set_server_ip","ReqData":"{
 		\"ip\":\"10.5.100.5\",
 	\"netmask\":\"10.5.100.5\",
@@ -274,6 +275,10 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
     response:
     {"ScaleId":1,"MsgType":resp_set_server_ip,"MsgBody":"ok"}
 
+29. To get factory info
+    {"Req":"get_factory_info","ReqData":""}
+    response:
+    {"ScaleId":1,"MsgType":resp_get_factory_info,"MsgBody":"t-max,484654654651564"}
 	
 
 To configure scale's wifi to connect to specific AP

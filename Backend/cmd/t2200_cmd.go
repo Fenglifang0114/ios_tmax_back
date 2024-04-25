@@ -48,7 +48,7 @@ func ComposeCmdT2200(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) 
 	}
 
 	switch cmd {
-	case m.CMD_EN_FAC_MODE:
+	case m.CMD_CHECK_FAC_MODE:
 		return enFacModeCmdT2200()
 	case m.CMD_DIS_FAC_MODE:
 		return disFacModeCmdT2200()

@@ -235,8 +235,9 @@ const (
 	SREQ_OPNE_SCALE_PASSTHROUGH   SReqType = "open_scale_passthrough" //20231023@FLF
 	SREQ_CLOSE_SCALE_PASSTHROUGH  SReqType = "close_scale_passthrough"
 	SREQ_CHANGE_SCALE_PASSTH_MODE SReqType = "change_scale_passth_mode"
-	SREQ_GET_SCALE_INFO           SReqType = "get_scale_info" //20231101@FLF
-	SREQ_GET_WEIGHT_ERR           SReqType = "get_weight_err" //20240111@FLF
+	SREQ_GET_SCALE_INFO           SReqType = "get_scale_info"   //20231101@FLF
+	SREQ_GET_FACTORY_INFO         SReqType = "get_factory_info" //20240417@FLF
+	SREQ_GET_WEIGHT_ERR           SReqType = "get_weight_err"   //20240111@FLF
 	SREQ_DOWN_PLU                 SReqType = "down_plu_to_scale"
 	SREQ_DEL_PLU                  SReqType = "del_plu_from_scale"
 	SREQ_INSERT_PLU               SReqType = "insert_plu_to_scale"
@@ -244,8 +245,9 @@ const (
 	SREQ_UPDATE_UI_CONF           SReqType = "update_ui_conf"
 	SREQ_CHANGE_WIFI_MODE         SReqType = "change_wifi_mode"
 	SREQ_MODIFY_EEPROM_INFO       SReqType = "modify_eeprom_info"
-	SREQ_MODIFY_HEADER_FOOTER     SReqType = "modify_header_footer"
+	SREQ_MODIFY_VAR_VALUE         SReqType = "modify_var_value"
 	SREQ_SET_SERVER_IP            SReqType = "set_server_ip"
+	SREQ_EN_FACTORY_MODE          SReqType = "en_factory_mode"
 )
 
 type ReqScaleRec struct {

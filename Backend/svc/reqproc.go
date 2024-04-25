@@ -179,12 +179,17 @@ func procModifyEepromInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqModifyEepromInfo(scale, req)
 }
 
-func procModifyHeaderFooter(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqModifyHeaderFooter(scale, req)
+func procModifyVarValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqModifyVarValue(scale, req)
 }
 
 func procSetServerIp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetServerIp(scale, req)
+}
+
+func procEnFactoryMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetServerIp(scale, req)
+	// return ReqEnFactoryMode(scale)TODO:
 }
 
 func procModifyBTName(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -290,6 +295,10 @@ func procGetScaleInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return scale.GetScaleInfo()
 }
 
+func procGetFactoryInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return scale.GetFactoryInfo()
+}
+
 func procGetWeighErr(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetWeightErr(scale)
 }
@@ -361,6 +370,7 @@ func init() {
 		SREQ_CLOSE_SCALE_PASSTHROUGH:  procCloseScalePassth,
 		SREQ_CHANGE_SCALE_PASSTH_MODE: procChangeScalePassthMode,
 		SREQ_GET_SCALE_INFO:           procGetScaleInfo,
+		SREQ_GET_FACTORY_INFO:         procGetFactoryInfo,
 		SREQ_GET_WEIGHT_ERR:           procGetWeighErr,
 		SREQ_DOWN_PLU:                 procDownPlu,
 		SREQ_DEL_PLU:                  procDelPlu,
@@ -369,27 +379,27 @@ func init() {
 		SREQ_UPDATE_UI_CONF:           procUpdateUiConf,
 		SREQ_CHANGE_WIFI_MODE:         procChangeWifiMode,
 		SREQ_MODIFY_EEPROM_INFO:       procModifyEepromInfo,
-		SREQ_MODIFY_HEADER_FOOTER:     procModifyHeaderFooter,
+		SREQ_MODIFY_VAR_VALUE:         procModifyVarValue,
 		SREQ_SET_SERVER_IP:            procSetServerIp,
+		SREQ_EN_FACTORY_MODE:          procEnFactoryMode,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
-		SREQ_ZERO:               m.ZERO_CMD_RESP,
-		SREQ_TARE:               m.TARE_CMD_RESP,
-		SREQ_GET_WEIGHT:         m.WEIGHT_DATA_RESP,
-		SREQ_SEND_WT_CONT:       m.WEIGHT_DATA_RESP,
-		SREQ_STOP_SEND_WT:       m.WEIGHT_DATA_RESP,
-		SREQ_REG_WEIGHT_DATA:    m.REG_WEIGHT_RESP,
-		SREQ_UNREG_WEIGHT_DATA:  m.UNREG_WEIGHT_RESP,
-		SREQ_GET_RECS:           m.GET_RECS_RESP,
-		SREQ_ADD_REC:            m.ADD_REC_RESP,
-		SREQ_DEL_REC:            m.DEL_REC_RESP,
-		SREQ_DOWN_PRN_FMT:       m.DOWN_PRN_FMT_RESP,
-		SREQ_GET_AP_LIST:        m.GET_AP_LIST_RESP,
-		SREQ_RESCAN_AP_LIST:     m.RESCAN_AP_LIST_RESP,
-		SREQ_CONNECT_AP:         m.CONNECT_AP_RESP,
-		SREQ_CONNECT_AP_ONE_KEY: m.CONNECT_AP_ONE_KEY_RESP,
-
+		SREQ_ZERO:                     m.ZERO_CMD_RESP,
+		SREQ_TARE:                     m.TARE_CMD_RESP,
+		SREQ_GET_WEIGHT:               m.WEIGHT_DATA_RESP,
+		SREQ_SEND_WT_CONT:             m.WEIGHT_DATA_RESP,
+		SREQ_STOP_SEND_WT:             m.WEIGHT_DATA_RESP,
+		SREQ_REG_WEIGHT_DATA:          m.REG_WEIGHT_RESP,
+		SREQ_UNREG_WEIGHT_DATA:        m.UNREG_WEIGHT_RESP,
+		SREQ_GET_RECS:                 m.GET_RECS_RESP,
+		SREQ_ADD_REC:                  m.ADD_REC_RESP,
+		SREQ_DEL_REC:                  m.DEL_REC_RESP,
+		SREQ_DOWN_PRN_FMT:             m.DOWN_PRN_FMT_RESP,
+		SREQ_GET_AP_LIST:              m.GET_AP_LIST_RESP,
+		SREQ_RESCAN_AP_LIST:           m.RESCAN_AP_LIST_RESP,
+		SREQ_CONNECT_AP:               m.CONNECT_AP_RESP,
+		SREQ_CONNECT_AP_ONE_KEY:       m.CONNECT_AP_ONE_KEY_RESP,
 		SREQ_SET_WIFI_DYNAMIC_IP:      m.SET_WIFI_DYNAMIC_IP_RESP,
 		SREQ_SET_WIFI_STATIC_IP:       m.SET_WIFI_STATIC_IP_RESP,
 		SREQ_GET_IP_INFO:              m.GET_IP_INFO_RESP,
@@ -408,12 +418,14 @@ func init() {
 		SREQ_CLOSE_SCALE_PASSTHROUGH:  m.CLOSE_SCALE_PASSTHROUGH_RESP,
 		SREQ_CHANGE_SCALE_PASSTH_MODE: m.CHANGE_SCALE_PASSTH_MODE_RESP,
 		SREQ_GET_SCALE_INFO:           m.GET_SCALE_INFO_RESP,
+		SREQ_GET_FACTORY_INFO:         m.GET_FACTORY_INFO_RESP,
 		SREQ_GET_WEIGHT_ERR:           m.GET_WEIGHT_ERR_RESP,
 		SREQ_DOWN_PLU:                 m.DOWN_PLU_RESP,
 		SREQ_DEL_PLU:                  m.DEL_PLU_RESP,
 		SREQ_INSERT_PLU:               m.INSERT_PLU_RESP,
 		SREQ_CHANGE_WIFI_MODE:         m.CHANGE_WIFI_MODE_RESP,
-		SREQ_MODIFY_HEADER_FOOTER:     m.MODIFY_HEADER_FOOTER_RESP,
+		SREQ_MODIFY_VAR_VALUE:         m.MODIFY_VAR_RESP,
 		SREQ_SET_SERVER_IP:            m.SET_SERVER_IP_RESP,
+		SREQ_EN_FACTORY_MODE:          m.EN_FACTORY_MODE_RESP,
 	}
 }

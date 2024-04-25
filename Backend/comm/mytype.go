@@ -15,7 +15,7 @@ const (
 type CmdType int
 
 const (
-	CMD_EN_FAC_MODE CmdType = iota
+	CMD_CHECK_FAC_MODE CmdType = iota
 	CMD_DIS_FAC_MODE
 
 	CMD_ZERO
@@ -30,6 +30,7 @@ const (
 
 	CMD_GET_BUILD_INFO
 	CMD_GET_SCALE_INFO
+	CMD_GET_FACTORY_INFO
 
 	CMD_REBOOT
 
@@ -63,7 +64,9 @@ const (
 	CMD_GET_WEIGHT_ERR
 	CMD_GET_SCALE_TIME
 	CMD_SET_SCALE_TIME
-	CMD_WRITE_HEADER_FOOTER
+	CMD_MODIFY_VAR_VALUE
+	CMD_EN_FACTORY_MODE
+	CMD_GET_RANDOM_DATA
 )
 
 type DataType int
@@ -149,6 +152,7 @@ const (
 	SCALE_PASSTH_DATA             RespMsgType = "scale_passth_data"
 	CHANGE_SCALE_PASSTH_MODE_RESP RespMsgType = "resp_change_scale_passth_mode"
 	GET_SCALE_INFO_RESP           RespMsgType = "resp_get_scale_info"
+	GET_FACTORY_INFO_RESP         RespMsgType = "resp_get_factory_info"
 	GET_WEIGHT_ERR_RESP           RespMsgType = "resp_get_weight_err"
 	DOWN_PLU_RESP                 RespMsgType = "resp_down_plu"
 	DEL_PLU_RESP                  RespMsgType = "resp_del_plu"
@@ -161,9 +165,10 @@ const (
 	ERASE_INSERT_PLU_RESP         RespMsgType = "resp_erase_insert_plu"
 	REBOOT_RESP                   RespMsgType = "resp_reboot"
 	MODIFY_EEPROM_INFO_RESP       RespMsgType = "resp_modify_eeprom_info"
-	MODIFY_HEADER_FOOTER1_RESP    RespMsgType = "resp_header_footer1"
-	MODIFY_HEADER_FOOTER_RESP     RespMsgType = "resp_header_footer"
+	MODIFY_VAR_RESP               RespMsgType = "resp_modify_var_value"
 	SET_SERVER_IP_RESP            RespMsgType = "resp_set_server_ip"
+	GET_RANDOM_DATA_RESP          RespMsgType = "resp_get_random_data"
+	EN_FACTORY_MODE_RESP          RespMsgType = "resp_en_factory_mode"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

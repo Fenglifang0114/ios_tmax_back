@@ -26,7 +26,7 @@ ROTATE,0`}, want: &mybuf},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ParserFmtToBuf(tt.args.utf8Buff, "EPM205"); len(got.Bytes()) == 2048 {
+			if got := ParserFmtToBuf(tt.args.utf8Buff, "EPM205", 2048); len(got.Bytes()) == 2048 {
 				t.Errorf("ParserFmtToBuf() = %s,", got.Bytes())
 			}
 		})

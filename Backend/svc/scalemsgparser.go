@@ -52,23 +52,26 @@ var responseHandlerMap map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int)
 
 func init() {
 	util.CmdsRespMap = util.CmdMap{
-		0xe107:                           m.WEIGHT_DATA,
-		0xe103:                           m.ZERO_CMD_RESP,
-		0xe105:                           m.TARE_CMD_RESP,
-		0xe101:                           m.WEIGHT_DATA_RESP,
-		0xfff3:                           m.REG_WEIGHT_RESP,
-		0xe108:                           m.UNREG_WEIGHT_RESP,
-		0xfff6:                           m.GET_RECS_RESP,
-		0xfff7:                           m.ADD_REC_RESP,
-		0xfff8:                           m.DEL_REC_RESP,
-		cmd.CMDID_REBOOT_TMAX:            m.REBOOT_RESP,
-		0x0556:                           m.GET_BUILD_INFO_RESP,
-		cmd.CMDID_READ_SCALE_INFO_TMAX:   m.GET_SCALE_INFO_RESP,
-		cmd.CMDID_GET_SCALE_TIME_TMAX:    m.GET_SCALE_TIME_RESP,
-		0x05f1:                           m.EN_FAC_MODE_RESP,
-		0x05f2:                           m.DIS_FAC_MODE_RESP,
-		0x05f3:                           m.EN_PASSTH_MODE_RESP,
-		0x05f4:                           m.DIS_PASSTH_MODE_RESP,
+		0xe107:                          m.WEIGHT_DATA,
+		0xe103:                          m.ZERO_CMD_RESP,
+		0xe105:                          m.TARE_CMD_RESP,
+		0xe101:                          m.WEIGHT_DATA_RESP,
+		0xfff3:                          m.REG_WEIGHT_RESP,
+		0xe108:                          m.UNREG_WEIGHT_RESP,
+		0xfff6:                          m.GET_RECS_RESP,
+		0xfff7:                          m.ADD_REC_RESP,
+		0xfff8:                          m.DEL_REC_RESP,
+		cmd.CMDID_REBOOT_TMAX:           m.REBOOT_RESP,
+		0x0556:                          m.GET_BUILD_INFO_RESP,
+		cmd.CMDID_READ_SCALE_INFO_TMAX:  m.GET_SCALE_INFO_RESP,
+		cmd.CMDID_GET_SCALE_TIME_TMAX:   m.GET_SCALE_TIME_RESP,
+		0x05f1:                          m.EN_FAC_MODE_RESP,
+		0x05f2:                          m.DIS_FAC_MODE_RESP,
+		0x05f3:                          m.EN_PASSTH_MODE_RESP,
+		0x05f4:                          m.DIS_PASSTH_MODE_RESP,
+		cmd.CMDID_GET_FACTORY_INFO_TMAX: m.GET_FACTORY_INFO_RESP,
+		cmd.CMDID_GET_RANDOM_DATA:       m.GET_RANDOM_DATA_RESP,
+
 		cmd.CMDID_ERASE_FLASH_TMAX:       m.ERASE_FLASH_RESP, //FLF//
 		cmd.CMDID_WRITE_FLASH_TMAX:       m.WRITE_DATA_FLASH_RESP,
 		0xff11:                           m.DOWN_PRN_FMT_RESP,
@@ -90,58 +93,53 @@ func init() {
 		cmd.CMDID_INSERT_PLU_TMAX:        m.INSERT_PLU_ADDR_RESP,
 		cmd.CMDID_READ_FLASH_TMAX:        m.READ_FLASH_DATA_RESP,
 		cmd.CMDID_ERASE_INSERT_PLU_TMAX:  m.ERASE_INSERT_PLU_RESP,
-		cmd.CMDID_MODIFY_HEADER1_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_HEADER2_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_HEADER3_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_FOOTER1_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_FOOTER2_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_FOOTER3_TMAX:    m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_OPERATOR1_TMAX:  m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_OPERATOR2_TMAX:  m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_OPERATOR3_TMAX:  m.MODIFY_HEADER_FOOTER1_RESP,
-		cmd.CMDID_MODIFY_OPERATOR4_TMAX:  m.MODIFY_HEADER_FOOTER1_RESP,
+		cmd.CMDID_MODIFY_VAR_TMAX:        m.MODIFY_VAR_RESP,
+		cmd.CMDID_EN_FACTORY_MODE:        m.EN_FACTORY_MODE_RESP,
 
 		0xff25: m.UNKNOWN_DATA,
 	}
 
 	responseHandlerMap = map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
-		m.WEIGHT_DATA:                handleWeightDataMsg,
-		m.ZERO_CMD_RESP:              handleZeroCmdResp,
-		m.TARE_CMD_RESP:              handleTareCmdResp,
-		m.WEIGHT_DATA_RESP:           handleWeightDataResp,
-		m.REG_WEIGHT_RESP:            handleRegWeightResp,
-		m.UNREG_WEIGHT_RESP:          handleUnregWeightResp,
-		m.GET_RECS_RESP:              handleGetRecsResp,
-		m.ADD_REC_RESP:               handleAddRecResp,
-		m.DEL_REC_RESP:               handleDelRecResp,
-		m.EN_FAC_MODE_RESP:           handleEnFacModeResp,
-		m.DIS_FAC_MODE_RESP:          handleDisFacModeResp,
-		m.EN_PASSTH_MODE_RESP:        handleEnPassthModeResp,
-		m.DIS_PASSTH_MODE_RESP:       handleDisPassthModeResp,
-		m.ERASE_FLASH_RESP:           handleEraseFlashResp,
-		m.WRITE_DATA_FLASH_RESP:      handleWriteDataFlashResp,
-		m.DOWN_PRN_FMT_RESP:          handleDownPrnFmtResp,
-		m.ERR_SERIAL_RESP:            handleErrSerialResp,
-		m.GET_AP_LIST_RESP:           handleGetApListResp,
-		m.RESCAN_AP_LIST_RESP:        handleRescanApListResp,
-		m.SET_WIFI_DYNAMIC_IP_RESP:   handleSetWifiDynamicIpResp,
-		m.SET_WIFI_STATIC_IP_RESP:    handleSetWifiStaticIpResp,
-		m.GET_IP_INFO_RESP:           handleGetIpInfoResp,
-		m.GET_IP_MODE_RESP:           handleGetIpModeResp,
-		m.MODIFY_BT_NAME_RESP:        handleModifyBtNameResp,
-		m.BT_PASSTH_DATA_RESP:        handleBTPassthResp,
-		m.WIFI_PASSTH_DATA_RESP:      handleWifiPassthResp,
-		m.GET_BUILD_INFO_RESP:        handleGetBuildInfoResp,
-		m.GET_SCALE_INFO_RESP:        handleGetScaleInfoResp,
-		m.GET_SCALE_TIME_RESP:        handleGetScaleTimeResp,
-		m.SET_SCALE_TIME_RESP:        handleSetScaleTimeResp,
-		m.DOWN_PLU_RESP:              handleDownPluResp,
-		m.DEL_PLU_RESP:               handleDelPluResp,
-		m.INSERT_PLU_ADDR_RESP:       handleInsertPluResp,
-		m.READ_FLASH_DATA_RESP:       handleReadFlashDataResp,
-		m.ERASE_INSERT_PLU_RESP:      handleEraseInsertPluResp,
-		m.REBOOT_RESP:                handleRebootResp,
-		m.MODIFY_HEADER_FOOTER1_RESP: handleHeaderFooter1Resp,
+		m.WEIGHT_DATA:              handleWeightDataMsg,
+		m.ZERO_CMD_RESP:            handleZeroCmdResp,
+		m.TARE_CMD_RESP:            handleTareCmdResp,
+		m.WEIGHT_DATA_RESP:         handleWeightDataResp,
+		m.REG_WEIGHT_RESP:          handleRegWeightResp,
+		m.UNREG_WEIGHT_RESP:        handleUnregWeightResp,
+		m.GET_RECS_RESP:            handleGetRecsResp,
+		m.ADD_REC_RESP:             handleAddRecResp,
+		m.DEL_REC_RESP:             handleDelRecResp,
+		m.EN_FAC_MODE_RESP:         handleEnFacModeResp,
+		m.DIS_FAC_MODE_RESP:        handleDisFacModeResp,
+		m.EN_PASSTH_MODE_RESP:      handleEnPassthModeResp,
+		m.DIS_PASSTH_MODE_RESP:     handleDisPassthModeResp,
+		m.ERASE_FLASH_RESP:         handleEraseFlashResp,
+		m.WRITE_DATA_FLASH_RESP:    handleWriteDataFlashResp,
+		m.DOWN_PRN_FMT_RESP:        handleDownPrnFmtResp,
+		m.ERR_SERIAL_RESP:          handleErrSerialResp,
+		m.GET_AP_LIST_RESP:         handleGetApListResp,
+		m.RESCAN_AP_LIST_RESP:      handleRescanApListResp,
+		m.SET_WIFI_DYNAMIC_IP_RESP: handleSetWifiDynamicIpResp,
+		m.SET_WIFI_STATIC_IP_RESP:  handleSetWifiStaticIpResp,
+		m.GET_IP_INFO_RESP:         handleGetIpInfoResp,
+		m.GET_IP_MODE_RESP:         handleGetIpModeResp,
+		m.MODIFY_BT_NAME_RESP:      handleModifyBtNameResp,
+		m.BT_PASSTH_DATA_RESP:      handleBTPassthResp,
+		m.WIFI_PASSTH_DATA_RESP:    handleWifiPassthResp,
+		m.GET_BUILD_INFO_RESP:      handleGetBuildInfoResp,
+		m.GET_SCALE_INFO_RESP:      handleGetScaleInfoResp,
+		m.GET_FACTORY_INFO_RESP:    handleGetFactoryInfoResp,
+		m.GET_SCALE_TIME_RESP:      handleGetScaleTimeResp,
+		m.SET_SCALE_TIME_RESP:      handleSetScaleTimeResp,
+		m.DOWN_PLU_RESP:            handleDownPluResp,
+		m.DEL_PLU_RESP:             handleDelPluResp,
+		m.INSERT_PLU_ADDR_RESP:     handleInsertPluResp,
+		m.READ_FLASH_DATA_RESP:     handleReadFlashDataResp,
+		m.ERASE_INSERT_PLU_RESP:    handleEraseInsertPluResp,
+		m.REBOOT_RESP:              handleRebootResp,
+		m.MODIFY_VAR_RESP:          handleModifyVarResp,
+		m.EN_FACTORY_MODE_RESP:     handleEnFactoryModeResp,
+		m.GET_RANDOM_DATA_RESP:     handleGetRandomDataResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -326,6 +324,11 @@ type SIAddrInfos struct {
 	EraseLen int `json:"EraseLen"`
 }
 
+type FIFromScale struct {
+	ScaleSn   string `json:"ScaleSn"`
+	ModelName string `json:"ModelName"`
+}
+
 func handleSetScaleTimeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_SCALE_TIME_RESP, MsgBody: "ok"}, len(data)
@@ -379,6 +382,38 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	msg.MsgType = m.GET_SCALE_INFO_RESP
 	msg.ScaleId = scaleId
 	msg.MsgBody, _ = json.MarshalToString(scaleInfo)
+
+	return msg, len(data)
+}
+
+func handleGetFactoryInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	//     20240417@FLF
+	// 5A A5 00 1E 05 F6 00 05 54 2D 4D 41 58 0C 31 30 38 30 30 38 30 32 30 30 30 38 62 C6 A8 39 A5 5A
+	var factoryInfo FIFromScale
+	msg := ScaleRespMsg{}
+	msg.MsgType = m.GET_FACTORY_INFO_RESP
+	msg.ScaleId = scaleId
+	msg.MsgBody = "fail"
+
+	tmpInt := int(data[0])
+	endIndex := tmpInt + 1
+	if endIndex > len(data) {
+		return msg, len(data)
+	}
+	factoryInfo.ModelName = string(data[1:endIndex])
+
+	if endIndex+1 > len(data) {
+		return msg, len(data)
+	}
+
+	tmpInt = int(data[endIndex])
+	endIndex1 := tmpInt + 1 + endIndex
+	if endIndex1 > len(data) {
+		return msg, len(data)
+	}
+	factoryInfo.ScaleSn = string(data[endIndex+1 : endIndex1])
+
+	msg.MsgBody, _ = json.MarshalToString(factoryInfo)
 
 	return msg, len(data)
 }
@@ -438,6 +473,23 @@ func handleEnFacModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	}
 }
 
+// 最新修改的打开工厂模式
+func handleEnFactoryModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_FACTORY_MODE_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_FACTORY_MODE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleGetRandomDataResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) == 2 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_RANDOM_DATA_RESP, MsgBody: data}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_RANDOM_DATA_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
 func handleRebootResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REBOOT_RESP, MsgBody: "ok"}, len(data)
@@ -486,11 +538,11 @@ func handleWriteDataFlashResp(scaleId int64, data []byte) (ScaleRespMsg, int) { 
 	}
 }
 
-func handleHeaderFooter1Resp(scaleId int64, data []byte) (ScaleRespMsg, int) { //FLF
+func handleModifyVarResp(scaleId int64, data []byte) (ScaleRespMsg, int) { //FLF
 	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.MODIFY_HEADER_FOOTER1_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.MODIFY_VAR_RESP, MsgBody: "ok"}, len(data)
 	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.MODIFY_HEADER_FOOTER1_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.MODIFY_VAR_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 

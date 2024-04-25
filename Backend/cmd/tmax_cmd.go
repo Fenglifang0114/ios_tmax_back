@@ -13,24 +13,26 @@ import (
 )
 
 var (
-	EN_ENG_CMD_TMAX          []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf1, 0x00, 0xf9, 0x16, 0x57, 0x5e, 0xa5, 0x5a}
-	DIS_ENG_CMD_TMAX         []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf2, 0x00, 0x8b, 0xfd, 0x08, 0x8d, 0xa5, 0x5a}
-	ZERO_CMD_TMAX            []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x03, 0x00, 0x0c, 0xD6, 0x90, 0x0C, 0xa5, 0x5a}
-	TARE_CMD_TMAX            []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xE1, 0x05, 0x00, 0xE9, 0x00, 0x2F, 0xAA, 0xA5, 0x5A}
-	REBOOT_CMD_TMAX          []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0x55, 0x00, 0x1E, 0x1D, 0x98, 0x49, 0xA5, 0x5A}
-	READ_WEIGHT_CMD_TMAX     []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x05, 0x00, 0xac, 0x24, 0x0e, 0x03, 0xa5, 0x5a}
-	EN_CONT_MODE_CMD_TMAX    []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x07, 0x00, 0x49, 0xf2, 0xb1, 0xa5, 0xa5, 0x5a}
-	DIS_CONT_MODE_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x08, 0x00, 0xf4, 0x75, 0x8c, 0x8d, 0xa5, 0x5a}
-	EN_PASSTH_MODE_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf3, 0x00, 0x59, 0xE4, 0xC9, 0x51, 0xa5, 0x5a}
-	DIS_PASSTH_MODE_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf4, 0x00, 0x6E, 0x2B, 0xB7, 0x2B, 0xa5, 0x5a}
-	GET_BUILD_INFO_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0x56, 0x00, 0x6C, 0xF6, 0xC7, 0x9A, 0xa5, 0x5a} //20230926@FLF
-	GET_SCALE_INFO_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf0, 0x00, 0x2B, 0x0F, 0x96, 0x82, 0xa5, 0x5a} //20231101@FLF
-	GET_INSERT_PLU_ADDR_TMAX []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xf3, 0x02, 0x00, 0xc0, 0xf4, 0xc0, 0xae, 0xA5, 0x5A}
-	GET_PLU_HEAD_TMAX        []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x20, 0x06, 0xa0, 0x00, 0x00, 0x64, 0x6c, 0xb0, 0xb0, 0x36, 0xa5, 0x5a}
-	ERASE_INSERT_PLU_TMAX    []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xf3, 0x03, 0x00, 0x12, 0xED, 0x01, 0x72, 0xA5, 0x5A}
-	GET_SCALE_TIME_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xF4, 0x02, 0x00, 0xC5, 0xFF, 0x87, 0x3B, 0xa5, 0x5a}                                     //20230112@FLF
-	READ_EEPROM_256_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x97, 0xab, 0x7f, 0x0d, 0xa5, 0x5a} //20240124@FLF
-	READ_EEPROM_512_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x4B, 0xC6, 0xE5, 0xBA, 0xa5, 0x5a} //20240129@FLF
+	EN_ENG_CMD_TMAX           []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf1, 0x00, 0xf9, 0x16, 0x57, 0x5e, 0xa5, 0x5a}
+	GET_RANDOM_DATA_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf7, 0x00, 0x1C, 0xC0, 0xE8, 0xF8, 0xa5, 0x5a}
+	DIS_ENG_CMD_TMAX          []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf2, 0x00, 0x8b, 0xfd, 0x08, 0x8d, 0xa5, 0x5a}
+	ZERO_CMD_TMAX             []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x03, 0x00, 0x0c, 0xD6, 0x90, 0x0C, 0xa5, 0x5a}
+	TARE_CMD_TMAX             []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xE1, 0x05, 0x00, 0xE9, 0x00, 0x2F, 0xAA, 0xA5, 0x5A}
+	REBOOT_CMD_TMAX           []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0x55, 0x00, 0x1E, 0x1D, 0x98, 0x49, 0xA5, 0x5A}
+	READ_WEIGHT_CMD_TMAX      []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x05, 0x00, 0xac, 0x24, 0x0e, 0x03, 0xa5, 0x5a}
+	EN_CONT_MODE_CMD_TMAX     []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x07, 0x00, 0x49, 0xf2, 0xb1, 0xa5, 0xa5, 0x5a}
+	DIS_CONT_MODE_CMD_TMAX    []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x08, 0x00, 0xf4, 0x75, 0x8c, 0x8d, 0xa5, 0x5a}
+	EN_PASSTH_MODE_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf3, 0x00, 0x59, 0xE4, 0xC9, 0x51, 0xa5, 0x5a}
+	DIS_PASSTH_MODE_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf4, 0x00, 0x6E, 0x2B, 0xB7, 0x2B, 0xa5, 0x5a}
+	GET_BUILD_INFO_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0x56, 0x00, 0x6C, 0xF6, 0xC7, 0x9A, 0xa5, 0x5a} //20230926@FLF
+	GET_SCALE_INFO_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf0, 0x00, 0x2B, 0x0F, 0x96, 0x82, 0xa5, 0x5a} //20231101@FLF
+	GET_INSERT_PLU_ADDR_TMAX  []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xf3, 0x02, 0x00, 0xc0, 0xf4, 0xc0, 0xae, 0xA5, 0x5A}
+	GET_PLU_HEAD_TMAX         []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x20, 0x06, 0xa0, 0x00, 0x00, 0x64, 0x6c, 0xb0, 0xb0, 0x36, 0xa5, 0x5a}
+	ERASE_INSERT_PLU_TMAX     []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xf3, 0x03, 0x00, 0x12, 0xED, 0x01, 0x72, 0xA5, 0x5A}
+	GET_SCALE_TIME_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xF4, 0x02, 0x00, 0xC5, 0xFF, 0x87, 0x3B, 0xa5, 0x5a}                                     //20230112@FLF
+	READ_EEPROM_256_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x97, 0xab, 0x7f, 0x0d, 0xa5, 0x5a} //20240124@FLF
+	READ_EEPROM_512_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x4B, 0xC6, 0xE5, 0xBA, 0xa5, 0x5a} //20240129@FLF
+	GET_FACTORY_INFO_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf6, 0x00, 0xCE, 0xD9, 0x29, 0x24, 0xa5, 0x5a}
 )
 
 func NewComposerTMAX() *m.CmdComposer {
@@ -47,7 +49,7 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 	}
 
 	switch cmd {
-	case m.CMD_EN_FAC_MODE:
+	case m.CMD_CHECK_FAC_MODE:
 		return EN_ENG_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	case m.CMD_DIS_FAC_MODE:
 		return DIS_ENG_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
@@ -77,6 +79,8 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return READ_EEPROM_512_CMD_TMAX, CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240129@FLF
 	case m.CMD_GET_SCALE_INFO:
 		return GET_SCALE_INFO_CMD_TMAX, CMD_TIMEOUT_SHORT_1500_MS, nil //20231101@FLF
+	case m.CMD_GET_FACTORY_INFO:
+		return GET_FACTORY_INFO_CMD_TMAX, CMD_TIMEOUT_SHORT_1500_MS, nil //20240417@FLF
 	case m.CMD_INSERT_PLU_ADDR:
 		return GET_INSERT_PLU_ADDR_TMAX, CMD_TIMEOUT_SHORT_1500_MS, nil //20231101@FLF
 	case m.CMD_GET_PLU_HEAD:
@@ -133,9 +137,15 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getModifyEepromCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_SET_SCALE_TIME:
 		return getSetScaleTimeCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
-	case m.CMD_WRITE_HEADER_FOOTER:
-		data := parseHeaderTMAX(cmdData.Data.(string))
-		return getModifyHeaderFooterCmdTMAX(data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_MODIFY_VAR_VALUE:
+		data, _ := hex.DecodeString(cmdData.Data.(string))
+		return getModifyVarValueCmdTMAX(data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_EN_FACTORY_MODE:
+		data, _ := hex.DecodeString(cmdData.Data.(string))
+		return enFactoryModeCmdTMAX(data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_RANDOM_DATA:
+		return GET_RANDOM_DATA_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+
 	}
 	return nil, CMD_TIMEOUT_IMMEDIATE, nil
 }
@@ -187,35 +197,28 @@ const (
 	CMDID_EN_PASSTH_TMAX         = 0x05F3
 	CMDID_DIS_PASSTH_TMAX        = 0x05F4
 	CMDID_GET_MAX_PACK_SIZE_TMAX = 0x05F5
+	CMDID_GET_FACTORY_INFO_TMAX  = 0x05F6
+	CMDID_GET_RANDOM_DATA        = 0x05F7
 )
 const (
-	CMDID_READ_FLASH_TMAX       = 0xF101
-	CMDID_WRITE_FLASH_TMAX      = 0xF102
-	CMDID_ERASE_FLASH_TMAX      = 0xF103
-	CMDID_READ_EEPROM_TMAX      = 0xF104
-	CMDID_WRITE_EEPROM_TMAX     = 0xF105
-	CMDID_ERASE_EEPROM_TMAX     = 0xF106
-	CMDID_READ_ROM_TMAX         = 0xF107
-	CMDID_WRITE_ROM_TMAX        = 0xF108
-	CMDID_ERASE_ROM_TMAX        = 0xF109
-	CMDID_DEL_PLU_TMAX          = 0xF301
-	CMDID_INSERT_PLU_TMAX       = 0xF302
-	CMDID_ERASE_INSERT_PLU_TMAX = 0xF303
-	CMDID_SET_SCALE_TIME_TMAX   = 0xF401
-	CMDID_GET_SCALE_TIME_TMAX   = 0xF402
-
+	CMDID_READ_FLASH_TMAX        = 0xF101
+	CMDID_WRITE_FLASH_TMAX       = 0xF102
+	CMDID_ERASE_FLASH_TMAX       = 0xF103
+	CMDID_READ_EEPROM_TMAX       = 0xF104
+	CMDID_WRITE_EEPROM_TMAX      = 0xF105
+	CMDID_ERASE_EEPROM_TMAX      = 0xF106
+	CMDID_READ_ROM_TMAX          = 0xF107
+	CMDID_WRITE_ROM_TMAX         = 0xF108
+	CMDID_ERASE_ROM_TMAX         = 0xF109
+	CMDID_DEL_PLU_TMAX           = 0xF301
+	CMDID_INSERT_PLU_TMAX        = 0xF302
+	CMDID_ERASE_INSERT_PLU_TMAX  = 0xF303
+	CMDID_SET_SCALE_TIME_TMAX    = 0xF401
+	CMDID_GET_SCALE_TIME_TMAX    = 0xF402
 	CMDID_SCALE_PASSTH_DATA_TMAX = 0xFF23 // virtual command ID
 	CMDID_DOWN_PLU_TMAX          = 0xFF24
-	CMDID_MODIFY_HEADER1_TMAX    = 0xF501
-	CMDID_MODIFY_HEADER2_TMAX    = 0xF502
-	CMDID_MODIFY_HEADER3_TMAX    = 0xF503
-	CMDID_MODIFY_FOOTER1_TMAX    = 0xF504
-	CMDID_MODIFY_FOOTER2_TMAX    = 0xF505
-	CMDID_MODIFY_FOOTER3_TMAX    = 0xF506
-	CMDID_MODIFY_OPERATOR1_TMAX  = 0xF507
-	CMDID_MODIFY_OPERATOR2_TMAX  = 0xF508
-	CMDID_MODIFY_OPERATOR3_TMAX  = 0xF509
-	CMDID_MODIFY_OPERATOR4_TMAX  = 0xF50a
+	CMDID_MODIFY_VAR_TMAX        = 0xF501
+	CMDID_EN_FACTORY_MODE        = 0xF601
 )
 
 const (
@@ -249,19 +252,49 @@ func composeCmd(cmdID uint16, seqNo byte, data []byte) []byte {
 	return cmd
 }
 
-const PACK_LEN_HEADER_TMAX = 11 //9 = 2个头+1个f5+2个长度+4个校验位+2个尾巴
+const PACK_LEN_HEADER_TMAX = 13 //9 = 2个头+2个f501+1个00+2个长度+4个校验位+2个尾巴
 // 构建命令   //FLF
-func composeHeaderCmd(cmdID uint8, data []byte) []byte {
+func composeModifyVarCmd(cmdID uint16, data []byte) []byte {
 	// Calculate packet length
 	var packLen uint16 = uint16(PACK_LEN_HEADER_TMAX + len(data))
 	cmd := make([]byte, packLen)
 	binary.BigEndian.PutUint16(cmd[0:2], PACKET_HEAD_TMAX)
 	// 构建命令ID与命令类型
 	binary.BigEndian.PutUint16(cmd[2:4], packLen-2) // packet length without header
-	cmd[4] = cmdID
+	binary.BigEndian.PutUint16(cmd[4:6], cmdID)
+	cmd[6] = 0x00
 	if len(data) > 0 {
-		copy(cmd[5:], data)
+		copy(cmd[7:], data)
 	}
+	// 计算与添加校验码
+	checksum := util.Crc32MPEG2(cmd[2 : packLen-6])
+	binary.BigEndian.PutUint32(cmd[packLen-6:], checksum)
+	// 添加包尾
+	binary.BigEndian.PutUint16(cmd[packLen-2:], PACKET_TAIL_TMAX)
+	fmt.Printf("%x", cmd)
+
+	return cmd
+}
+
+const PACK_LEN_FACTORY_TMAX = 17 // = 2个头+2个长度+2个f5+1个00+4个数据+4个校验位+2个尾巴
+// 构建命令   //FLF
+func composeFactoryCmd(cmdID uint16, data []byte) []byte {
+	// Calculate packet length
+	var packLen uint16 = uint16(PACK_LEN_FACTORY_TMAX)
+	cmd := make([]byte, packLen)
+	binary.BigEndian.PutUint16(cmd[0:2], PACKET_HEAD_TMAX)
+	// 构建命令ID与命令类型
+	binary.BigEndian.PutUint16(cmd[2:4], packLen-2) // packet length without header
+	binary.BigEndian.PutUint16(cmd[4:6], cmdID)
+	cmd[6] = 0x00
+	//data 有6个字节，data[0]data[1] 随机数 data[2]data[3]data[4]data[5] md5
+	//data[0]和data[2]做XOR  得到的数据x1
+	//data[1]和data[5]做XOR  得到的数据x2
+	//x1 data[3] data[4] x2  4个字节做CRC得到此命令的数据部分
+	data[2] = data[0] ^ data[2]
+	data[5] = data[1] ^ data[5]
+	dataCrc := util.Crc32MPEG2(data[2:]) //此处是数据，只不过数据值是CRC的校验值，后面还是有校验的
+	binary.BigEndian.PutUint32(cmd[7:11], dataCrc)
 	// 计算与添加校验码
 	checksum := util.Crc32MPEG2(cmd[2 : packLen-6])
 	binary.BigEndian.PutUint32(cmd[packLen-6:], checksum)
@@ -450,9 +483,14 @@ func getModifyEepromCmdTMAX(addr uint32, data []byte) []byte {
 	return wrDataCmdTMAX(addr, data, uint16(dataLen))
 }
 
-func getModifyHeaderFooterCmdTMAX(data []byte) []byte {
-	l.Log.Debug("compose modify header footer cmd")
-	return composeHeaderCmd(0xf5, data)
+func getModifyVarValueCmdTMAX(data []byte) []byte {
+	l.Log.Debug("compose modify var value cmd")
+	return composeModifyVarCmd(0xf501, data)
+}
+
+func enFactoryModeCmdTMAX(data []byte) []byte {
+	l.Log.Debug("compose en factory mode cmd")
+	return composeFactoryCmd(0xf601, data)
 }
 
 func getSetScaleTimeCmdTMAX(data string) []byte {
@@ -475,45 +513,6 @@ func parseWrDataTMAX(inData string) (addr int64, data []byte) { // inData is hex
 	}
 
 	return
-}
-
-func parseHeaderTMAX(inData string) []byte { // inData is hex ascii
-	//34 来源：秤只能打印32个字符，最前面两个是页眉页脚的位置 01 00/02 00等
-	//命令如： f5 01 00
-	//页眉页脚32个字符   操作员20个字符 f507 f508 f509 f50a 是操作员的指令
-	rawData, err := hex.DecodeString(inData)
-	if err != nil {
-		fmt.Println("Invalid hex string")
-		return nil
-	}
-	byteCount := len(inData)
-	if byteCount > 0 && rawData[0] < 0x07 {
-		// 超过34字节时，截取前34字节
-		if byteCount > 68 {
-			return rawData[:68]
-		}
-
-		// 不足34字节时，在末尾补充0
-		if byteCount < 68 {
-			padCount := (68 - byteCount) / 2
-			padBytes := make([]byte, padCount)
-			rawData = append(rawData, padBytes...)
-		}
-
-	} else if rawData[0] >= 0x07 {
-		if byteCount > 44 {
-			return rawData[:44]
-		}
-
-		// 不足34字节时，在末尾补充0
-		if byteCount < 44 {
-			padCount := (44 - byteCount) / 2
-			padBytes := make([]byte, padCount)
-			rawData = append(rawData, padBytes...)
-		}
-	}
-
-	return rawData
 }
 
 func parseReadFlashTMAX(inData string) (addr int64, data []byte) { // inData is hex ascii

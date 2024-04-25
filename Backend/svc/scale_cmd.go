@@ -21,8 +21,12 @@ const (
 )
 
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
-	EnFacMode(c)
-	// Reboot(c)
+	// EnFacMode(c)
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		l.Log.Debug(err)
+
+	}
 	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP, 1)
 	if reqMsg.MsgBody != "ok" {
 		//to do nothing
@@ -35,7 +39,7 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	output := make(chan string)
 	done := make(chan error)
 	go util.RunCommand(output, done, "./BootCommander.exe", "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
-	var err error
+	// var err error
 	isFinish := false
 	isStartUpdate := false
 	var cmdOutput string
@@ -111,12 +115,24 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 
 func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
 	l.Log.Debug("check serial port")
-	reqMsg, _ := excuteSimpCmd(c, m.CMD_EN_FAC_MODE, m.EN_FAC_MODE_RESP)
-	if reqMsg.MsgBody == "ok" {
-		return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_GET_FACTORY_INFO, m.GET_FACTORY_INFO_RESP)
+	if reqMsg.MsgBody == nil {
+		return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
 	}
-	return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
+
+	return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: reqMsg.MsgBody, ScaleId: c.Id}, nil
 }
+
+//原来的打开工厂模式的写法
+// func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
+// 	l.Log.Debug("check serial port")
+// 	reqMsg, _ := excuteSimpCmd(c, m.CMD_EN_FAC_MODE, m.EN_FAC_MODE_RESP)
+// 	if reqMsg.MsgBody == "ok" {
+// 		return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+// 	}
+// 	return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
+// }
 
 func (c *Scale) GetBuildInfo() (*ScaleRespMsg, error) {
 	l.Log.Debug("get build info")
@@ -133,6 +149,12 @@ func (c *Scale) GetScaleTime() (*ScaleRespMsg, error) {
 func (c *Scale) GetScaleInfo() (*ScaleRespMsg, error) {
 	l.Log.Debug("get scale info")
 	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_SCALE_INFO, m.GET_SCALE_INFO_RESP)
+	return reqMsg, err
+}
+
+func (c *Scale) GetFactoryInfo() (*ScaleRespMsg, error) {
+	l.Log.Debug("get factory info")
+	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_FACTORY_INFO, m.GET_FACTORY_INFO_RESP)
 	return reqMsg, err
 }
 
@@ -231,7 +253,7 @@ func (c *Scale) CloseScalePassth() (*ScaleRespMsg, error) {
 	// enable scale sending weighing info continually
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)
-	reqMsg, _ := excuteSimpCmd(c, m.CMD_EN_FAC_MODE, m.EN_FAC_MODE_RESP)
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_CHECK_FAC_MODE, m.EN_FAC_MODE_RESP)
 	if reqMsg.MsgBody == "ok" {
 		return &ScaleRespMsg{MsgType: m.CLOSE_SCALE_PASSTHROUGH_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
 	}
@@ -323,7 +345,7 @@ func Reboot(s *Scale) (*ScaleRespMsg, error) {
 // 打开工厂模式
 func EnFacMode(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("send enable factory mode cmd to scale")
-	return excuteSimpCmd(s, m.CMD_EN_FAC_MODE, m.EN_FAC_MODE_RESP)
+	return excuteSimpCmd(s, m.CMD_CHECK_FAC_MODE, m.EN_FAC_MODE_RESP)
 }
 
 // 关闭工厂模式
@@ -333,6 +355,10 @@ func DisFacMode(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func excuteSimpCmd(s *Scale, cmdType m.CmdType, respType m.RespMsgType, perfTimes ...int) (*ScaleRespMsg, error) {
+	// reg, err, res := openFactory(s)
+	// if err != nil || !res {
+	// 	return reg, err
+	// }
 	scaleCmdExtractorFn := s.composer.ComposeCmd
 	cmd, timeoutMs, err := scaleCmdExtractorFn(s.composer, cmdType, m.CmdData{})
 	if err != nil {

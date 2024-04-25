@@ -115,6 +115,9 @@ func ParserPluFile(excelFileName string) bool {
 			tempProduct = append(tempProduct, product)
 		}
 	}
+	sort.Slice(tempProduct, func(i, j int) bool {
+		return tempProduct[i].ProductNumber < tempProduct[j].ProductNumber
+	})
 	products = tempProduct
 	// 将plu数量写入bytes.Buffer
 	pluCount := make([]byte, 2)
