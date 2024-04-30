@@ -171,10 +171,12 @@ func (c *Client) Close() error {
 	if c.sendCh != nil {
 		c.wgSndCh.Wait()
 		close(c.sendCh)
+		c.sendCh = nil
 	}
 	if c.recvCh != nil {
 		c.wgRecvCh.Wait()
 		close(c.recvCh)
+		c.recvCh = nil
 	}
 
 	return nil
