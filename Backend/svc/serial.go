@@ -51,7 +51,7 @@ type TSerial struct {
 
 }
 
-// NewScale creates a new scale
+// NewSerial creates a new serial port
 func NewSerial(pconf ComInfo, pickerFn picker.PickerFunc) (*TSerial, error) {
 	if pickerFn == nil {
 		return nil, fmt.Errorf("user NewSerial(), should provide a picker function")
