@@ -112,6 +112,10 @@ func procDownPrnFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownPrnFmt(scale, req)
 }
 
+func procDownDefaultPrnFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDownDefaultPrnFmt(scale, req)
+}
+
 func procDownPlu(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownPlu(scale, req)
 }
@@ -382,6 +386,7 @@ func init() {
 		SREQ_MODIFY_VAR_VALUE:         procModifyVarValue,
 		SREQ_SET_SERVER_IP:            procSetServerIp,
 		SREQ_EN_FACTORY_MODE:          procEnFactoryMode,
+		SREQ_DOWN_DEFAULT_PRN_FMT:     procDownDefaultPrnFmt,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -427,5 +432,6 @@ func init() {
 		SREQ_MODIFY_VAR_VALUE:         m.MODIFY_VAR_RESP,
 		SREQ_SET_SERVER_IP:            m.SET_SERVER_IP_RESP,
 		SREQ_EN_FACTORY_MODE:          m.EN_FACTORY_MODE_RESP,
+		SREQ_DOWN_DEFAULT_PRN_FMT:     m.DOWN_DEFAULT_PRN_FMT_RESP,
 	}
 }

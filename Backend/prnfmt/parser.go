@@ -29,16 +29,21 @@ type printInfoRpt struct {
 	varInfo         [60]RptVarStruct
 }
 
-// type printInfoTmax struct {
-// 	printerName     [23]byte
-// 	formatNum       uint8
-// 	everyFormatInfo [12]InfoStr    //最大12个打印格式
-// 	varInfo         [120]VarStruct //最大120个变量
-// }
+type printInfoDef struct {
+	printerName     [23]byte
+	formatNum       uint8
+	everyFormatInfo [12]InfoStr    //最大12个打印格式
+	varInfo         [150]VarStruct //最大150个变量
+}
 
 const (
-	headBufLen        = 468 //一个printInfo占用的字节是固定的。
-	headBufLenReceipt = 468 //一个printInfoReceipt占用的字节是固定的。
+	headBufLen        = 468  //一个printInfo占用的字节是固定的。
+	headBufLenReceipt = 468  //一个printInfoReceipt占用的字节是固定的。
+	headBufLenDef     = 1668 //默认打印格式占用的字节是固定的。
+)
+
+var (
+	FMT_FILL_TAIL []byte = []byte{0x5a, 0xa5, 0xa5, 0x5a, 0x00, 0x00, 0x00, 0x00}
 )
 
 func ParserFmtToFile(utf8Buff string, printerModel string, fmtLen int) bool {
@@ -127,11 +132,11 @@ func ParserFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buf
 	}
 
 	// 6.写结尾5a a5 a5 5a 00 00 00 00
-	fillTail := []byte{0x5a, 0xa5, 0xa5, 0x5a, 0x00, 0x00, 0x00, 0x00}
+
 	dataCamp1 := bytes.NewBufferString("")
 
-	for i := 0; i < len(fillTail); i++ {
-		dataCamp1.WriteByte(fillTail[i])
+	for i := 0; i < len(FMT_FILL_TAIL); i++ {
+		dataCamp1.WriteByte(FMT_FILL_TAIL[i])
 	}
 
 	binary.Write(buffer, binary.LittleEndian, dataCamp1.Bytes())
@@ -204,11 +209,11 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 		}
 	}
 	// 6.写结尾5a a5 a5 5a 00 00 00 00
-	fillTail := []byte{0x5a, 0xa5, 0xa5, 0x5a, 0x00, 0x00, 0x00, 0x00}
+
 	dataCamp1 := bytes.NewBufferString("")
 
-	for i := 0; i < len(fillTail); i++ {
-		dataCamp1.WriteByte(fillTail[i])
+	for i := 0; i < len(FMT_FILL_TAIL); i++ {
+		dataCamp1.WriteByte(FMT_FILL_TAIL[i])
 	}
 	binary.Write(buffer, binary.LittleEndian, dataCamp1.Bytes())
 	return buffer
@@ -258,4 +263,118 @@ func Utf8ToGb2312(buff string) (string, error) {
 	gb2312str := string(gb2312Bytes)
 
 	return gb2312str, err
+}
+
+func ParserDefFmtToFile(fmtDataList [12]string, printerModel string, fmtLen int) bool {
+	var buffer *bytes.Buffer
+	if printerModel == "EPM205" {
+		buffer = ParserDefFmtToBuf(fmtDataList, printerModel, fmtLen)
+	}
+	// 7.创建bin文件
+	if buffer.Len() > 0 {
+		if creatFile("formatBin.bin", buffer) {
+			fmt.Println("creat binary file success")
+			return true
+		} else {
+			fmt.Println("creat binary file fail")
+			return false
+		}
+
+	}
+	return false
+
+	// 8.写数据到串口
+}
+
+func ParserDefFmtToBuf(fmtDataList [12]string, printerModel string, fmtLen int) *bytes.Buffer {
+	var FinalFormatInfo printInfoDef
+
+	dataCamp1 := bytes.NewBufferString("")
+	for i := 0; i < len(FMT_FILL_TAIL); i++ {
+		dataCamp1.WriteByte(FMT_FILL_TAIL[i])
+	}
+
+	// var fillchar byte
+	fillchar := 0xff
+	var lastVarPos int //变量位置
+
+	FinalFormatInfo.formatNum = 12 ///打印格式总数，根据打印格式文件数量决定
+
+	totalbuffer := bytes.NewBufferString("") //打印命令集合
+	// var everyAddr []int                                                 //每个打印格式偏移量
+	var everyBufLen []int  //每个打印格式的命令集合
+	TotalVarDataIndex := 0 //每个打印格式信息的索引
+	// formatinfo.VarTable = formatinfo.ReadTableFromFile(currentPath + "\\varTable.json") //获取变量ID表
+	dataCamp := bytes.NewBufferString("") //临时buf 存放命令数据
+	lastVarNum := 0
+	lastAddr := 0
+	var clearList []VarStruct
+	VarList = clearList // 用于清空数据
+
+	//for循环解析文件
+	for i := 0; i < 12; i++ {
+		utf8Buff := fmtDataList[i]
+		lastVarPos = 0
+
+		buff, _ := Utf8ToGb2312(utf8Buff)
+		formatbuf := ParseEplLines(buff, dataCamp, lastVarPos)
+		everyBufLen = append(everyBufLen, formatbuf.Len())
+
+		fmt.Println(string(dataCamp.Bytes()))
+
+		totalbuffer.WriteString(formatbuf.String())
+		div := ((everyBufLen[TotalVarDataIndex] / 4) + 1) * 4
+
+		for i := formatbuf.Len(); i < div; i++ {
+			totalbuffer.WriteByte(byte(fillchar))
+		}
+
+		if TotalVarDataIndex > 0 {
+			lastVarNum = len(VarList) - lastVarNum
+		} else {
+			lastAddr = headBufLenDef
+			lastVarNum = len(VarList)
+		}
+		// fmt.Printf("%x", templen)
+		FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].addr = uint32(lastAddr)
+		FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].formatLen = uint32(everyBufLen[TotalVarDataIndex])
+		FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].varNum = uint32(lastVarNum)
+		dataCamp.Reset()
+		// fmt.Println(dataCamp.Len())
+		TotalVarDataIndex = TotalVarDataIndex + 1
+		lastVarNum = len(VarList)
+		lastAddr = div + lastAddr
+
+	}
+	if len(VarList) > 150 {
+		return bytes.NewBufferString("")
+
+	}
+
+	//复制变量
+	copy(FinalFormatInfo.varInfo[:], VarList)
+
+	buffer := binaryDataDef(FinalFormatInfo)
+	binary.Write(buffer, binary.LittleEndian, totalbuffer.Bytes())
+	// fmt.Println(buffer.Len())
+	if buffer.Len() < (fmtLen - 8) {
+		for i := buffer.Len(); i < (8192 - 8); i++ {
+			binary.Write(buffer, binary.LittleEndian, byte(fillchar))
+		}
+	} else {
+		return bytes.NewBufferString("")
+	}
+	binary.Write(buffer, binary.LittleEndian, dataCamp1.Bytes())
+
+	return buffer
+
+}
+
+func binaryDataDef(tempInfo printInfoDef) *bytes.Buffer {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, tempInfo.printerName)
+	binary.Write(buf, binary.LittleEndian, tempInfo.formatNum)
+	binary.Write(buf, binary.LittleEndian, tempInfo.everyFormatInfo)
+	binary.Write(buf, binary.LittleEndian, tempInfo.varInfo)
+	return buf
 }

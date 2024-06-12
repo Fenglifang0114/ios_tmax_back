@@ -355,10 +355,7 @@ func DisFacMode(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func excuteSimpCmd(s *Scale, cmdType m.CmdType, respType m.RespMsgType, perfTimes ...int) (*ScaleRespMsg, error) {
-	// reg, err, res := openFactory(s)
-	// if err != nil || !res {
-	// 	return reg, err
-	// }
+
 	scaleCmdExtractorFn := s.composer.ComposeCmd
 	cmd, timeoutMs, err := scaleCmdExtractorFn(s.composer, cmdType, m.CmdData{})
 	if err != nil {
@@ -507,7 +504,7 @@ func (c *Scale) GetPluDownRec(md5Str string) ([]PluRec, error) {
 }
 
 func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeoutMs ...int) (*ScaleRespMsg, error) {
-	curTimeoutMs := 3000 // 3000 ms
+	curTimeoutMs := 10000 //3000 // 3000 ms
 	var ret *ScaleRespMsg
 	var err error = nil
 	var sendCmdTimes = 3
@@ -521,6 +518,7 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 	}
 
 	for i := 0; i < sendCmdTimes; i++ {
+
 		if curTimeoutMs == mcmd.CMD_TIMEOUT_IMMEDIATE {
 			if err = writeScale(c, cmd); err != nil {
 				l.Log.Error(err.Error())

@@ -169,6 +169,7 @@ const (
 	SET_SERVER_IP_RESP            RespMsgType = "resp_set_server_ip"
 	GET_RANDOM_DATA_RESP          RespMsgType = "resp_get_random_data"
 	EN_FACTORY_MODE_RESP          RespMsgType = "resp_en_factory_mode"
+	DOWN_DEFAULT_PRN_FMT_RESP     RespMsgType = "resp_down_def_prn_fmt"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

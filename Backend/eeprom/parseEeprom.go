@@ -55,7 +55,8 @@ func GetExcelData() (EepromStruct, bool) {
 		fmt.Println("read excel file error", err.Error())
 		return fieldData, false
 	}
-	rows, err := f.GetRows("Sheet1")
+	sheet1 := f.GetSheetName(0)
+	rows, err := f.GetRows(sheet1)
 	if err != nil {
 		fmt.Println("read excel file error", err.Error())
 		return fieldData, false

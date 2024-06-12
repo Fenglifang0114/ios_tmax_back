@@ -201,9 +201,9 @@
             "comment": "PaymentAmount_P"
         },
         {
-            "valuename": "Change Amount_P",
+            "valuename": "ChangeAmount_P",
             "id": 58,
-            "comment": "Change Amount_P"
+            "comment": "ChangeAmount_P"
         },
         {
             "valuename": "Subtotal_P",

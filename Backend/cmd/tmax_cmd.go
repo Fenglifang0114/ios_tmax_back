@@ -98,7 +98,7 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_256_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WRITE_FLASH_512:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
-		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_512_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_512_TMAX), CMD_TIMEOUT_MED_LONG_4000_MS, nil
 	case m.CMD_WIFI_DATA_PASSTH:
 		return sendDataToWifiCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_GET_AP_LIST:

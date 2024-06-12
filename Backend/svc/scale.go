@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"crypto/md5"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -814,8 +816,12 @@ type HeaderList struct {
 }
 
 func ReqModifyVarValue(s *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(s)
+	if err != nil || !res {
+		return reg, err
+	}
 	var headerList HeaderList
-	err := json.Unmarshal([]byte(req.ReqData), &headerList)
+	err = json.Unmarshal([]byte(req.ReqData), &headerList)
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
@@ -834,10 +840,6 @@ func ReqModifyVarValue(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			if err != nil {
 				return &ScaleRespMsg{m.MODIFY_VAR_RESP, "fail", s.Id}, err
 			}
-			for _, b := range cmd {
-				fmt.Printf("%02x ", b) // 打印每个字节的 16 进制表示并用空格分隔
-			}
-			// 发送数据包
 
 			if res, err := perfCmdNwaitResult(s, cmd, m.MODIFY_VAR_RESP, timeoutMs); err != nil {
 				return &ScaleRespMsg{m.MODIFY_VAR_RESP, "fail", s.Id}, err
@@ -1067,7 +1069,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	for _, jsonStr := range siAddrInfos {
 		addrInfo, err := parseJSON(jsonStr)
 		if err != nil {
-			return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+			return &ScaleRespMsg{}, fmt.Errorf("get print format address fail")
 		}
 		if addrInfo.Type == SI_FREE_PRN_INFO {
 			prnFmtAddr = addrInfo.Addr
@@ -1090,7 +1092,13 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		if prnfmt.ParserFmtToFile(string(csvFmtContent), reqData.PrinterModel, eraseLen) {
+
+		tempStr := decryptCsv(string(csvFmtContent))
+		if !strings.Contains(tempStr, "ROTATE") {
+			return &ScaleRespMsg{}, fmt.Errorf("format error,download fail!")
+		}
+
+		if prnfmt.ParserFmtToFile(tempStr, reqData.PrinterModel, eraseLen) {
 			// 读取bin文件
 			data, err := os.ReadFile("formatBin.bin")
 			if err != nil {
@@ -1160,6 +1168,223 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return &ScaleRespMsg{m.DOWN_PRN_FMT_RESP, "ok", c.Id}, nil
 }
 
+func getAddrFromScale(c *Scale, typeInt int) (SIAddrInfos, bool) {
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_GET_SCALE_INFO, m.GET_SCALE_INFO_RESP)
+	var scaleInfo SIFromScale
+	var addrInfo SIAddrInfos
+
+	strData := reqMsg.MsgBody
+	if str, ok := strData.(string); ok {
+		if err := json.UnmarshalFromString(str, &scaleInfo); err != nil {
+			l.Log.Error(err)
+			return addrInfo, false
+		}
+	} else {
+		return addrInfo, false
+	}
+	siAddrInfos := scaleInfo.AddrInfos
+	fmt.Println(siAddrInfos)
+	for _, jsonStr := range siAddrInfos {
+		addrInfo, err := parseJSON(jsonStr)
+		if err != nil {
+			return addrInfo, false
+		}
+		if addrInfo.Type == typeInt {
+			return addrInfo, true
+		}
+	}
+	return addrInfo, false
+
+}
+
+func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+
+	prnFmtAddr := 0
+	prnFmtMaxLenth := 0
+	eraseLen := 0
+	addrInfo, res := getAddrFromScale(c, SI_DEF_PRN_INFO)
+	if !res {
+		return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+	}
+
+	prnFmtAddr = addrInfo.Addr
+	prnFmtMaxLenth = addrInfo.Lenth
+	eraseLen = addrInfo.EraseLen
+
+	if prnFmtAddr == 0 || prnFmtMaxLenth == 0 || eraseLen == 0 {
+		return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+	}
+	var reqData ReqDefaultPrnData
+	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
+		return &ScaleRespMsg{}, err
+	}
+
+	zipFilePath := reqData.FilePath
+	//将所有文件解密后的内容和md5都存储到数组里
+	strFileDataArray, strMd5Array, res := getFileDataAndMd5(zipFilePath)
+	if !res {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
+	}
+
+	//检查所有文件的md5是否正确
+	if !checkFilesMd5(strFileDataArray, strMd5Array) {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
+	}
+
+	//分析打印格式
+	composer := c.composer
+	fn := composer.ComposeCmd
+	if prnfmt.ParserDefFmtToFile(strFileDataArray, reqData.PrinterModel, prnFmtMaxLenth) {
+		// 读取bin文件
+		data, err := os.ReadFile("formatBin.bin")
+		if err != nil {
+			l.Log.Fatal(err)
+		}
+		// 擦除原本秤上的打印格式
+		l.Log.Debug("erase flash on scale")
+
+		addr := prnFmtAddr
+		size := prnFmtMaxLenth
+
+		loopCnt := size / eraseLen
+		addrInLoop := addr
+		for i := 0; i < loopCnt; i++ {
+			cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
+				return &ScaleRespMsg{}, err
+			} else if res.MsgBody != "ok" {
+				return &ScaleRespMsg{}, fmt.Errorf("erase fail")
+			}
+			addrInLoop += eraseLen
+		}
+		// 计算数据包数量
+		packetCount := len(data) / DATA_LENGTH_256_TMAX
+		if len(data)%DATA_LENGTH_256_TMAX != 0 {
+			packetCount += 1
+		}
+		// 遍历所有数据包
+		l.Log.Debug("send data package to scale")
+		for i := 0; i < packetCount; i++ {
+			// 计算本包数据
+			start := i * DATA_LENGTH_256_TMAX
+			end := start + DATA_LENGTH_256_TMAX
+			if end > len(data) {
+				end = len(data)
+			}
+			packetData := data[start:end]
+
+			// 构建数据包
+			// dataPackCmd := buildSendDataPacket(addr, packetData)
+			packDataHexStr := hex.EncodeToString(packetData)
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			// 发送数据包
+			if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+				return &ScaleRespMsg{}, err
+			} else if res.MsgBody != "ok" {
+				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+			}
+			// 地址自增
+			addr += 0x100
+		}
+		l.Log.Info("send bin ok")
+	} else {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,Check for over 150 variables, excessive 8K print format, or incorrect print format.")
+	}
+
+	return &ScaleRespMsg{m.DOWN_DEFAULT_PRN_FMT_RESP, "ok", c.Id}, nil
+}
+
+func getFileDataAndMd5(zipFilePath string) ([12]string, [12]string, bool) {
+	var strFileDataArray [12]string
+	var strMd5Array [12]string
+	r, err := zip.OpenReader(zipFilePath)
+	if err != nil {
+		return strFileDataArray, strMd5Array, false
+	}
+	defer r.Close()
+	for _, f := range r.File {
+		fmt.Println("File:", f.Name)
+		// 打开文件
+		rc, err := f.Open()
+		if err != nil {
+			return strFileDataArray, strMd5Array, false
+		}
+		defer rc.Close()
+		num, res := getFileNum(f.Name)
+		if !res {
+			return strFileDataArray, strMd5Array, false
+		}
+		tempContent, err := io.ReadAll(rc)
+		if err != nil {
+			return strFileDataArray, strMd5Array, false
+		}
+		if strings.Contains(f.Name, "fmt") {
+			tempStr := decryptCsv(string(tempContent))
+			if !strings.Contains(tempStr, "ROTATE") {
+				return strFileDataArray, strMd5Array, false
+			}
+			strFileDataArray[num-1] = tempStr
+		} else if strings.Contains(f.Name, "txt") {
+			strMd5Array[num-1] = string(tempContent)
+		}
+	}
+	return strFileDataArray, strMd5Array, true
+}
+
+func checkFilesMd5(strFileDataArray [12]string, strMd5Array [12]string) bool {
+	for i := 0; i < 12; i++ {
+		if strFileDataArray[i] != "" {
+			tempMd5Arr := calculateMD5(strFileDataArray[i] + MD5SEED) //统一为seed,要改打包的UI，此处先暂定这样
+			var md5TmpStr string
+			for _, b := range tempMd5Arr {
+				md5TmpStr += fmt.Sprintf("%02X", b) // 将每个字节转换为两位16进制格式的字符串并拼接
+			}
+			if !strings.EqualFold(md5TmpStr, strMd5Array[i]) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func getFileNum(fNameStr string) (int, bool) {
+	re := regexp.MustCompile(`(\d+)`) // 使用正则表达式提取数字部分
+	match := re.FindStringSubmatch(fNameStr)
+
+	if len(match) > 1 {
+		numStr := match[1]               // 提取到的数字部分
+		num, err := strconv.Atoi(numStr) // 将字符串转换为int类型
+		if err == nil {
+			return num, true
+		} else {
+			return 0, false
+		}
+	}
+	return 0, false
+}
+
+func decryptCsv(encryptedCsv string) string {
+	var decryptedBytes []byte
+	encryptedBytes := []byte(encryptedCsv)
+
+	for i := 0; i < len(encryptedBytes); i += 2 {
+		decryptedByte := (int32(encryptedBytes[i])-3)<<4 | (int32(encryptedBytes[i+1])-3)&0x0F
+		decryptedBytes = append(decryptedBytes, byte(decryptedByte))
+	}
+
+	return string(decryptedBytes)
+}
+
 func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	var reqData ReqPluData
 
@@ -1167,6 +1392,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, err
 	}
 	var file = reqData.FilePath
+	var nameMaxLen = reqData.NameMaxLen
 	var headBytes []byte
 	composer := c.composer
 
@@ -1207,7 +1433,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 	}
 
-	bufPluNumData, insertHeadBytes, resParser := ParserInsertPlu(string(file))
+	bufPluNumData, insertHeadBytes, resParser := ParserInsertPlu(string(file), nameMaxLen)
 
 	if !bytes.Equal(headBytes, insertHeadBytes) {
 		return &ScaleRespMsg{}, fmt.Errorf("plu head is inconsistent,fail")
@@ -1304,7 +1530,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			} else if res.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 			}
-			addr += 0x100
+			addr += DATA_LENGTH_256_TMAX
 		}
 		l.Log.Info("send bin ok")
 	}
@@ -1317,7 +1543,9 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, err
 	}
 	var file = reqData.FilePath
-	if ParserPluFile(string(file)) {
+	var nameMaxLen = reqData.NameMaxLen
+
+	if ParserPluFile(string(file), nameMaxLen) {
 		// 读取bin文件
 		data, err := os.ReadFile("plu.bin")
 		if err != nil {
@@ -1386,21 +1614,21 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 			addrInLoop += 4096
 		}
-		packetCount := len(data) / DATA_LENGTH_512_TMAX
-		if len(data)%DATA_LENGTH_512_TMAX != 0 {
+		packetCount := len(data) / DATA_LENGTH_256_TMAX
+		if len(data)%DATA_LENGTH_256_TMAX != 0 {
 			packetCount += 1
 		}
 		l.Log.Debug("send data package to scale")
 		for i := 0; i < packetCount; i++ {
 			// 计算本包数据
-			start := i * DATA_LENGTH_512_TMAX
-			end := start + DATA_LENGTH_512_TMAX
+			start := i * DATA_LENGTH_256_TMAX
+			end := start + DATA_LENGTH_256_TMAX
 			if end > len(data) {
 				end = len(data)
 			}
 			packetData := data[start:end]
 			packDataHexStr := hex.EncodeToString(packetData)
-			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_512, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 			if err != nil {
 				return &ScaleRespMsg{}, err
 			}
@@ -1409,9 +1637,11 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			} else if res.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 			}
-			addr += 0x200
+			addr += DATA_LENGTH_256_TMAX
 		}
 		l.Log.Info("send bin ok")
+	} else {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,data error")
 	}
 	//备份PLU表格 记录md5值和文件的对应关系
 	destPath := getPluFilePath(getCurrPath())

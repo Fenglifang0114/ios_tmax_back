@@ -177,13 +177,13 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 
 18. download plu to scale =>{
 	"Req": "down_plu_to_scale",
-	"ReqData": "{ \"ScaleModel\": \"tmax\", \"FilePaths\": [\"./plu.xlsx\"]}"
+	"ReqData": "{ \"ScaleModel\": \"tmax\", \"FilePaths\": [\"./plu.xlsx\"],\"NameMaxLen\": 30}"
 }
 	response: {"MsgType":"resp_down_plu","MsgBody":"ok", "ScaleId":1}
 
 19. insert plu to scale =>{
 	"Req": "insert_plu_to_scale",
-	"ReqData": "{ \"ScaleModel\": \"tmax\", \"FilePaths\": [\"./plu.xlsx\"]}"
+	"ReqData": "{ \"ScaleModel\": \"tmax\", \"FilePaths\": [\"./plu.xlsx\"],\"NameMaxLen\": 30}"
 }
 	response: {"MsgType":"resp_insert_plu","MsgBody":"ok", "ScaleId":1}
 20. delete plu from scale =>{
@@ -279,6 +279,12 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
     {"Req":"get_factory_info","ReqData":""}
     response:
     {"ScaleId":1,"MsgType":resp_get_factory_info,"MsgBody":"t-max,484654654651564"}
+
+30. download default printer format to scale =>{
+	"Req": "down_def_print_format",
+	"ReqData": "{ \"ScaleModel\": \"t2200\", \"PrinterModel\": \"lp50\", \"FilePath\": "./1.zip\"}"
+}
+	response: {"MsgType":"resp_down_def_prn_fmt","MsgBody":"ok", "ScaleId":1}
 	
 
 To configure scale's wifi to connect to specific AP

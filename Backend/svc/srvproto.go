@@ -248,6 +248,7 @@ const (
 	SREQ_MODIFY_VAR_VALUE         SReqType = "modify_var_value"
 	SREQ_SET_SERVER_IP            SReqType = "set_server_ip"
 	SREQ_EN_FACTORY_MODE          SReqType = "en_factory_mode"
+	SREQ_DOWN_DEFAULT_PRN_FMT     SReqType = "down_def_print_format"
 )
 
 type ReqScaleRec struct {
@@ -271,6 +272,12 @@ type ReqPrnData struct {
 	FilePaths    []string `json:"FilePaths"`
 }
 
+type ReqDefaultPrnData struct {
+	ScaleModel   string `json:"ScaleModel"`
+	PrinterModel string `json:"PrinterModel"`
+	FilePath     string `json:"FilePath"`
+}
+
 type ReqDelPLuData struct {
 	ScaleModel string   `json:"ScaleModel"`
 	PluId      []string `json:"PluId"`
@@ -286,6 +293,7 @@ type OlUlInfo struct {
 type ReqPluData struct {
 	ScaleModel string `json:"ScaleModel"`
 	FilePath   string `json:"FilePath"`
+	NameMaxLen int    `json:"NameMaxLen"`
 }
 
 type ReqSerialFileList struct {

@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"log"
+	"math"
 	"os"
 	"sort"
 
@@ -69,24 +69,25 @@ double plu_limit_high;			8	8	上限
 double plu_limit_low;  			9	8	下限
 */
 
-func ParserPluFile(excelFileName string) bool {
+func ParserPluFile(excelFileName string, nameMaxLen int) bool {
 
-	columnNames := []string{
-		"ProductNumber",
-		"ProductName",
-		"PriceUnit",
-		"TaxModel",
-		"TaxType",
-		"Price",
-		"UnitWeight",
-		"PreTare",
-		"LimitHigh",
-		"LimitLow",
-		"isUSED",
-	}
+	// columnNames := []string{
+	// 	"ProductNumber",
+	// 	"ProductName",
+	// 	"PriceUnit",
+	// 	"TaxModel",
+	// 	"TaxType",
+	// 	"Price",
+	// 	"UnitWeight",
+	// 	"PreTare",
+	// 	"LimitHigh",
+	// 	"LimitLow",
+	// 	"isUSED",
+	// }
+
 	md5Str := fileToMd5(excelFileName)
 
-	products, err := readExcelToJSON(excelFileName, columnNames)
+	products, err := readExcelToJSON(excelFileName)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return false
@@ -107,7 +108,7 @@ func ParserPluFile(excelFileName string) bool {
 
 	buf.Write([]byte(md5Str))
 
-	pluNameMaxLenth := 64
+	pluNameMaxLenth := nameMaxLen
 	var tempProduct []Product
 	//删除空行
 	for _, product := range products {
@@ -126,21 +127,6 @@ func ParserPluFile(excelFileName string) bool {
 	// 将长度写入bytes.Buffer
 	buf.WriteByte(mapLength)
 
-	for _, product := range products {
-		// 计算ProductName字段的长度
-		nameLength := len(product.ProductName)
-		// 更新最大长度
-		if nameLength > pluNameMaxLenth {
-			pluNameMaxLenth = nameLength
-		}
-	}
-	if pluNameMaxLenth > 64 && pluNameMaxLenth < 128 {
-		pluNameMaxLenth = 128
-	} else if pluNameMaxLenth > 128 && pluNameMaxLenth < 256 {
-		pluNameMaxLenth = 256
-	} else if pluNameMaxLenth > 256 && pluNameMaxLenth < 512 {
-		pluNameMaxLenth = 512
-	}
 	varKeys := make([]string, 0, len(VarNumberMap))
 	for key := range VarNumberMap {
 		varKeys = append(varKeys, key)
@@ -167,9 +153,16 @@ func ParserPluFile(excelFileName string) bool {
 		// 写入ProductNumber，4字节
 		binary.Write(buf, binary.LittleEndian, int32(product.ProductNumber))
 		// 写入ProductName，根据pluNameMaxLenth的值计算字节数
-		productNameBytes := []byte(product.ProductName)
-		productNameBytes = append(productNameBytes, make([]byte, pluNameMaxLenth-len(productNameBytes))...)
-		buf.Write(productNameBytes)
+		if len(product.ProductName) > pluNameMaxLenth {
+			var tempName = product.ProductName[:pluNameMaxLenth]
+			productNameBytes := []byte(tempName)
+			buf.Write(productNameBytes)
+		} else {
+			productNameBytes := []byte(product.ProductName)
+			productNameBytes = append(productNameBytes, make([]byte, pluNameMaxLenth-len(productNameBytes))...)
+			buf.Write(productNameBytes)
+		}
+
 		// 写入PriceUnit，1字节
 		buf.WriteByte(byte(product.PriceUnit))
 		// 写入TaxModel，1字节
@@ -214,57 +207,96 @@ func fileToMd5(filePath string) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
-func readExcelToJSON(fileName string, columnNames []string) ([]Product, error) {
+func readExcelToJSON(fileName string) ([]Product, error) {
 	xlFile, err := excelize.OpenFile(fileName)
 	if err != nil {
 		return nil, err
 	}
 
 	var products []Product
-	rows, err := xlFile.GetRows("Sheet1")
+	sheet1 := xlFile.GetSheetName(0)
+	rows, err := xlFile.GetRows(sheet1)
 	if err != nil {
 		return nil, err
 	}
+	var colsList = rows[0]
 
-	for rowIndex := range rows {
+	for rowIndex := 1; rowIndex < len(rows); rowIndex++ {
 		product := Product{}
-		for i, colName := range columnNames {
-			cellValue, err := xlFile.GetCellValue("Sheet1", indexToCellName(rowIndex+2, i+1))
+		for i, colName := range colsList {
+			cellValue, err := xlFile.GetCellValue(sheet1, indexToCellName(rowIndex+1, i+1))
 			if err != nil {
-				// 错误处理
+				return products, err
 			}
 			switch colName {
 			case "ProductNumber":
-				product.ProductNumber = convertToInt(cellValue)
+				if cellValue != "" {
+					product.ProductNumber, err = convertToInt(cellValue)
+					if err != nil {
+						return products, err
+					}
+				} else {
+					return products, fmt.Errorf("data error")
+				}
 
 			case "ProductName":
-				product.ProductName = cellValue
+				if cellValue != "" {
+					product.ProductName = cellValue
+				} else {
+					return products, fmt.Errorf("data error")
+				}
 
 			case "PriceUnit":
-				product.PriceUnit = convertToByte(cellValue)
+				product.PriceUnit, err = convertToByte(cellValue)
+				if err != nil {
+					return products, err
+				}
 
 			case "TaxModel":
-				product.TaxModel = convertToByte(cellValue)
-
+				product.TaxModel, err = convertToByte(cellValue)
+				if err != nil {
+					return products, err
+				}
 			case "TaxType":
-				product.TaxType = convertToByte(cellValue)
+				product.TaxType, err = convertToByte(cellValue)
+				if err != nil {
+					return products, err
+				}
 
 			case "Price":
-				product.Price = convertToFloat64(cellValue)
+				product.Price, err = convertToFloat64(cellValue)
+				if err != nil {
+					return products, err
+				}
 
 			case "UnitWeight":
-				product.UnitWeight = convertToFloat64(cellValue)
+				product.UnitWeight, err = convertToFloat64(cellValue)
+				if err != nil {
+					return products, err
+				}
 			case "PreTare":
-				product.PreTare = convertToFloat64(cellValue)
+				product.PreTare, err = convertToFloat64(cellValue)
+				if err != nil {
+					return products, err
+				}
 
 			case "LimitHigh":
-				product.LimitHigh = convertToFloat64(cellValue)
+				product.LimitHigh, err = convertToFloat64(cellValue)
+				if err != nil {
+					return products, err
+				}
 
 			case "LimitLow":
-				product.LimitLow = convertToFloat64(cellValue)
+				product.LimitLow, err = convertToFloat64(cellValue)
+				if err != nil {
+					return products, err
+				}
 
 			case "isUSED":
-				product.isUSED = convertToByte(cellValue)
+				product.isUSED, err = convertToByte(cellValue)
+				if err != nil {
+					return products, err
+				}
 
 			default:
 
@@ -285,68 +317,74 @@ func indexToCellName(row, col int) string {
 	return colName + fmt.Sprint(row)
 }
 
-func convertToInt(value string) int {
+func convertToInt(value string) (int, error) {
 	var result int
 	if value != "" {
 		_, err := fmt.Sscanf(value, "%d", &result)
 		if err != nil {
-			log.Fatal(err)
+
+			return result, err
 		}
 	}
-	return result
+	return result, nil
 }
 
-func convertToByte(value string) byte {
+func convertToByte(value string) (byte, error) {
 	var result byte
 	if value != "" {
 		_, err := fmt.Sscanf(value, "%d", &result)
 		if err != nil {
-			log.Fatal(err)
+
+			return result, err
 		}
 	}
-	return result
+	return result, nil
 }
 
-func convertToFloat64(value string) float64 {
+func convertToFloat64(value string) (float64, error) {
 	var result float64
 	if value != "" {
 		_, err := fmt.Sscanf(value, "%f", &result)
 		if err != nil {
-			log.Fatal(err)
+			return result, err
 		}
+		result = math.Round(result*1000) / 1000
 	}
-	return result
+	return result, nil
 }
 
 func ParserDelPlu(pluIdList []string) ([]byte, bool) {
 	buf := new(bytes.Buffer)
 	for i := 0; i < len(pluIdList); i++ {
-		idNum := convertToInt(pluIdList[i])
+		idNum, err := convertToInt(pluIdList[i])
+		if err != nil {
+			return buf.Bytes(), false
+		}
 		binary.Write(buf, binary.BigEndian, int32(idNum))
 	}
 
 	return buf.Bytes(), true
 }
 
-func ParserInsertPlu(excelFileName string) ([]byte, []byte, bool) {
-	columnNames := []string{
-		"ProductNumber",
-		"ProductName",
-		"PriceUnit",
-		"TaxModel",
-		"TaxType",
-		"Price",
-		"UnitWeight",
-		"PreTare",
-		"LimitHigh",
-		"LimitLow",
-		"isUSED",
-	}
+func ParserInsertPlu(excelFileName string, nameMaxLen int) ([]byte, []byte, bool) {
+	// columnNames := []string{
+	// 	"ProductNumber",
+	// 	"ProductName",
+	// 	"PriceUnit",
+	// 	"TaxModel",
+	// 	"TaxType",
+	// 	"Price",
+	// 	"UnitWeight",
+	// 	"PreTare",
+	// 	"LimitHigh",
+	// 	"LimitLow",
+	// 	"isUSED",
+	// }
 
 	pluNumBuf := new(bytes.Buffer)
 	insertHeadBuf := new(bytes.Buffer)
 
-	products, err := readExcelToJSON(excelFileName, columnNames)
+	products, err := readExcelToJSON(excelFileName)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return pluNumBuf.Bytes(), insertHeadBuf.Bytes(), false
@@ -365,7 +403,7 @@ func ParserInsertPlu(excelFileName string) ([]byte, []byte, bool) {
 	buf := new(bytes.Buffer)
 	// 将长度写入bytes.Buffer
 	// buf.WriteByte(mapLength)
-	pluNameMaxLenth := 64
+	pluNameMaxLenth := nameMaxLen
 	var tempProduct []Product
 	//删除空行
 	for _, product := range products {
@@ -374,22 +412,6 @@ func ParserInsertPlu(excelFileName string) ([]byte, []byte, bool) {
 		}
 	}
 	products = tempProduct
-
-	for _, product := range products {
-		// 计算ProductName字段的长度
-		nameLength := len(product.ProductName)
-		// 更新最大长度
-		if nameLength > pluNameMaxLenth {
-			pluNameMaxLenth = nameLength
-		}
-	}
-	if pluNameMaxLenth > 64 && pluNameMaxLenth < 128 {
-		pluNameMaxLenth = 128
-	} else if pluNameMaxLenth > 128 && pluNameMaxLenth < 256 {
-		pluNameMaxLenth = 256
-	} else if pluNameMaxLenth > 256 && pluNameMaxLenth < 512 {
-		pluNameMaxLenth = 512
-	}
 
 	varKeys := make([]string, 0, len(VarNumberMap))
 	for key := range VarNumberMap {
@@ -420,9 +442,15 @@ func ParserInsertPlu(excelFileName string) ([]byte, []byte, bool) {
 		binary.Write(pluNumBuf, binary.BigEndian, int32(product.ProductNumber)) //获取PLU number先删除，后插入
 		binary.Write(buf, binary.LittleEndian, int32(product.ProductNumber))
 		// 写入ProductName，根据pluNameMaxLenth的值计算字节数
-		productNameBytes := []byte(product.ProductName)
-		productNameBytes = append(productNameBytes, make([]byte, pluNameMaxLenth-len(productNameBytes))...)
-		buf.Write(productNameBytes)
+		if len(product.ProductName) > pluNameMaxLenth {
+			var tempName = product.ProductName[:pluNameMaxLenth]
+			productNameBytes := []byte(tempName)
+			buf.Write(productNameBytes)
+		} else {
+			productNameBytes := []byte(product.ProductName)
+			productNameBytes = append(productNameBytes, make([]byte, pluNameMaxLenth-len(productNameBytes))...)
+			buf.Write(productNameBytes)
+		}
 		// 写入PriceUnit，1字节
 		buf.WriteByte(byte(product.PriceUnit))
 		// 写入TaxModel，1字节

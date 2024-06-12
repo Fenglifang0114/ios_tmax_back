@@ -98,11 +98,8 @@ func getBarCodeTypeId(filename string, tempLan string, tempType string) string {
 		fmt.Println("读取excel文件出错", err.Error())
 		return ret
 	}
-	// sheets := f.GetSheetMap()
-	// fmt.Println(sheets)
-	// sheet1 := sheets[1]
-	// fmt.Println("第一个工作表", sheet1)
-	rows, err := f.GetRows("Sheet1")
+	sheet1 := f.GetSheetName(0)
+	rows, err := f.GetRows(sheet1)
 	if err != nil {
 		fmt.Println("读取excel文件出错", err.Error())
 		return ret
@@ -129,7 +126,7 @@ func getBarCodeTypeId(filename string, tempLan string, tempType string) string {
 	rowDes := []string{}
 	isDesOk := false
 	if colId > 0 {
-		cols1, err := f.GetCols("Sheet1")
+		cols1, err := f.GetCols(sheet1)
 		if err != nil {
 			fmt.Println("读取excel文件出错", err.Error())
 			return ret
