@@ -17,7 +17,7 @@ func init() {
 	once.Do(func() {
 		log := &log.Logger{
 			Out:   os.Stderr,
-			Level: log.DebugLevel,
+			Level: log.WarnLevel, //DebugLevel 调试LOG
 			Formatter: &log.TextFormatter{
 				ForceColors:     true,
 				FullTimestamp:   true,
