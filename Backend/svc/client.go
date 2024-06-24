@@ -160,6 +160,7 @@ func (c *Client) writePump() {
 				return
 			}
 		default:
+			time.Sleep(time.Microsecond * 100)
 			continue
 		}
 	}
