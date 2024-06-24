@@ -216,11 +216,11 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	c.isSendUnolicitedData = false
-	// _, err := EnFacMode(c)
-	// if err != nil {
-	// 	return &ScaleRespMsg{}, err
-	// }
-	// enable scale sending weighing info continually
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		l.Log.Debug(err)
+
+	}
 	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)

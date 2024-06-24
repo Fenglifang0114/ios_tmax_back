@@ -40,13 +40,14 @@ func procToScaleReq(s *Scale, req SRequest) {
 	}
 	// send msg to web socket client
 	result, _ := json.Marshal(resp)
-	if err != nil {
-		if s.client.sendCh != nil {
-			s.client.sendCh <- result
-		}
-	} else {
-		l.Log.Errorf("Error on marshal resp: %v", err)
-	}
+	s.client.sendCh <- result
+	// if err != nil {
+	// 	if s.client.sendCh != nil {
+	// 		s.client.sendCh <- result
+	// 	}
+	// } else {
+	// 	l.Log.Errorf("Error on marshal resp: %v", err)
+	// }
 }
 
 var conversionMap map[SReqType]m.RespMsgType
@@ -187,6 +188,10 @@ func procChangeWifiMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func procModifyEepromInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqModifyEepromInfo(scale, req)
+}
+
+func procDownEepromInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDownEepromInfo(scale, req)
 }
 
 func procModifyVarValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -389,6 +394,7 @@ func init() {
 		SREQ_UPDATE_UI_CONF:           procUpdateUiConf,
 		SREQ_CHANGE_WIFI_MODE:         procChangeWifiMode,
 		SREQ_MODIFY_EEPROM_INFO:       procModifyEepromInfo,
+		SREQ_DOWN_EEPROM_INFO:         procDownEepromInfo,
 		SREQ_MODIFY_VAR_VALUE:         procModifyVarValue,
 		SREQ_SET_SERVER_IP:            procSetServerIp,
 		SREQ_EN_FACTORY_MODE:          procEnFactoryMode,

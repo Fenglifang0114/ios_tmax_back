@@ -165,6 +165,7 @@ const (
 	ERASE_INSERT_PLU_RESP         RespMsgType = "resp_erase_insert_plu"
 	REBOOT_RESP                   RespMsgType = "resp_reboot"
 	MODIFY_EEPROM_INFO_RESP       RespMsgType = "resp_modify_eeprom_info"
+	DOWN_EEPROM_INFO_RESP         RespMsgType = "resp_down_eeprom_info"
 	MODIFY_VAR_RESP               RespMsgType = "resp_modify_var_value"
 	SET_SERVER_IP_RESP            RespMsgType = "resp_set_server_ip"
 	GET_RANDOM_DATA_RESP          RespMsgType = "resp_get_random_data"

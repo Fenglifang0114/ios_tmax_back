@@ -2,6 +2,7 @@ package svc
 
 import (
 	"math/big"
+	"strings"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -45,10 +46,19 @@ type SrvMgr struct {
 	modeSetting *ModeSettingProvider
 }
 
+type LicenseInfo struct {
+	Id         string
+	ModuleName string
+	IsValid    bool
+	ValidDate  string
+}
+
 var (
-	gIsKeyValid   bool
-	gMachineId    string
-	gLicValidDate string
+	gIsKeyValid      bool
+	gMachineId       string
+	gLicValidDate    string
+	gModuleName      string
+	gLicenseInfoList []LicenseInfo
 )
 
 func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
@@ -58,13 +68,33 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	var licKey string
 	var err error
+	var licKeyList []string
 
-	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil || len(licKey) != 74 {
-		l.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
-		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid("d7a0a41239d92ee1724cd1a311ffffff2023-05-2594df26ebd828dbff03ede5f76effffff")
+	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil || len(licKey) < 74 {
+		var temp []string
+		licKeyList = temp
+		gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid("d7a0a41239d92ee1724cd1a311ffffff2023-05-2594df26ebd828dbff03ede5f76effffff")
+		gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
 	} else {
-		gIsKeyValid, gMachineId, gLicValidDate = lic.IsKeyValid(licKey)
+		licKeyList = strings.Split(licKey, "\r\n")
+		for _, item := range licKeyList {
+			if len(item) == 74 || len(item) == 78 {
+				gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
+				if gIsKeyValid {
+					gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
+				}
+
+			}
+
+		}
 	}
+
+	// if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil || len(licKey) != 74 {
+	// 	l.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
+	// 	gIsKeyValid, gMachineId, gLicValidDate,gModuleName = lic.IsKeyValid("d7a0a41239d92ee1724cd1a311ffffff2023-05-2594df26ebd828dbff03ede5f76effffff")
+	// } else {
+	// 	gIsKeyValid, gMachineId, gLicValidDate,gModuleName = lic.IsKeyValid(licKey)
+	// }
 
 	return &SrvMgr{
 		scaleMgr:           scaleMgr,
@@ -313,26 +343,20 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 	// 		}
 	// 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: ""}
 	// 	}
-	case REQ_CHECK_LICENSE:
-
-		var isValid string
-		if gIsKeyValid {
-			isValid = "true"
-		} else {
-			isValid = "false"
-		}
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE, MsgBody: isValid + "," + gMachineId + "," + gLicValidDate}
+	case REQ_GET_LICENSE:
+		licListStr, _ := json.MarshalToString(gLicenseInfoList)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_LICENSE, MsgBody: licListStr}
 
 	case REQ_CHECK_LICENSE_KEY:
 
-		isValid, machineId, licValidDate := lic.IsKeyValid(req.ReqData)
+		isValid, machineId, licValidDate, moduleName := lic.IsKeyValid(req.ReqData)
 		var isValidStr string
 		if isValid {
 			isValidStr = "true"
 		} else {
 			isValidStr = "false"
 		}
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE_KEY, MsgBody: isValidStr + "," + machineId + "," + licValidDate}
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE_KEY, MsgBody: moduleName + "," + isValidStr + "," + machineId + "," + licValidDate}
 
 	case REQ_UPDATE_LICENSE:
 		if err := lic.SaveKey(comm.LICENSE_FILE, req.ReqData); err != nil {

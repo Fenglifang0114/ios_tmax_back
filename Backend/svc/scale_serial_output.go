@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 var idMap = map[string]byte{
@@ -66,6 +68,7 @@ type Data struct {
 	VarName    string `json:"varname,omitempty"`
 	FunctionID int    `json:"functionid,omitempty"`
 	Length     int    `json:"length,omitempty"`
+	IsHex      bool   `json:"ishex,omitempty"`
 }
 
 type JSONData struct {
@@ -152,7 +155,22 @@ func procJsonDataData(jsonDataStruct JSONData, funcPosArray map[int]int) ([]byte
 			varPosArray = append(varPosArray, lengthBytes...)
 			outputDataArray = append(outputDataArray, positionData...) // 添加6个字节的空间
 		} else {
-			outputDataArray = append(outputDataArray, []byte(data.Value)...) // 追加value值
+
+			if data.IsHex {
+				var result []byte
+
+				parts := strings.Fields(data.Value)
+				for _, part := range parts {
+					value, _ := strconv.ParseInt(part, 16, 0)
+					result = append(result, byte(value))
+				}
+				outputDataArray = append(outputDataArray, result...)
+
+			} else {
+				outputDataArray = append(outputDataArray, []byte(data.Value)...) // 追加value值
+
+			}
+
 		}
 	}
 	return outputDataArray, varPosArray

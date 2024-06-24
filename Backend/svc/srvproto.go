@@ -37,7 +37,7 @@ const (
 	REQ_QUIT_APPLICATION ReqType = "quit_application" // without parameter
 	// REQ_GET_UI_CONF       ReqType = "get_ui_conf"       // without parameter
 	// REQ_UPDATE_UI_CONF    ReqType = "update_ui_conf"    // without parameter
-	REQ_CHECK_LICENSE     ReqType = "check_license"     // without parameter
+	REQ_GET_LICENSE       ReqType = "get_license"       // without parameter
 	REQ_CHECK_LICENSE_KEY ReqType = "check_license_key" // with parameter
 	REQ_UPDATE_LICENSE    ReqType = "update_license"    // with parameter
 
@@ -129,7 +129,7 @@ const (
 	SCALE_MGR_RESP_QUIT_APPLICATION ScaleMgrRespMsgType = "resp_quit_application" // without data
 	// SCALE_MGR_RESP_GET_UI_CONFIG     ScaleMgrRespMsgType = "resp_get_ui_config"     // with response of UI configuration
 	// SCALE_MGR_RESP_UPDATE_UI_CONFIG  ScaleMgrRespMsgType = "resp_update_ui_config"  // without parameter
-	SCALE_MGR_RESP_CHECK_LICENSE     ScaleMgrRespMsgType = "resp_check_license"     // with response of true or false
+	SCALE_MGR_RESP_GET_LICENSE       ScaleMgrRespMsgType = "resp_get_license"       // with response of true or false
 	SCALE_MGR_RESP_CHECK_LICENSE_KEY ScaleMgrRespMsgType = "resp_check_license_key" // with response of true or false
 	SCALE_MGR_RESP_UPDATE_LICENSE    ScaleMgrRespMsgType = "resp_update_license"    // with response of true or false
 
@@ -245,6 +245,7 @@ const (
 	SREQ_UPDATE_UI_CONF           SReqType = "update_ui_conf"
 	SREQ_CHANGE_WIFI_MODE         SReqType = "change_wifi_mode"
 	SREQ_MODIFY_EEPROM_INFO       SReqType = "modify_eeprom_info"
+	SREQ_DOWN_EEPROM_INFO         SReqType = "down_eeprom_info"
 	SREQ_MODIFY_VAR_VALUE         SReqType = "modify_var_value"
 	SREQ_SET_SERVER_IP            SReqType = "set_server_ip"
 	SREQ_EN_FACTORY_MODE          SReqType = "en_factory_mode"

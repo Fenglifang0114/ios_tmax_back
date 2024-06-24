@@ -544,6 +544,111 @@ func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
 	return GetIpMode(s)
 }
 
+func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
+	var eepromDataDown EepromDataDownResp
+	if err := json.UnmarshalFromString(req.ReqData, &eepromDataDown.EepromDataDown); err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	modifyData := eepromDataDown.EepromDataDown
+
+	print(len(modifyData))
+	composer := s.composer
+	fn := composer.ComposeCmd
+	for i := 0; i < len(modifyData); i++ {
+		if modifyData[i].Type == "string" {
+			packetData := stringToLittleEndianBytes(modifyData[i].Value, modifyData[i].Size)
+			packDataHexStr := hex.EncodeToString(packetData)
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+
+			// 发送数据包
+			if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+				return &ScaleRespMsg{}, err
+			} else if res.MsgBody != "ok" {
+				return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+			}
+		} else if modifyData[i].Type == "int" {
+			if modifyData[i].Size == 1 {
+				num, err := strconv.Atoi(modifyData[i].Value)
+				if err != nil {
+
+					return &ScaleRespMsg{m.DOWN_EEPROM_INFO_RESP, "fail,data error", s.Id}, nil
+				}
+				byteVal := []byte{byte(num)}
+				packDataHexStr := hex.EncodeToString(byteVal)
+				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
+				if err != nil {
+					return &ScaleRespMsg{}, err
+				}
+				// 发送数据包
+				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+					return &ScaleRespMsg{}, err
+				} else if res.MsgBody != "ok" {
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+				}
+			} else if modifyData[i].Size == 4 && modifyData[i].SubType == "ip" {
+				packetData := ipv4StringToBytes(modifyData[i].Value)
+				packDataHexStr := hex.EncodeToString(packetData)
+				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
+				if err != nil {
+					return &ScaleRespMsg{}, err
+				}
+				// 发送数据包
+				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+					return &ScaleRespMsg{}, err
+				} else if res.MsgBody != "ok" {
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+				}
+			} else if modifyData[i].Size == 2 || modifyData[i].Size == 4 || modifyData[i].Size == 8 {
+				packetData, _ := intToLittleEndianBytes(modifyData[i].Value, modifyData[i].Size)
+				packDataHexStr := hex.EncodeToString(packetData)
+				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
+				if err != nil {
+					return &ScaleRespMsg{}, err
+				}
+				// 发送数据包
+				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+					return &ScaleRespMsg{}, err
+				} else if res.MsgBody != "ok" {
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+				}
+			}
+
+		} else if modifyData[i].Type == "double" {
+			if modifyData[i].Size == 8 {
+				packetData := StringToFloat64Bytes(modifyData[i].Value)
+				packDataHexStr := hex.EncodeToString(packetData)
+				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
+				if err != nil {
+					return &ScaleRespMsg{}, err
+				}
+				// 发送数据包
+				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+					return &ScaleRespMsg{}, err
+				} else if res.MsgBody != "ok" {
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+				}
+			} else if modifyData[i].Size == 4 {
+				packetData := StringToFloat32Bytes(modifyData[i].Value)
+				packDataHexStr := hex.EncodeToString(packetData)
+				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
+				if err != nil {
+					return &ScaleRespMsg{}, err
+				}
+				// 发送数据包
+				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+					return &ScaleRespMsg{}, err
+				} else if res.MsgBody != "ok" {
+					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+				}
+			}
+		}
+	}
+	return &ScaleRespMsg{m.DOWN_EEPROM_INFO_RESP, "ok", s.Id}, nil
+}
+
 func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	var eepromData EepromDataResp
 	if err := json.UnmarshalFromString(req.ReqData, &eepromData.EepromData); err != nil {
@@ -890,6 +995,19 @@ func StringToFloat64Bytes(s string) []byte {
 	bits := math.Float64bits(f)
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, bits)
+	return bytes
+}
+
+// StringToFloat32Bytes 将字符串转换为 4 个字节的 32 位浮点数
+func StringToFloat32Bytes(s string) []byte {
+	// 解析字符串为浮点数
+	f, err := strconv.ParseFloat(s, 32)
+	if err != nil {
+		return nil
+	}
+	bits := math.Float32bits(float32(f))
+	bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bytes, bits)
 	return bytes
 }
 
@@ -2024,9 +2142,27 @@ type EData struct {
 	Comment     string `json:"comment"`
 	Category    string `json:"category"`
 }
+type EDataDown struct {
+	FiledName   string `json:"filedName"`
+	Size        int    `json:"size"`
+	Addr        int    `json:"addr"`
+	Type        string `json:"type"`
+	SubType     string `json:"subType"`
+	Permission  int    `json:"permission"`
+	Value       string `json:"value"`
+	Values      string `json:"values"`
+	CurrValue   string `json:"currValue"`
+	Description string `json:"description"`
+	Comment     string `json:"comment"`
+	Category    string `json:"category"`
+	Id          int    `json:"id"`
+}
 
 type EepromDataResp struct {
 	EepromData []EData
+}
+type EepromDataDownResp struct {
+	EepromDataDown []EDataDown
 }
 
 func ReqGetAllEepromInfo(c *Scale) (*ScaleRespMsg, error) {
