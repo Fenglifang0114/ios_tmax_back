@@ -246,10 +246,14 @@ const (
 	SREQ_CHANGE_WIFI_MODE         SReqType = "change_wifi_mode"
 	SREQ_MODIFY_EEPROM_INFO       SReqType = "modify_eeprom_info"
 	SREQ_DOWN_EEPROM_INFO         SReqType = "down_eeprom_info"
+	SREQ_DOWN_FACTORY_INFO        SReqType = "down_factory_info"
 	SREQ_MODIFY_VAR_VALUE         SReqType = "modify_var_value"
 	SREQ_SET_SERVER_IP            SReqType = "set_server_ip"
 	SREQ_EN_FACTORY_MODE          SReqType = "en_factory_mode"
 	SREQ_DOWN_DEFAULT_PRN_FMT     SReqType = "down_def_print_format"
+	SREQ_BACKUP_DEF_SETTING       SReqType = "backup_def_setting"
+	SREQ_GET_EEPROM_TO_BIN        SReqType = "get_eeprom_to_bin"
+	SREQ_SET_EEPROM_FROM_BIN      SReqType = "set_eeprom_from_bin"
 )
 
 type ReqScaleRec struct {
@@ -274,9 +278,9 @@ type ReqPrnData struct {
 }
 
 type ReqDefaultPrnData struct {
-	ScaleModel   string `json:"ScaleModel"`
-	PrinterModel string `json:"PrinterModel"`
-	FilePath     string `json:"FilePath"`
+	ScaleModel   string   `json:"ScaleModel"`
+	PrinterModel string   `json:"PrinterModel"`
+	FilePaths    []string `json:"FilePath"`
 }
 
 type ReqDelPLuData struct {

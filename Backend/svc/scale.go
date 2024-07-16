@@ -1,7 +1,6 @@
 package svc
 
 import (
-	"archive/zip"
 	"bufio"
 	"bytes"
 	"crypto/md5"
@@ -15,7 +14,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +36,7 @@ const (
 	// 	PACKET_TAIL_TMAX               = 0xA55A
 	DATA_LENGTH_256_TMAX = 256
 	DATA_LENGTH_512_TMAX = 512
+	DATA_LENGTH_8_TMAX   = 8
 
 // FILE_CHUNK_SIZE_TMAX           = 272
 // OPEN_FAC_CHUNK_SIZE_TMAX       = 6
@@ -61,6 +60,24 @@ const MD5SEED = "*T-Scale*"
 const (
 	SCALE_RECV_CH_SIZE = 16
 	SCALE_SEND_CH_SIZE = 16
+)
+
+const (
+	FCX_ADDR            = 0x1001DC00
+	FCX_MODEL_NAME_ADDR = FCX_ADDR                   //8字节
+	FCX_SN_ADDR         = FCX_MODEL_NAME_ADDR + 0x08 //16字节
+	FCX_MD5_ADDR        = FCX_SN_ADDR + 0x10         //8字节
+	FCX_TAIL_ADDR       = FCX_ADDR + 0x200 - 0x08    //尾巴8字节
+
+	FCX_DEF_FLASH_ADDR = 0x1001DE00 //默认参数位置
+)
+
+var WRITE_FACTORY_TAIL_CMD_TMAX []byte = []byte{0xff, 0xff, 0xff, 0xff, 0x5a, 0xa5, 0xa5, 0x5a}
+
+const (
+	FCX_MODEL_NAME_ID = 1
+	FCX_SN_ID         = 2
+	FCX_MD5_ID        = 3
 )
 
 const (
@@ -649,6 +666,251 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return &ScaleRespMsg{m.DOWN_EEPROM_INFO_RESP, "ok", s.Id}, nil
 }
 
+func ReqSetEepromFromBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	filePath := req.ReqData
+	composer := c.composer
+	fn := composer.ComposeCmd
+
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+	dataInfo, err := os.ReadFile(filePath)
+	if err != nil {
+		l.Log.Fatal(err)
+	}
+
+	if len(dataInfo) != 512 {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail.")
+	}
+
+	// for i := 0; i < 61; i++ {
+	// 	if dataInfo[i] != 0xff {
+	// 		return &ScaleRespMsg{}, fmt.Errorf("fail,file error.")
+	// 	}
+	// }
+
+	packetCount := (512 - 61) / 8
+	if (512-61)%8 != 0 {
+		packetCount += 1
+	}
+	addr := 61
+
+	for i := 0; i < packetCount; i++ {
+		// 计算本包数据
+		start := i*8 + 61
+		end := start + 8
+		if end > len(dataInfo) {
+			end = len(dataInfo)
+		}
+		packetData := dataInfo[start:end]
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		// 发送数据包
+		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
+		}
+		// 地址自增
+		addr += 0x08
+	}
+
+	l.Log.Info("save bin ok")
+
+	// 备份eeprom 擦除原本秤上的flash  一次擦512  DATA_LENGTH_512_TMAX
+	l.Log.Debug("erase flash on scale")
+	addr = FCX_DEF_FLASH_ADDR
+
+	addrInLoop := addr
+
+	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH_512, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{}, fmt.Errorf("erase fail")
+	}
+
+	// 计算数据包数量
+	packetCount = len(dataInfo) / DATA_LENGTH_8_TMAX
+	if len(dataInfo)%DATA_LENGTH_8_TMAX != 0 {
+		packetCount += 1
+	}
+	// 遍历所有数据包
+	l.Log.Debug("send data package to scale")
+	for i := 0; i < packetCount; i++ {
+		// 计算本包数据
+		start := i * DATA_LENGTH_8_TMAX
+		end := start + DATA_LENGTH_8_TMAX
+		if end > len(dataInfo) {
+			end = len(dataInfo)
+		}
+		packetData := dataInfo[start:end]
+
+		// 构建数据包
+		// dataPackCmd := buildSendDataPacket(addr, packetData)
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		// 发送数据包
+		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+		}
+		// 地址自增
+		addr += 0x08
+	}
+	l.Log.Info("send bin ok")
+
+	return &ScaleRespMsg{m.SET_EEPROM_FROM_BIN_RESP, "ok", c.Id}, nil
+}
+
+func ReqGetEepromInfoToBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	filePath := req.ReqData
+
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+
+	dataInfo, _ := getEepromData(c, 512)
+	if len(dataInfo) == 512 {
+		// for i := 0; i < 61; i++ {
+		// 	dataInfo[i] = 0xff
+		// }
+		if !saveByteToBin(filePath, dataInfo) {
+			return &ScaleRespMsg{}, fmt.Errorf("fail,write bin fail.")
+		}
+
+		l.Log.Info("save bin ok")
+	} else {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail.")
+	}
+
+	return &ScaleRespMsg{m.GET_EEPROM_TO_BIN_RESP, "ok", c.Id}, nil
+}
+
+func saveByteToBin(fileName string, tempBuf []byte) bool {
+	fp, err := os.Create(fileName)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	defer fp.Close()
+	fp.Write(tempBuf)
+	return true
+}
+
+func ReqDownFactoryInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
+	var factoryDataDown FactoryDataDownResp
+	if err := json.UnmarshalFromString(req.ReqData, &factoryDataDown.FactoryDataDown); err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	reg, err, res := openFactory(s)
+	if err != nil || !res {
+		return reg, err
+	}
+
+	modifyData := factoryDataDown.FactoryDataDown
+
+	print(len(modifyData))
+	composer := s.composer
+	fn := composer.ComposeCmd
+
+	eraseAddr := FCX_ADDR
+
+	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH_512, m.CmdData{Type: m.DATA_TYPE_INT, Data: eraseAddr})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	if res, err := perfCmdNwaitResult(s, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{}, fmt.Errorf("erase fail")
+	}
+
+	modelNameSnStr := ""
+	for i := 0; i < len(modifyData); i++ {
+		if modifyData[i].Type == "string" {
+			packetData := fillStrBySize(modifyData[i].Value, modifyData[i].Size)
+			packDataHexStr := hex.EncodeToString(packetData)
+			var addr = 0
+			if modifyData[i].Id == FCX_MODEL_NAME_ID {
+				addr = FCX_MODEL_NAME_ADDR
+				modelNameSnStr = modelNameSnStr + modifyData[i].Value
+			} else if modifyData[i].Id == FCX_SN_ID {
+				addr = FCX_SN_ADDR
+				modelNameSnStr = modelNameSnStr + modifyData[i].Value
+			} else if modifyData[i].Id == FCX_MD5_ID {
+				addr = FCX_MD5_ADDR
+			} else {
+				return &ScaleRespMsg{}, fmt.Errorf("write flase fail")
+			}
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+
+			// 发送数据包
+			if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+				return &ScaleRespMsg{}, err
+			} else if res.MsgBody != "ok" {
+				return &ScaleRespMsg{}, fmt.Errorf("write flase fail")
+			}
+		}
+	}
+	//计算MD5值
+	if len(modelNameSnStr) > 0 {
+		modelNameSnStr = modelNameSnStr + MD5SEED
+		crc16Byte := calculateMD5(modelNameSnStr)
+		byte4Md5 := crc16Byte[0:4]
+		result := make([]byte, 0, 8)
+		result = append(result, byte4Md5[:4]...)
+		if len(result) < 8 {
+			result = append(result, bytes.Repeat([]byte{0xFF}, 8-len(result))...)
+		}
+		packetData := result
+		packDataHexStr := hex.EncodeToString(packetData)
+		addr := FCX_MD5_ADDR
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		// 发送数据包
+		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("write flase fail")
+		}
+
+	}
+
+	packetData := WRITE_FACTORY_TAIL_CMD_TMAX
+	packDataHexStr := hex.EncodeToString(packetData)
+	addr := FCX_TAIL_ADDR
+	cmd, timeoutMs, err = fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	// 发送数据包
+	if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{}, fmt.Errorf("write flase fail")
+	}
+
+	return &ScaleRespMsg{m.DOWN_FACTORY_INFO_RESP, "ok", s.Id}, nil
+}
+
 func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	var eepromData EepromDataResp
 	if err := json.UnmarshalFromString(req.ReqData, &eepromData.EepromData); err != nil {
@@ -1044,6 +1306,25 @@ func intToLittleEndianBytes(dataStr string, size int) ([]byte, error) {
 
 }
 
+func fillStrBySize(dataStr string, size int) []byte {
+	runes := []rune(dataStr)
+	result := make([]byte, 0, size)
+
+	if isASCII(dataStr) {
+		for i, r := range runes {
+			if i >= size {
+				break
+			}
+			result = append(result, byte(r))
+		}
+	}
+	for i := len(result); i < size; i++ {
+		result = append(result, byte(0xff))
+	}
+
+	return result
+}
+
 func isASCII(s string) bool {
 	for _, char := range s {
 		if char > 127 {
@@ -1052,6 +1333,7 @@ func isASCII(s string) bool {
 	}
 	return true
 }
+
 func stringToLittleEndianBytes(dataStr string, size int) []byte {
 	runes := []rune(dataStr)
 	result := make([]byte, 0, size)
@@ -1117,7 +1399,7 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 	}
 
 	crc16Byte := calculateMD5(dataStruct.ModelName + dataStruct.ScaleSn + MD5SEED)
-	byte4Md5 := crc16Byte[0:5]
+	byte4Md5 := crc16Byte[0:4]
 	fmt.Println(byte4Md5)
 	//------拿到随机数
 	var nums []uint8
@@ -1196,7 +1478,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 	}
 	if prnFmtAddr == 0 || prnFmtMaxLenth == 0 || eraseLen == 0 {
-		return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+		return &ScaleRespMsg{}, fmt.Errorf("get print address fail")
 	}
 	var reqData ReqPrnData
 	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
@@ -1326,7 +1608,7 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	eraseLen := 0
 	addrInfo, res := getAddrFromScale(c, SI_DEF_PRN_INFO)
 	if !res {
-		return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+		return &ScaleRespMsg{}, fmt.Errorf("get print address fail")
 	}
 
 	prnFmtAddr = addrInfo.Addr
@@ -1334,22 +1616,17 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	eraseLen = addrInfo.EraseLen
 
 	if prnFmtAddr == 0 || prnFmtMaxLenth == 0 || eraseLen == 0 {
-		return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+		return &ScaleRespMsg{}, fmt.Errorf("get print address fail")
 	}
 	var reqData ReqDefaultPrnData
 	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
 		return &ScaleRespMsg{}, err
 	}
 
-	zipFilePath := reqData.FilePath
+	zipFilePath := reqData.FilePaths
 	//将所有文件解密后的内容和md5都存储到数组里
-	strFileDataArray, strMd5Array, res := getFileDataAndMd5(zipFilePath)
+	strFileDataArray, res := getFileData(zipFilePath)
 	if !res {
-		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
-	}
-
-	//检查所有文件的md5是否正确
-	if !checkFilesMd5(strFileDataArray, strMd5Array) {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
 	}
 
@@ -1421,74 +1698,139 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	return &ScaleRespMsg{m.DOWN_DEFAULT_PRN_FMT_RESP, "ok", c.Id}, nil
 }
+func getEepromData(c *Scale, readLen int) ([]byte, error) {
 
-func getFileDataAndMd5(zipFilePath string) ([12]string, [12]string, bool) {
-	var strFileDataArray [12]string
-	var strMd5Array [12]string
-	r, err := zip.OpenReader(zipFilePath)
-	if err != nil {
-		return strFileDataArray, strMd5Array, false
-	}
-	defer r.Close()
-	for _, f := range r.File {
-		fmt.Println("File:", f.Name)
-		// 打开文件
-		rc, err := f.Open()
+	composer := c.composer
+	l.Log.Debug("get eeprom data from scale")
+	dataBuffer := make([]byte, 0)
+
+	loopAddr := 0
+	packetCount := readLen / 8
+	for i := 0; i < packetCount; i++ {
+		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_READ_EEPROM_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, "")})
 		if err != nil {
-			return strFileDataArray, strMd5Array, false
+			return dataBuffer, nil
 		}
-		defer rc.Close()
-		num, res := getFileNum(f.Name)
-		if !res {
-			return strFileDataArray, strMd5Array, false
-		}
-		tempContent, err := io.ReadAll(rc)
-		if err != nil {
-			return strFileDataArray, strMd5Array, false
-		}
-		if strings.Contains(f.Name, "fmt") {
-			tempStr := decryptCsv(string(tempContent))
-			if !strings.Contains(tempStr, "ROTATE") {
-				return strFileDataArray, strMd5Array, false
-			}
-			strFileDataArray[num-1] = tempStr
-		} else if strings.Contains(f.Name, "txt") {
-			strMd5Array[num-1] = string(tempContent)
-		}
-	}
-	return strFileDataArray, strMd5Array, true
-}
-
-func checkFilesMd5(strFileDataArray [12]string, strMd5Array [12]string) bool {
-	for i := 0; i < 12; i++ {
-		if strFileDataArray[i] != "" {
-			tempMd5Arr := calculateMD5(strFileDataArray[i] + MD5SEED) //统一为seed,要改打包的UI，此处先暂定这样
-			var md5TmpStr string
-			for _, b := range tempMd5Arr {
-				md5TmpStr += fmt.Sprintf("%02X", b) // 将每个字节转换为两位16进制格式的字符串并拼接
-			}
-			if !strings.EqualFold(md5TmpStr, strMd5Array[i]) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-func getFileNum(fNameStr string) (int, bool) {
-	re := regexp.MustCompile(`(\d+)`) // 使用正则表达式提取数字部分
-	match := re.FindStringSubmatch(fNameStr)
-
-	if len(match) > 1 {
-		numStr := match[1]               // 提取到的数字部分
-		num, err := strconv.Atoi(numStr) // 将字符串转换为int类型
-		if err == nil {
-			return num, true
+		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+			return dataBuffer, nil
+		} else if res.MsgBody == "fail" {
+			return dataBuffer, nil
 		} else {
-			return 0, false
+			strData := res.MsgBody
+			if str, ok := strData.(string); ok {
+				addrBytes := []byte(str)
+				if len(addrBytes) == 8 {
+					dataBuffer = append(dataBuffer, addrBytes...)
+				} else {
+					return dataBuffer, nil
+				}
+			} else {
+				return dataBuffer, nil
+			}
 		}
+		loopAddr = loopAddr + 8
+		println("test:" + string(loopAddr))
+
 	}
-	return 0, false
+
+	return dataBuffer, nil
+
+}
+
+func ReqBackupDefSetting(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+
+	//分析打印格式
+	composer := c.composer
+	fn := composer.ComposeCmd
+
+	dataInfo, _ := getEepromData(c, 512)
+	if len(dataInfo) == 512 {
+
+		// 擦除原本秤上的flash  一次擦512  DATA_LENGTH_512_TMAX
+		l.Log.Debug("erase flash on scale")
+		addr := FCX_DEF_FLASH_ADDR
+
+		addrInLoop := addr
+
+		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH_512, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("erase fail")
+		}
+
+		// 计算数据包数量
+		packetCount := len(dataInfo) / DATA_LENGTH_8_TMAX
+		if len(dataInfo)%DATA_LENGTH_8_TMAX != 0 {
+			packetCount += 1
+		}
+		// 遍历所有数据包
+		l.Log.Debug("send data package to scale")
+		for i := 0; i < packetCount; i++ {
+			// 计算本包数据
+			start := i * DATA_LENGTH_8_TMAX
+			end := start + DATA_LENGTH_8_TMAX
+			if end > len(dataInfo) {
+				end = len(dataInfo)
+			}
+			packetData := dataInfo[start:end]
+
+			// 构建数据包
+			// dataPackCmd := buildSendDataPacket(addr, packetData)
+			packDataHexStr := hex.EncodeToString(packetData)
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			// 发送数据包
+			if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+				return &ScaleRespMsg{}, err
+			} else if res.MsgBody != "ok" {
+				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+			}
+			// 地址自增
+			addr += 0x08
+		}
+		l.Log.Info("send bin ok")
+	} else {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail.")
+	}
+
+	return &ScaleRespMsg{m.BACKUP_DEF_SETTING_RESP, "ok", c.Id}, nil
+}
+
+func getFileData(zipFilePath []string) ([]string, bool) {
+	var strFileDataArray []string
+
+	for _, f := range zipFilePath {
+
+		// 打开文件
+		file, err := os.Open(f)
+		if err != nil {
+			return strFileDataArray, false
+		}
+		defer file.Close()
+
+		tempContent, err := io.ReadAll(file)
+		if err != nil {
+			return strFileDataArray, false
+		}
+
+		tempStr := decryptCsv(string(tempContent))
+		if !strings.Contains(tempStr, "ROTATE") {
+			return strFileDataArray, false
+		}
+		strFileDataArray = append(strFileDataArray, tempStr)
+
+	}
+	return strFileDataArray, true
 }
 
 func decryptCsv(encryptedCsv string) string {
@@ -2119,7 +2461,7 @@ func ReqGetOneEepromInfo(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				}
 
 			} else {
-				return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+				return &ScaleRespMsg{}, fmt.Errorf("get wifi&Bt fail")
 			}
 		}
 
@@ -2163,6 +2505,17 @@ type EepromDataResp struct {
 }
 type EepromDataDownResp struct {
 	EepromDataDown []EDataDown
+}
+
+type FactDataDown struct {
+	Size  int    `json:"size"`
+	Type  string `json:"type"`
+	Value string `json:"value"`
+	Id    int    `json:"id"`
+}
+
+type FactoryDataDownResp struct {
+	FactoryDataDown []FactDataDown
 }
 
 func ReqGetAllEepromInfo(c *Scale) (*ScaleRespMsg, error) {

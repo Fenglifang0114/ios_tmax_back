@@ -55,7 +55,7 @@ func IsKeyValid(licenseKey string) (bool, string, string, string) {
 		machineId := []byte(machineIDStr[0:10]) // e4e13e78c5
 		log.Log.Debugf("MachineId:%s\n", machineId)
 		saltedData := append([]byte(machineIDStr[0:10]), []byte(salt)...)
-		saltedData = append([]byte(licenseKey[32:36]), []byte(salt)...)
+		saltedData = append([]byte(licenseKey[32:36]), saltedData...)
 		hash := md5.Sum(saltedData)
 		hashStr := hex.EncodeToString(hash[:])
 		if !reflect.DeepEqual(licenseKey[0:32], hashStr) {
@@ -112,7 +112,21 @@ func ReadLicFile(filename string) (string, error) {
 // 	return os.WriteFile(filePath, []byte(content+"\n"), 0644)
 // }
 
+func ensureFileExists(filePath string) {
+	_, err := os.Stat(filePath)
+	if err != nil && os.IsNotExist(err) {
+		file, err := os.Create(filePath)
+		if err != nil {
+			fmt.Printf("creat file fail: %v\n", err)
+			return
+		}
+		defer file.Close()
+	}
+}
+
 func SaveKey(filePath string, content string) error {
+
+	ensureFileExists(filePath)
 
 	contentStr, err := os.ReadFile(filePath)
 	if err != nil {

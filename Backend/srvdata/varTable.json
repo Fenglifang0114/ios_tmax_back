@@ -60,6 +60,26 @@
             "id": 16,
             "comment": "total count"
         },
+		{
+            "valuename": "DATE",
+            "id": 17,
+            "comment": "date_from_scale"
+        },
+        {
+            "valuename": "TIME",
+            "id": 18,
+            "comment": "time_from_scale"
+        },
+		{
+            "valuename": "U.WGT",
+            "id": 19,
+            "comment": "Universal weight"
+        },
+        {
+            "valuename": "U.WU",
+            "id": 20,
+            "comment": "Universal weight unit"
+        },
         {
             "valuename": "NO._P",
             "id": 30,

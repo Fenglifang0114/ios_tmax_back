@@ -38,14 +38,12 @@ const (
 
 // SI_  代表scale info 的缩写
 const (
-	SI_MODEL_NAME    = 1
-	SI_SCALE_SN      = 2
-	SI_DEF_PRN_INFO  = 3
-	SI_FREE_PRN_INFO = 4
-	SI_SERIAL_OUTPUT = 5
-	SI_PLU_INFO      = 6
-	SI_OL_INFO       = 7
-	SI_UL_INFO       = 8
+	SI_DEF_PRN_INFO  = 1
+	SI_FREE_PRN_INFO = 2
+	SI_SERIAL_OUTPUT = 3
+	SI_PLU_INFO      = 4
+	SI_OL_INFO       = 5
+	SI_UL_INFO       = 6
 )
 
 var responseHandlerMap map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int)
@@ -141,6 +139,9 @@ func init() {
 		m.EN_FACTORY_MODE_RESP:      handleEnFactoryModeResp,
 		m.GET_RANDOM_DATA_RESP:      handleGetRandomDataResp,
 		m.DOWN_DEFAULT_PRN_FMT_RESP: handleDownDefaultPrnFmtResp,
+		m.DOWN_FACTORY_INFO_RESP:    handleDownFactorInfoResp,
+		m.GET_EEPROM_TO_BIN_RESP:    handleGetEepromToBinResp,
+		m.SET_EEPROM_FROM_BIN_RESP:  handleSetEepromFromBinResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -353,31 +354,27 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return msg, len(data)
 
 	}
-	dataLen := int(binary.BigEndian.Uint16(data[:2]))
-	var byteLen int
+	dataLen := int(binary.BigEndian.Uint32(data[:4]))
+
 	fmt.Println(dataLen)
-	for i := 2; i < dataLen; i++ {
-		println(data[i])
-		switch data[i] {
-		case SI_MODEL_NAME:
-			byteLen = int(data[i+1])
-			scaleInfo.ModelName = string(data[i+2 : i+2+byteLen])
-			i = i + 1 + byteLen
-		case SI_SCALE_SN:
-			byteLen = int(data[i+1])
-			scaleInfo.ScaleSn = string(data[i+2 : i+2+byteLen])
-			i = i + 1 + byteLen
+	loopTime := dataLen / 16
+	dataStart := 4
+	for i := 0; i < loopTime; i++ {
+
+		id := int(binary.BigEndian.Uint32(data[dataStart : dataStart+4]))
+		switch id {
 		case SI_DEF_PRN_INFO, SI_FREE_PRN_INFO, SI_SERIAL_OUTPUT, SI_PLU_INFO, SI_OL_INFO, SI_UL_INFO:
-			byteLen = int(data[i+1])
-			var infoByte = data[i+2 : i+2+byteLen]
-			siAddrInfos.Type = int(data[i])
+
+			var infoByte = data[dataStart+4 : dataStart+16]
+			siAddrInfos.Type = id
 			siAddrInfos.Addr, siAddrInfos.Lenth, siAddrInfos.EraseLen = getInfoAddrLen(infoByte)
 			addrInfoStr, _ := json.MarshalToString(siAddrInfos)
 			scaleInfo.AddrInfos = append(scaleInfo.AddrInfos, addrInfoStr)
-			i = i + 1 + byteLen
+
 		default:
 
 		}
+		dataStart = dataStart + 16
 	}
 
 	msg.MsgType = m.GET_SCALE_INFO_RESP
@@ -389,31 +386,35 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleGetFactoryInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	//     20240417@FLF
-	// 5A A5 00 1E 05 F6 00 05 54 2D 4D 41 58 0C 31 30 38 30 30 38 30 32 30 30 30 38 62 C6 A8 39 A5 5A
+	// 5A A5 00 1E 05 F6 00 05 54 2D 4D 41 58 0C 31 30 38 30 30 38 30 32 30 30 30 38 62 C6 A8 39 A5 5A  //旧的
+	//前8位是model name 后16位是SN
 	var factoryInfo FIFromScale
 	msg := ScaleRespMsg{}
 	msg.MsgType = m.GET_FACTORY_INFO_RESP
 	msg.ScaleId = scaleId
 	msg.MsgBody = "fail"
-
-	tmpInt := int(data[0])
-	endIndex := tmpInt + 1
-	if endIndex > len(data) {
+	modelNameStr := ""
+	snStr := ""
+	if len(data) != 24 {
 		return msg, len(data)
 	}
-	factoryInfo.ModelName = string(data[1:endIndex])
-
-	if endIndex+1 > len(data) {
-		return msg, len(data)
+	for i := 0; i < 8; i++ {
+		if data[i] != 0xff {
+			modelNameStr = modelNameStr + string(data[i])
+		} else {
+			break
+		}
+	}
+	for i := 8; i < 24; i++ {
+		if data[i] != 0xff {
+			snStr = snStr + string(data[i])
+		} else {
+			break
+		}
 	}
 
-	tmpInt = int(data[endIndex])
-	endIndex1 := tmpInt + 1 + endIndex
-	if endIndex1 > len(data) {
-		return msg, len(data)
-	}
-	factoryInfo.ScaleSn = string(data[endIndex+1 : endIndex1])
-
+	factoryInfo.ModelName = modelNameStr
+	factoryInfo.ScaleSn = snStr
 	msg.MsgBody, _ = json.MarshalToString(factoryInfo)
 
 	return msg, len(data)
@@ -548,6 +549,21 @@ func handleModifyVarResp(scaleId int64, data []byte) (ScaleRespMsg, int) { //FLF
 }
 
 func handleDownDefaultPrnFmtResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	// TODO: Implement function
+	return ScaleRespMsg{}, 0
+}
+
+func handleDownFactorInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	// TODO: Implement function
+	return ScaleRespMsg{}, 0
+}
+
+func handleGetEepromToBinResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	// TODO: Implement function
+	return ScaleRespMsg{}, 0
+}
+
+func handleSetEepromFromBinResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
 }

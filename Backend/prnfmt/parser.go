@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 )
@@ -16,7 +17,7 @@ type InfoStr struct {
 	varNum    uint32
 }
 type printInfo struct {
-	printerName     [23]byte
+	printerName     [23]byte //22个用于存储打印机的名字，后面的一个用于写类型，比如0是lable，1是receipt
 	formatNum       uint8
 	everyFormatInfo [12]InfoStr
 	varInfo         [30]VarStruct
@@ -43,15 +44,41 @@ const (
 )
 
 var (
-	FMT_FILL_TAIL []byte = []byte{0x5a, 0xa5, 0xa5, 0x5a, 0x00, 0x00, 0x00, 0x00}
+	FMT_FILL_TAIL      []byte = []byte{0x5a, 0xa5, 0xa5, 0x5a, 0x00, 0x00, 0x00, 0x00}
+	ESC_CHANGE_EPL_205        = []byte{0x1F, 0x28, 0x4C, 0x03, 0x00, 0x43, 0x45, 0x06}
 )
+
+func findPrinterName(s string) string {
+	parts := strings.Split(s, "\r\n")
+	if len(parts) >= 2 {
+		return parts[len(parts)-2]
+	}
+	return ""
+}
 
 func ParserFmtToFile(utf8Buff string, printerModel string, fmtLen int) bool {
 	var buffer *bytes.Buffer
-	if printerModel == "EPM205" {
-		buffer = ParserFmtToBuf(utf8Buff, printerModel, fmtLen)
+	printMode := printerModel
+	printerName := ""
+	prtInfo := findPrinterName(utf8Buff)
+	if strings.Contains(prtInfo, "F,") {
+		parts := strings.Split(prtInfo, ",")
+		if len(parts) == 3 {
+			printerName = parts[1]
+			if parts[2] == "L" {
+				printMode = "Lable"
+			} else {
+				printMode = "Receipt"
+			}
+
+		}
+
+	}
+	if printMode == "Lable" {
+		//此处需要进一步判断是哪个打印机，哪种模式，上面的Lable只是初步判断是从标签格式下发的路径来的
+		buffer = ParserFmtToBuf(utf8Buff, printerName, fmtLen)
 	} else {
-		buffer = ParserRptFmtToBuf(utf8Buff, printerModel, fmtLen)
+		buffer = ParserRptFmtToBuf(utf8Buff, printerName, fmtLen)
 	}
 
 	// 7.创建bin文件
@@ -87,6 +114,9 @@ func ParserFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buf
 
 	buff, _ := Utf8ToGb2312(utf8Buff)
 	var formatbuf *bytes.Buffer
+	if printerModel == "EPM205" {
+		dataCamp.Write(ESC_CHANGE_EPL_205)
+	}
 
 	formatbuf = ParseEplLines(buff, dataCamp, lastVarPos)
 
@@ -108,6 +138,15 @@ func ParserFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buf
 	}
 
 	FinalFormatInfo.formatNum = 1 ///打印格式总数，根据打印格式文件数量决定
+	var prtName [23]byte
+	prtName[22] = 0x00
+
+	if len(printerModel) > 22 {
+		printerModel = printerModel[:22]
+	}
+	copy(prtName[:len(printerModel)], []byte(printerModel))
+
+	FinalFormatInfo.printerName = prtName
 	FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].addr = uint32(lastAddr)
 	FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].formatLen = uint32(everyBufLen[TotalVarDataIndex])
 	FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].varNum = uint32(lastVarNum)
@@ -166,6 +205,10 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 	buff := utf8Buff //用UTF8 做
 	var formatbuf *bytes.Buffer
 
+	if printerModel == "EPM205" {
+		dataCamp.Write(ESC_CHANGE_ESC_205)
+	}
+
 	formatbuf = ParseEscLines(buff, dataCamp, lastVarPos)
 
 	everyBufLen = append(everyBufLen, formatbuf.Len())
@@ -186,6 +229,15 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 	}
 
 	FinalRptFmtInfo.formatNum = 1 ///打印格式总数，根据打印格式文件数量决定
+	var prtName [23]byte
+	prtName[22] = 0x01
+	tmpNameStr := ""
+	if len(printerModel) > 22 {
+		tmpNameStr = printerModel[:22]
+	}
+	copy(prtName[:len(tmpNameStr)], []byte(tmpNameStr))
+	FinalRptFmtInfo.printerName = prtName
+
 	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].addr = uint32(lastAddr)
 	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].formatLen = uint32(everyBufLen[TotalVarDataIndex])
 	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].varNum = uint32(lastVarNum)
@@ -265,7 +317,7 @@ func Utf8ToGb2312(buff string) (string, error) {
 	return gb2312str, err
 }
 
-func ParserDefFmtToFile(fmtDataList [12]string, printerModel string, fmtLen int) bool {
+func ParserDefFmtToFile(fmtDataList []string, printerModel string, fmtLen int) bool {
 	var buffer *bytes.Buffer
 	if printerModel == "EPM205" {
 		buffer = ParserDefFmtToBuf(fmtDataList, printerModel, fmtLen)
@@ -286,7 +338,7 @@ func ParserDefFmtToFile(fmtDataList [12]string, printerModel string, fmtLen int)
 	// 8.写数据到串口
 }
 
-func ParserDefFmtToBuf(fmtDataList [12]string, printerModel string, fmtLen int) *bytes.Buffer {
+func ParserDefFmtToBuf(fmtDataList []string, printerModel string, fmtLen int) *bytes.Buffer {
 	var FinalFormatInfo printInfoDef
 
 	dataCamp1 := bytes.NewBufferString("")
@@ -298,7 +350,7 @@ func ParserDefFmtToBuf(fmtDataList [12]string, printerModel string, fmtLen int) 
 	fillchar := 0xff
 	var lastVarPos int //变量位置
 
-	FinalFormatInfo.formatNum = 12 ///打印格式总数，根据打印格式文件数量决定
+	FinalFormatInfo.formatNum = uint8(len(fmtDataList)) ///打印格式总数，根据打印格式文件数量决定
 
 	totalbuffer := bytes.NewBufferString("") //打印命令集合
 	// var everyAddr []int                                                 //每个打印格式偏移量
@@ -312,7 +364,7 @@ func ParserDefFmtToBuf(fmtDataList [12]string, printerModel string, fmtLen int) 
 	VarList = clearList // 用于清空数据
 
 	//for循环解析文件
-	for i := 0; i < 12; i++ {
+	for i := 0; i < len(fmtDataList); i++ {
 		utf8Buff := fmtDataList[i]
 		lastVarPos = 0
 
@@ -358,7 +410,7 @@ func ParserDefFmtToBuf(fmtDataList [12]string, printerModel string, fmtLen int) 
 	binary.Write(buffer, binary.LittleEndian, totalbuffer.Bytes())
 	// fmt.Println(buffer.Len())
 	if buffer.Len() < (fmtLen - 8) {
-		for i := buffer.Len(); i < (8192 - 8); i++ {
+		for i := buffer.Len(); i < (fmtLen - 8); i++ {
 			binary.Write(buffer, binary.LittleEndian, byte(fillchar))
 		}
 	} else {

@@ -295,6 +295,36 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"MsgType":"resp_down_eeprom_info","MsgBody":"[{\"ssid\":\"T-Scale\",\"rssi\":1,\"mac\":\"11:22:33:44:55:66\",\"enccryptType\":\"WEP\"}, ]",
 										   "ScaleId":1
 }
+
+31. download Factory data to scale =>{
+	"Req": "down_factory_info",
+	"ReqData": "[{\"id\":1,\"size\":8,\"type\":\"string\", \"values\":\"Fcx\"}]"
+}
+ {
+	"MsgType":"resp_down_factory_info","MsgBody":"ok","ScaleId":1}
+
+32. backup default setting  to scale =>{
+	"Req": "backup_def_setting",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_down_factory_info","MsgBody":"ok","ScaleId":1}	 
+
+33. get eeprom data from scale =>{
+	"Req": "get_eeprom_to_bin",
+	"ReqData": "./1.bin"
+}
+{
+	"MsgType":"resp_get_eeprom_to_bin","MsgBody":"ok","ScaleId":1
+}
+
+34. get eeprom data from scale =>{
+	"Req": "set_eeprom_from_bin",
+	"ReqData": "./1.bin"
+}
+ {
+	"MsgType":"resp_set_eeprom_from_bin","MsgBody":"ok","ScaleId":1
+}
 	
 
 To configure scale's wifi to connect to specific AP

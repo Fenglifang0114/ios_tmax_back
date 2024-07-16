@@ -75,6 +75,9 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return GET_SCALE_TIME_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil //20230926@FLF
 	case m.CMD_READ_EEPROM_256:
 		return READ_EEPROM_256_CMD_TMAX, CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240125@FLF
+	case m.CMD_READ_EEPROM_8:
+		addr := parseReadAddrTMAX(cmdData.Data.(string))
+		return readDataCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240703@FLF
 	case m.CMD_READ_EEPROM_512:
 		return READ_EEPROM_512_CMD_TMAX, CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240129@FLF
 	case m.CMD_GET_SCALE_INFO:
@@ -93,9 +96,15 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 	case m.CMD_ERASE_FLASH:
 		addr := cmdData.Data.(int)
 		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_ERASE_FLASH_512:
+		addr := cmdData.Data.(int)
+		return eraseCmdTMAX_512(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WRITE_FLASH_256:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
 		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_256_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WRITE_FLASH_8:
+		addr, data := parseWrDataTMAX(cmdData.Data.(string))
+		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_28_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WRITE_FLASH_512:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
 		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_512_TMAX), CMD_TIMEOUT_MED_LONG_4000_MS, nil
@@ -165,9 +174,12 @@ const (
 	PACKET_HEAD_TMAX         = 0x5AA5
 	PACKET_TAIL_TMAX         = 0xA55A
 	FILE_CHUNK_SIZE_256_TMAX = 275 //FLF
+	FILE_CHUNK_SIZE_28_TMAX  = 27  //FLF
 	FILE_CHUNK_SIZE_512_TMAX = 531 //@FLF20240110
 	EARSE_CHUNK_SIZE_TMAX    = 0x13
 	ERASE_SIZE_TMAX          = 0x800
+	ERASE_SIZE_TMAX_512      = 0x200
+	READ_EEPROM_TMAX_8       = 0x08
 )
 
 const (
@@ -306,6 +318,38 @@ func composeFactoryCmd(cmdID uint16, data []byte) []byte {
 }
 
 // 构建一个数据包   //FLF
+// 0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x97, 0xab, 0x7f, 0x0d, 0xa5, 0x5a
+// 0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x4B, 0xC6, 0xE5, 0xBA, 0xa5, 0x5a
+const PACK_LEN_READ_EEPROM_TMAX = 19
+
+func readDataCmdTMAX(addr uint32) []byte {
+	// 构建包头
+	var packLen uint16 = uint16(PACK_LEN_READ_EEPROM_TMAX)
+	packet := make([]byte, packLen)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
+	//构建数据长度  总长度-包头
+	binary.BigEndian.PutUint16(packet[2:4], packLen-2)
+	// 构建命令ID与命令类型
+	binary.BigEndian.PutUint16(packet[4:6], uint16(CMDID_READ_FLASH_TMAX))
+	//构建保留数据 00
+	binary.BigEndian.PutUint16(packet[6:8], 0x00)
+	// 构建地址
+	binary.BigEndian.PutUint32(packet[7:11], addr)
+
+	// 构建数据长度
+	binary.BigEndian.PutUint16(packet[11:13], uint16(READ_EEPROM_TMAX_8))
+
+	// 计算与添加校验码
+	checksum := util.Crc32MPEG2(packet[2 : packLen-6])
+	binary.BigEndian.PutUint32(packet[packLen-6:], checksum)
+
+	// 添加包尾
+	binary.BigEndian.PutUint16(packet[packLen-2:], PACKET_TAIL_TMAX)
+
+	return packet
+}
+
+// 构建一个数据包   //FLF
 func wrDataCmdTMAX(addr uint32, data []byte, packetLen uint16) []byte {
 	// 构建包头
 	packet := make([]byte, packetLen)
@@ -378,6 +422,33 @@ func eraseCmdTMAX(addr uint32) []byte { // erase size will 2K
 	binary.BigEndian.PutUint32(packet[7:11], addr)
 	// 擦除长度
 	binary.BigEndian.PutUint16(packet[11:13], ERASE_SIZE_TMAX)
+
+	// 计算与添加校验码
+	checksum := util.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE_TMAX-6])
+	binary.BigEndian.PutUint32(packet[EARSE_CHUNK_SIZE_TMAX-6:], checksum)
+
+	// 添加包尾
+	binary.BigEndian.PutUint16(packet[EARSE_CHUNK_SIZE_TMAX-2:], PACKET_TAIL_TMAX)
+
+	return packet
+}
+
+// CMD:  5a a5 00 11 f1 03 00 08 01 e0 00 08 00 75 E8 A3 E3 a5 5a   //FLF
+// 擦除原本秤上的默认参数备份  一次512
+func eraseCmdTMAX_512(addr uint32) []byte { // erase size will 512
+	// 构建包头
+	packet := make([]byte, EARSE_CHUNK_SIZE_TMAX)
+	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
+	//构建数据长度  总长度-包头
+	binary.BigEndian.PutUint16(packet[2:4], EARSE_CHUNK_SIZE_TMAX-2)
+	// 构建命令ID与命令类型
+	binary.BigEndian.PutUint16(packet[4:6], uint16(CMDID_ERASE_FLASH_TMAX))
+	//构建保留数据 00
+	binary.BigEndian.PutUint16(packet[6:8], 0x00)
+	// 构建地址
+	binary.BigEndian.PutUint32(packet[7:11], addr)
+	// 擦除长度
+	binary.BigEndian.PutUint16(packet[11:13], ERASE_SIZE_TMAX_512)
 
 	// 计算与添加校验码
 	checksum := util.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE_TMAX-6])
@@ -496,6 +567,16 @@ func enFactoryModeCmdTMAX(data []byte) []byte {
 func getSetScaleTimeCmdTMAX(data string) []byte {
 	l.Log.Debug("compose get IP mode cmd")
 	return composeCmd(0xf401, 0, []byte(data))
+}
+
+func parseReadAddrTMAX(inData string) (addr int64) { // inData is hex ascii
+	addr, err := strconv.ParseInt(inData[0:8], 16, 64)
+	if err != nil {
+		fmt.Println("Invalid offset number")
+		return -1
+	}
+
+	return
 }
 
 func parseWrDataTMAX(inData string) (addr int64, data []byte) { // inData is hex ascii

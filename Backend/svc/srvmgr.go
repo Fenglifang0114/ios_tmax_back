@@ -80,9 +80,8 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		for _, item := range licKeyList {
 			if len(item) == 74 || len(item) == 78 {
 				gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
-				if gIsKeyValid {
-					gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
-				}
+
+				gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
 
 			}
 

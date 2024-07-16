@@ -49,12 +49,14 @@ const (
 
 	CMD_BT_DATA_PASSTH
 	CMD_MODIFY_BT_NAME
-
+	CMD_READ_EEPROM_8
 	CMD_READ_EEPROM_256
 	CMD_READ_EEPROM_512
 	CMD_WRITE_EEPROM
 	CMD_ERASE_FLASH
+	CMD_ERASE_FLASH_512
 	CMD_READ_FLASH
+	CMD_WRITE_FLASH_8
 	CMD_WRITE_FLASH_256
 	CMD_WRITE_FLASH_512
 	CMD_DEL_PLU
@@ -166,11 +168,15 @@ const (
 	REBOOT_RESP                   RespMsgType = "resp_reboot"
 	MODIFY_EEPROM_INFO_RESP       RespMsgType = "resp_modify_eeprom_info"
 	DOWN_EEPROM_INFO_RESP         RespMsgType = "resp_down_eeprom_info"
+	DOWN_FACTORY_INFO_RESP        RespMsgType = "resp_down_factory_info"
 	MODIFY_VAR_RESP               RespMsgType = "resp_modify_var_value"
 	SET_SERVER_IP_RESP            RespMsgType = "resp_set_server_ip"
 	GET_RANDOM_DATA_RESP          RespMsgType = "resp_get_random_data"
 	EN_FACTORY_MODE_RESP          RespMsgType = "resp_en_factory_mode"
 	DOWN_DEFAULT_PRN_FMT_RESP     RespMsgType = "resp_down_def_prn_fmt"
+	BACKUP_DEF_SETTING_RESP       RespMsgType = "resp_backup_def_setting"
+	GET_EEPROM_TO_BIN_RESP        RespMsgType = "resp_get_eeprom_to_bin"
+	SET_EEPROM_FROM_BIN_RESP      RespMsgType = "resp_set_eeprom_from_bin"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

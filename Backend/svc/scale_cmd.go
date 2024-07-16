@@ -27,11 +27,11 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 		l.Log.Debug(err)
 
 	}
-	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP, 1)
-	if reqMsg.MsgBody != "ok" {
-		//to do nothing
-		excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA, 1)
-	}
+	excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA, 1)
+	// reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP, 1)
+	// if reqMsg.MsgBody != "ok" {
+	//
+	// }
 
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()

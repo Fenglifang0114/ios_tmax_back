@@ -123,6 +123,10 @@ func procDownDefaultPrnFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownDefaultPrnFmt(scale, req)
 }
 
+func procBackupDefSetting(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqBackupDefSetting(scale, req)
+}
+
 func procDownPlu(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownPlu(scale, req)
 }
@@ -192,6 +196,18 @@ func procModifyEepromInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func procDownEepromInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownEepromInfo(scale, req)
+}
+
+func procGetEepromToBin(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetEepromInfoToBin(scale, req)
+}
+
+func procSetEepromFromBin(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetEepromFromBin(scale, req)
+}
+
+func procDownFactoryInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDownFactoryInfo(scale, req)
 }
 
 func procModifyVarValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -395,10 +411,14 @@ func init() {
 		SREQ_CHANGE_WIFI_MODE:         procChangeWifiMode,
 		SREQ_MODIFY_EEPROM_INFO:       procModifyEepromInfo,
 		SREQ_DOWN_EEPROM_INFO:         procDownEepromInfo,
+		SREQ_DOWN_FACTORY_INFO:        procDownFactoryInfo,
 		SREQ_MODIFY_VAR_VALUE:         procModifyVarValue,
 		SREQ_SET_SERVER_IP:            procSetServerIp,
 		SREQ_EN_FACTORY_MODE:          procEnFactoryMode,
 		SREQ_DOWN_DEFAULT_PRN_FMT:     procDownDefaultPrnFmt,
+		SREQ_BACKUP_DEF_SETTING:       procBackupDefSetting,
+		SREQ_GET_EEPROM_TO_BIN:        procGetEepromToBin,
+		SREQ_SET_EEPROM_FROM_BIN:      procSetEepromFromBin,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -445,5 +465,9 @@ func init() {
 		SREQ_SET_SERVER_IP:            m.SET_SERVER_IP_RESP,
 		SREQ_EN_FACTORY_MODE:          m.EN_FACTORY_MODE_RESP,
 		SREQ_DOWN_DEFAULT_PRN_FMT:     m.DOWN_DEFAULT_PRN_FMT_RESP,
+		SREQ_DOWN_FACTORY_INFO:        m.DOWN_FACTORY_INFO_RESP,
+		SREQ_BACKUP_DEF_SETTING:       m.BACKUP_DEF_SETTING_RESP,
+		SREQ_GET_EEPROM_TO_BIN:        m.GET_EEPROM_TO_BIN_RESP,
+		SREQ_SET_EEPROM_FROM_BIN:      m.SET_EEPROM_FROM_BIN_RESP,
 	}
 }
