@@ -29,6 +29,8 @@ const (
 	GET_IP_MODE_OK_RESP         string = "\r\nOK\r\n"
 	CHANG_WIFI_MODE_OK_RESP     string = "\r\nOK\r\n"
 	CHANG_WIFI_MODE_FAIL_RESP   string = "\r\n+CWMODE:\r\n"
+	GET_AT_VERSION_OK_RESP      string = "\r\nOK\r\n"
+	GET_AT_MODE_OK_RESP         string = "\r\nOK\r\n"
 )
 
 const (
@@ -94,7 +96,7 @@ func init() {
 		cmd.CMDID_MODIFY_VAR_TMAX:        m.MODIFY_VAR_RESP,
 		cmd.CMDID_EN_FACTORY_MODE:        m.EN_FACTORY_MODE_RESP,
 
-		0xff25: m.UNKNOWN_DATA,
+		0xff26: m.UNKNOWN_DATA,
 	}
 
 	responseHandlerMap = map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
@@ -663,9 +665,11 @@ func handleScalePassthData(scaleId int64, data []byte, isHexMode bool) (ScaleRes
 	return respMsg, index + 2
 }
 
-var okBytes = []byte("\r\nOK\r\n")
+// var okBytes = []byte("\r\nOK\r\n")
+var okBytes = []byte("\r\n\r\nOK\r\n") //20240718  更换wifi模块
 
 func containsOK(response []byte) bool {
+	println(string(response))
 	return bytes.Contains(response, okBytes)
 }
 
@@ -735,6 +739,22 @@ func getEncryptType(security int) string {
 	}
 }
 
+// +CWLAP:<ecn>,<ssid>,<rssi>,<mac>,<channel>,<freq_offset>,<freqcal_val>,<pairwise_cipher>,<group_cipher>,<bgn>,<wps> ESP32-C3
+// <ecn>：加密方式
+// <ssid>：字符串参数，AP 的 SSID
+// <rssi>：信号强度
+// <mac>：字符串参数，AP 的 MAC 地址
+// <channel>：信道号
+// <scan_type>：Wi-Fi 扫描类型，默认值为：0
+// <scan_time_min>：每个信道最短扫描时间，单位：毫秒，范围：[0,1500]，如果扫描类型为被动扫描，本参数无效
+// <scan_time_max>：每个信道最长扫描时间，单位：毫秒，范围：[0,1500]，如果设为 0，固件采用参数默认值，主动扫描为 120 ms，被动扫描为 360 ms
+// <freq_offset>：频偏（保留项目）
+// <freqcal_val>：频率校准值（保留项目）
+// <pairwise_cipher>：成对加密类型
+// <group_cipher>：组加密类型，与 <pairwise_cipher> 参数的枚举值相同
+// <bgn>：802.11 b/g/n，若 bit 设为 1，则表示使能对应模式，若设为 0，则表示禁用对应模式
+// <wps>：wps flag
+// +CWLAP:<ecn>, <ssid>, <rssi>, <mac>, <ch>, <freq offset>, <freq calibration>  ESP8266
 func parseCWLAPResponse(data []byte) []CWLAPResponse {
 	if !containsOK(data) {
 		return nil
@@ -757,6 +777,26 @@ func parseCWLAPResponse(data []byte) []CWLAPResponse {
 				channel, _ := strconv.Atoi(fields[4])
 				offset, _ := strconv.Atoi(fields[5])
 				security, _ := strconv.Atoi(fields[6])
+
+				result := CWLAPResponse{
+					NetworkType: networkType,
+					SSID:        ssid,
+					RSSI:        rssi,
+					BSSID:       bssid,
+					Channel:     channel,
+					Offset:      offset,
+					Security:    security,
+				}
+
+				results = append(results, result)
+			} else if len(fields) == 11 { //ESP32-C3
+				networkType, _ := strconv.Atoi(fields[0])
+				ssid := strings.Trim(fields[1], "\"")
+				rssi, _ := strconv.Atoi(fields[2])
+				bssid := strings.Trim(fields[3], "\"")
+				channel, _ := strconv.Atoi(fields[4])
+				offset, _ := strconv.Atoi(fields[8])
+				security, _ := strconv.Atoi(fields[9])
 
 				result := CWLAPResponse{
 					NetworkType: networkType,
@@ -808,8 +848,42 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return handleSetWifiStaticIpResp(scaleId, data)
 	case m.CHANGE_WIFI_MODE_RESP:
 		return handleChangeWifiModeResp(scaleId, data)
+	case m.GET_AT_VERSION_RESP:
+		return handleGetWifiAtVersionResp(scaleId, data)
+	case m.GET_AT_MODE_RESP:
+		return handleGetWifiAtModeResp(scaleId, data)
 
 	default:
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleGetWifiAtModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "+CWMODE:1") {
+			return ScaleRespMsg{m.GET_AT_MODE_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.GET_AT_MODE_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_AT_MODE_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleGetWifiAtVersionResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_VERSION_OK_RESP) { // success
+		if strings.Contains(string(data), m.AT_VERSION) {
+			return ScaleRespMsg{m.GET_AT_VERSION_RESP, m.AT_VERSION, scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.GET_AT_VERSION_RESP, "8266", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_AT_VERSION_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
 		return ScaleRespMsg{}, 0
 	}
 }
@@ -847,6 +921,7 @@ func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleConnectApResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	println("at connect resp:" + string(data))
 	if strings.Contains(string(data), CONNECT_AP_OK_RESP) { // success
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CONNECT_AP_RESP, MsgBody: "ok"}, len(data)
 	} else if strings.Contains(string(data), CONNECT_AP_FAIL_RESP) { // fail
@@ -923,8 +998,8 @@ func extractWifiAPInfo(response string) (WifiAPInfo, error) {
 		line = strings.Trim(line, "\t")
 		line = strings.Replace(line, `\"`, "", -1)
 		line = strings.Replace(line, `"`, "", -1)
-		if strings.HasPrefix(line, "+CWJAP_DEF:") {
-			data := line[len("+CWJAP_DEF:"):]
+		if strings.HasPrefix(line, "+CWJAP:") {
+			data := line[len("+CWJAP:"):]
 			dataSplit := strings.Split(data, ",")
 			info.Ssid = dataSplit[0]
 			info.Bssid = dataSplit[1]
@@ -944,13 +1019,22 @@ func extractIPInfo(response string) (IPInfo, error) {
 	lines := strings.Split(response, "\r\n")
 
 	// 遍历每一行字符串，提取 IP、网关和子网掩码的值
+	// for _, line := range lines {
+	// 	if strings.HasPrefix(line, "+CIPSTA_CUR:ip:") {
+	// 		info.IP = strings.Trim(line[len("+CIPSTA_CUR:ip:\""):], "\"")
+	// 	} else if strings.HasPrefix(line, "+CIPSTA_CUR:gateway:") {
+	// 		info.Gateway = strings.Trim(line[len("+CIPSTA_CUR:gateway:\""):], "\"")
+	// 	} else if strings.HasPrefix(line, "+CIPSTA_CUR:netmask:") {
+	// 		info.Netmask = strings.Trim(line[len("+CIPSTA_CUR:netmask:\""):], "\"")
+	// 	}
+	// }
 	for _, line := range lines {
-		if strings.HasPrefix(line, "+CIPSTA_CUR:ip:") {
-			info.IP = strings.Trim(line[len("+CIPSTA_CUR:ip:\""):], "\"")
-		} else if strings.HasPrefix(line, "+CIPSTA_CUR:gateway:") {
-			info.Gateway = strings.Trim(line[len("+CIPSTA_CUR:gateway:\""):], "\"")
-		} else if strings.HasPrefix(line, "+CIPSTA_CUR:netmask:") {
-			info.Netmask = strings.Trim(line[len("+CIPSTA_CUR:netmask:\""):], "\"")
+		if strings.HasPrefix(line, "+CIPSTA:ip:") {
+			info.IP = strings.Trim(line[len("+CIPSTA:ip:\""):], "\"")
+		} else if strings.HasPrefix(line, "+CIPSTA:gateway:") {
+			info.Gateway = strings.Trim(line[len("+CIPSTA:gateway:\""):], "\"")
+		} else if strings.HasPrefix(line, "+CIPSTA:netmask:") {
+			info.Netmask = strings.Trim(line[len("+CIPSTA:netmask:\""):], "\"")
 		}
 	}
 
@@ -971,8 +1055,8 @@ func extractIPMode(response string) (bool, error) {
 
 	// 遍历每一行字符串，提取 IP mode
 	for _, line := range lines {
-		if strings.HasPrefix(line, "+CWDHCP_CUR:") {
-			modeNo := line[len("+CWDHCP_CUR:"):]
+		if strings.HasPrefix(line, "+CWDHCP:") {
+			modeNo := line[len("+CWDHCP:"):]
 			if modeNo == "2" || modeNo == "3" {
 				mode = true
 			} else if modeNo == "0" || modeNo == "1" {
@@ -1004,10 +1088,11 @@ func handleGetApInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleGetIpInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	println("IP:" + string(data))
 	if strings.Contains(string(data), GET_IP_INFO_OK_RESP) { // success
 		ipInfo, err := extractIPInfo(string(data))
 		if err != nil {
-			return ScaleRespMsg{}, len(data)
+			return ScaleRespMsg{m.GET_IP_INFO_RESP, "fail", scaleId}, len(data)
 		}
 		ipInfoStr, _ := json.MarshalToString(ipInfo)
 		return ScaleRespMsg{m.GET_IP_INFO_RESP, ipInfoStr, scaleId}, len(data)

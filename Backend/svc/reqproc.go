@@ -40,7 +40,11 @@ func procToScaleReq(s *Scale, req SRequest) {
 	}
 	// send msg to web socket client
 	result, _ := json.Marshal(resp)
-	s.client.sendCh <- result
+	if s.client != nil {
+		s.client.sendCh <- result
+
+	}
+
 	// if err != nil {
 	// 	if s.client.sendCh != nil {
 	// 		s.client.sendCh <- result
@@ -165,7 +169,7 @@ func procRescanAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func procConnectAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	data := utils.JsonToMap(req.ReqData)
-	return ReqConnectAp(scale, data["ssid"].(string), data["bssid"].(string), data["password"].(string))
+	return ReqConnectAp(scale, data["ssid"].(string), data["password"].(string), data["bssid"].(string))
 }
 
 func procConnectApOneKey(scale *Scale, req SRequest) (*ScaleRespMsg, error) {

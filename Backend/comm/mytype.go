@@ -43,9 +43,12 @@ const (
 	CMD_WIFI_GET_IP_INFO
 	CMD_WIFI_GET_IP_MODE
 	CMD_WIFI_CONN_AP
+	CMD_WIFI_CONN_AP32
 	CMD_WIFI_CONN_AP_ONE_KEY
 	CMD_WIFI_DISCONN_AP
 	CMD_CHANGE_WIFI_MODE
+	CMD_WIFI_AT_VERSION
+	CMD_WIFI_AT_MODE
 
 	CMD_BT_DATA_PASSTH
 	CMD_MODIFY_BT_NAME
@@ -88,6 +91,8 @@ const (
 	LICENSE_FILE  = "tmaxlic.txt"
 	SRV_DATA_PATH = "srvdata"
 	PLU_BACK_PATH = "plufiles"
+	AT_VERSION    = "ESP32C3"
+	IS_ESP32      = true
 )
 
 type CmdComposer struct {
@@ -130,6 +135,8 @@ const (
 	CONNECT_AP_ONE_KEY_RESP       RespMsgType = "resp_connect_ap_one_key"
 	SET_WIFI_DYNAMIC_IP_RESP      RespMsgType = "resp_set_wifi_dynamic_ip"
 	SET_WIFI_STATIC_IP_RESP       RespMsgType = "resp_set_wifi_static_ip"
+	GET_AT_VERSION_RESP           RespMsgType = "resp_get_at_version"
+	GET_AT_MODE_RESP              RespMsgType = "resp_get_at_mode"
 	GET_WIFI_AP_INFO_RESP         RespMsgType = "resp_get_wifi_ap_info"
 	GET_IP_INFO_RESP              RespMsgType = "resp_get_ip_info"
 	GET_IP_MODE_RESP              RespMsgType = "resp_get_ip_mode"

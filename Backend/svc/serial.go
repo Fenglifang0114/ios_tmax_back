@@ -205,8 +205,8 @@ func (s *TSerial) readScale() (int, error) {
 
 	if n > 0 {
 		log.Log.Debug(s.tmpbuf[0:n])
-		// fmt.Printf("data:%x\n", string(s.tmpbuf[0:n]))
-		// fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
+		fmt.Printf("data:%x\n", string(s.tmpbuf[0:n]))
+		fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
 		if err := s.queue.EnqueueN(s.tmpbuf[0:n], n); err != nil {
 			s.queue.Reset()
 		}

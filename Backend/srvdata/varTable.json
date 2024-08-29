@@ -244,7 +244,17 @@
             "valuename": "CopyTimes_P",
             "id": 62,
             "comment": "CopyTimes_P"
-        },		
+        },
+        {
+            "valuename": "PLU_Tax_P",
+            "id": 63,
+            "comment": "PLU_Tax_P"
+        },
+        {
+            "valuename": "TotalNoTax_P",
+            "id": 64,
+            "comment": "TotalNoTax_P"
+        },			
         {
             "valuename": "StartLoop",
             "id": 254,

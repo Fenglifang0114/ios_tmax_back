@@ -434,26 +434,26 @@ func enablePassthrough(s *Scale, respType m.RespMsgType) (*ScaleRespMsg, error) 
 	// 	return &ScaleRespMsg{respType, "fail", s.Id}, nil
 	// }
 	// time.Sleep(100 * time.Millisecond)
-	if _, err := EnPassthrough(s); err != nil {
-		return &ScaleRespMsg{respType, "fail", s.Id}, err
-	}
-	time.Sleep(100 * time.Millisecond)
-	return &ScaleRespMsg{respType, "ok", s.Id}, nil
+	msg, err := EnPassthrough(s)
+
+	return msg, err
 }
 
 func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.MODIFY_BT_NAME_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.MODIFY_BT_NAME_RESP
 		return msg, err
 	}
 	return s.ModifyBTName(name)
 }
 
 func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SEND_DATA_TO_BT_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.SEND_DATA_TO_BT_RESP
 		return msg, err
 	}
 
@@ -461,9 +461,10 @@ func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
 }
 
 func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SEND_DATA_TO_WIFI_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.SEND_DATA_TO_WIFI_RESP
 		return msg, err
 	}
 
@@ -471,9 +472,10 @@ func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
 }
 
 func ReqGetWifiApInfo(s *Scale) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_WIFI_AP_INFO_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.GET_WIFI_AP_INFO_RESP
 		return msg, err
 	}
 
@@ -481,30 +483,44 @@ func ReqGetWifiApInfo(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func ReqGetApList(s *Scale) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_AP_LIST_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.GET_AP_LIST_RESP
 		return msg, err
 	}
 
 	return GetApList(s)
 }
 
+func getAtVersion(s *Scale) (*ScaleRespMsg, error) {
+	msg, err := GetWifiAtVersion(s)
+	return msg, err
+}
+
 func ReqConnectAp(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	////defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.CONNECT_AP_RESP
 		return msg, err
 	}
+	msg, _ = getAtVersion(s)
+	if msg.MsgBody == m.AT_VERSION {
+		res, err := ConnectWifiAp32(s, ssid, password, bssid)
+		return res, err
+	} else {
+		res, err := ConnectWifiAp(s, ssid, password, bssid)
+		return res, err
+	}
 
-	res, err := ConnectWifiAp(s, ssid, password, bssid)
-	return res, err
 }
 
 func ReqConnectApOneKey(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	////defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.CONNECT_AP_RESP
 		return msg, err
 	}
 
@@ -513,9 +529,10 @@ func ReqConnectApOneKey(s *Scale, ssid string, password string, bssid string) (*
 }
 
 func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.SET_WIFI_STATIC_IP_RESP
 		return msg, err
 	}
 
@@ -523,9 +540,10 @@ func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.SET_WIFI_STATIC_IP_RESP
 		return msg, err
 	}
 
@@ -533,32 +551,45 @@ func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*S
 }
 
 func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.SET_WIFI_STATIC_IP_RESP
 		return msg, err
 	}
 
 	return GetIpInfo(s)
 }
 
+func getAtMode(s *Scale) (*ScaleRespMsg, error) {
+	msg, err := GetWifiAtMode(s)
+	return msg, err
+}
+
 func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CHANGE_WIFI_MODE_RESP)
+
 	if msg.MsgBody != "ok" {
+		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
 		return msg, err
 	}
-	return ChangeWifiMode(s)
+	//问了模式不对再切换模式
+	msg, err = getAtMode(s)
+	if err != nil {
+		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
+		return msg, err
+	} else if msg.MsgBody != "ok" {
+		return ChangeWifiMode(s)
+	}
+	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
+	return msg, err
 }
 
 func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
-	defer DisPassthrough(s)
+	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_IP_MODE_RESP)
-	if msg.MsgBody != "ok" {
-		return msg, err
-	}
-
-	return GetIpMode(s)
+	return msg, err
 }
 
 func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {

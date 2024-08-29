@@ -219,7 +219,6 @@ func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
 		l.Log.Debug(err)
-
 	}
 	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
 	//sendErrMsg(c, msg)
@@ -381,7 +380,8 @@ func EnPassthrough(s *Scale) (*ScaleRespMsg, error) {
 
 // 关闭BT透传模式
 func DisPassthrough(s *Scale) (*ScaleRespMsg, error) {
-	return excuteSimpCmd(s, m.CMD_DIS_PASSTH, m.DIS_PASSTH_MODE_RESP)
+	// return excuteSimpCmd(s, m.CMD_DIS_PASSTH, m.DIS_PASSTH_MODE_RESP)
+	return &ScaleRespMsg{MsgType: m.DIS_PASSTH_MODE_RESP, MsgBody: "ok", ScaleId: s.Id}, nil
 }
 
 var GExpectBTResp m.RespMsgType
@@ -396,6 +396,18 @@ func (c *Scale) ModifyBTName(name string) (*ScaleRespMsg, error) {
 }
 
 var GExpectWifiResp m.RespMsgType
+
+// get At version
+func GetWifiAtVersion(c *Scale) (*ScaleRespMsg, error) {
+	GExpectWifiResp = m.GET_AT_VERSION_RESP
+	return excuteSimpCmd(c, m.CMD_WIFI_AT_VERSION, m.GET_AT_VERSION_RESP)
+}
+
+// get At mode
+func GetWifiAtMode(c *Scale) (*ScaleRespMsg, error) {
+	GExpectWifiResp = m.GET_AT_MODE_RESP
+	return excuteSimpCmd(c, m.CMD_WIFI_AT_MODE, m.GET_AT_MODE_RESP)
+}
 
 // Get AP list
 func GetApList(c *Scale) (*ScaleRespMsg, error) {
@@ -448,9 +460,19 @@ func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*Scal
 }
 
 // Connect to specifi AP
-func ConnectWifiAp(s *Scale, ssid string, bssid string, passwd string) (*ScaleRespMsg, error) {
+func ConnectWifiAp(s *Scale, ssid string, passwd string, bssid string) (*ScaleRespMsg, error) {
 	l.Log.Debug("Connect to Wifi AP")
-	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_CONN_AP, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ssid, bssid, passwd)})
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_CONN_AP, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ssid, passwd, bssid)})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.CONNECT_AP_RESP
+	return perfCmdNwaitResult(s, cmd, m.CONNECT_AP_RESP, timeoutMs, 1)
+}
+
+func ConnectWifiAp32(s *Scale, ssid string, passwd string, bssid string) (*ScaleRespMsg, error) {
+	l.Log.Debug("Connect to Wifi AP")
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_CONN_AP32, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ssid, passwd, bssid)})
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}

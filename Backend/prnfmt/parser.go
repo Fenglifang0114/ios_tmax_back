@@ -369,6 +369,9 @@ func ParserDefFmtToBuf(fmtDataList []string, printerModel string, fmtLen int) *b
 		lastVarPos = 0
 
 		buff, _ := Utf8ToGb2312(utf8Buff)
+		if printerModel == "EPM205" {
+			dataCamp.Write(ESC_CHANGE_EPL_205)
+		}
 		formatbuf := ParseEplLines(buff, dataCamp, lastVarPos)
 		everyBufLen = append(everyBufLen, formatbuf.Len())
 
