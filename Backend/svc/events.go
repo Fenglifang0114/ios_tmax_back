@@ -257,3 +257,21 @@ func (u UserDeleted) Trigger(mgr *SrvMgr, payload ReqDelUser) {
 		go handler.Handle(mgr, payload)
 	}
 }
+
+var detailListed DetailListed
+
+type DetailListed struct {
+	handlers []interface{ Handle(scaleMgr *ScaleMgr) }
+}
+
+// Register adds an event handler for this event
+func (u *DetailListed) Register(handler interface{ Handle(payload *ScaleMgr) }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u DetailListed) Trigger(payload *ScaleMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(payload)
+	}
+}

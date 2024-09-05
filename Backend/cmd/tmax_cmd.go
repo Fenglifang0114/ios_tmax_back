@@ -33,6 +33,9 @@ var (
 	READ_EEPROM_256_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x97, 0xab, 0x7f, 0x0d, 0xa5, 0x5a} //20240124@FLF
 	READ_EEPROM_512_CMD_TMAX  []byte = []byte{0x5a, 0xa5, 0x00, 0x11, 0xf1, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x4B, 0xC6, 0xE5, 0xBA, 0xa5, 0x5a} //20240129@FLF
 	GET_FACTORY_INFO_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf6, 0x00, 0xCE, 0xD9, 0x29, 0x24, 0xa5, 0x5a}
+	GET_BASIC_DATA_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf8, 0x00, 0xA1, 0x47, 0xD5, 0xD0, 0xa5, 0x5a}
+	PAY_BILL_ON_CMD_TMAX      []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x09, 0x01, 0x22, 0xad, 0x50, 0xe6, 0xa5, 0x5a} //20240829@FLF结账发送开启
+
 )
 
 func NewComposerTMAX() *m.CmdComposer {
@@ -75,6 +78,7 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return GET_SCALE_TIME_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil //20230926@FLF
 	case m.CMD_READ_EEPROM_256:
 		return READ_EEPROM_256_CMD_TMAX, CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240125@FLF
+
 	case m.CMD_READ_EEPROM_8:
 		addr := parseReadAddrTMAX(cmdData.Data.(string))
 		return readDataCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240703@FLF
@@ -161,6 +165,13 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return enFactoryModeCmdTMAX(data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	case m.CMD_GET_RANDOM_DATA:
 		return GET_RANDOM_DATA_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_BASIC_DATA:
+		return GET_BASIC_DATA_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_LIMIT_TO_SCALE:
+		data, _ := hex.DecodeString(cmdData.Data.(string))
+		return getSetLimitToScaleCmdTMAX(data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_OPEN_BILL_SEND:
+		return PAY_BILL_ON_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 
 	}
 	return nil, CMD_TIMEOUT_IMMEDIATE, nil
@@ -168,9 +179,9 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 
 var GET_AT_VERSION_CMD []byte = []byte("AT+GMR\r\n") //查看wifi 模块的版本信息会包含 ESP32 等信息
 var GET_AP_LIST_CMD []byte = []byte("AT+CWLAP\r\n")
+var CONNECT_AP_CMD []byte = []byte("AT+CWJAP_DEF=\"%s\",\"%s\"\r\n")         // ssid, password, bssid
 var CONNECT_AP_CMD_32 []byte = []byte("AT+CWJAP=\"%s\",\"%s\"\r\n")          // ssid, password, bssid
 var CONNECT_AP_CMD_32_B []byte = []byte("AT+CWJAP=\"%s\",\"%s\",\"%s\"\r\n") // ssid, password, bssid
-var CONNECT_AP_CMD []byte = []byte("AT+CWJAP_DEF=\"%s\",\"%s\"\r\n")         // ssid, password, bssid
 var CONNECT_AP_CMD_B []byte = []byte("AT+CWJAP=\"%s\",\"%s\"\r\n")           // ssid, password, bssid
 var DISCONNECT_AP_CMD []byte = []byte("AT+CWQAP\r\n")                        // ssid, password, bssid
 // var GET_AP_INFO_CMD []byte = []byte("AT+CWJAP_DEF?\r\n")                     // ssid, password, bssid
@@ -213,8 +224,18 @@ const (
 	CMDID_PREF_TARE_ON_STABLE_TMAX = 0xE106
 	CMDID_EN_CONT_WEIGHT_TMAX      = 0xE107
 	CMDID_DIS_CONT_WEIGHT_TMAX     = 0xE108
-	CMDID_SET_1ST_CAP_TMAX         = 0xE109
-	CMDID_SET_2ND_CAP_TMAX         = 0xE10A
+	// CMDID_SET_1ST_CAP_TMAX         = 0xE109
+	// CMDID_SET_2ND_CAP_TMAX         = 0xE10A
+	CMDID_PAY_BILL_ON_TMAX    = 0xE109 // 开结账开关
+	CMDID_PAY_BILL_OFF_TMAX   = 0xE10A // 关结账
+	CMDID_SET_PRICE_MODE_TMAX = 0xE10B // 设置计价秤
+	CMDID_SET_WGT_MODE_TMAX   = 0xE10C // 设置计重秤
+	CMDID_CLARE_LIMIT_TMAX    = 0xE10D // 清除上下限
+	CMDID_SET_LIMIT_TMAX      = 0xE10E // 设置上下限
+	CMDID_SWITCH_LIMIT_TMAX   = 0xE10F // 切换上下限
+	CMDID_PAY_BILL_HEAD_TMAX  = 0xE110 // 结账头
+	CMDID_PAY_BILL_MID_TMAX   = 0xE111 // 结账中
+	CMDID_PAY_BILL_TAIL_TMAX  = 0xE112 // 结账尾
 )
 
 const (
@@ -233,10 +254,11 @@ const (
 	CMDID_GET_MAX_PACK_SIZE_TMAX = 0x05F5
 	CMDID_GET_FACTORY_INFO_TMAX  = 0x05F6
 	CMDID_GET_RANDOM_DATA        = 0x05F7
+	CMDID_GET_BASIC_DATA         = 0x05F8
 )
 const (
 	CMDID_READ_FLASH_TMAX        = 0xF101
-	CMDID_WRITE_FLASH_TMAX       = 0xF102
+	CMDID_WRITE_FLASH_TMAX       = 0xF102 //写flash和写rom一样的，秤会根据地址自己偏移。命令不区分
 	CMDID_ERASE_FLASH_TMAX       = 0xF103
 	CMDID_READ_EEPROM_TMAX       = 0xF104
 	CMDID_WRITE_EEPROM_TMAX      = 0xF105
@@ -284,6 +306,7 @@ func composeCmd(cmdID uint16, seqNo byte, data []byte) []byte {
 	binary.BigEndian.PutUint32(cmd[packLen-6:], checksum)
 	// 添加包尾
 	binary.BigEndian.PutUint16(cmd[packLen-2:], PACKET_TAIL_TMAX)
+	fmt.Printf("%X\n", cmd)
 	return cmd
 }
 
@@ -612,10 +635,14 @@ func enFactoryModeCmdTMAX(data []byte) []byte {
 }
 
 func getSetScaleTimeCmdTMAX(data string) []byte {
-	l.Log.Debug("compose get IP mode cmd")
+	l.Log.Debug("compose set scale Time cmd")
 	return composeCmd(0xf401, 0, []byte(data))
 }
 
+func getSetLimitToScaleCmdTMAX(data []byte) []byte {
+	l.Log.Debug("compose set limit to cmd")
+	return composeCmd(CMDID_SET_LIMIT_TMAX, 0, data)
+}
 func parseReadAddrTMAX(inData string) (addr int64) { // inData is hex ascii
 	addr, err := strconv.ParseInt(inData[0:8], 16, 64)
 	if err != nil {

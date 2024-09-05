@@ -225,11 +225,9 @@ func extractPack(b []byte) ([]byte, bool) {
 	if b[len(b)-2] != 0xA5 || b[len(b)-1] != 0x5A {
 		return nil, false
 	}
-
 	if b[len(b)-6] != GetChkSum(b[:len(b)-6])[0] { // -6: checksum(4 bytes) and tail(2 bytes)
 		return nil, false
 	}
-
 	return b[2:(len(b) - 6)], true // remove header, checksum and tail
 }
 

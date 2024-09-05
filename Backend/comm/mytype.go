@@ -72,6 +72,9 @@ const (
 	CMD_MODIFY_VAR_VALUE
 	CMD_EN_FACTORY_MODE
 	CMD_GET_RANDOM_DATA
+	CMD_GET_BASIC_DATA
+	CMD_SET_LIMIT_TO_SCALE
+	CMD_OPEN_BILL_SEND
 )
 
 type DataType int
@@ -149,6 +152,7 @@ const (
 	SEND_DATA_TO_WIFI_RESP        RespMsgType = "resp_send_data_to_wifi"
 	UPDATE_FIRMWARE_RESP          RespMsgType = "resp_update_firmware"
 	UPDATE_FIRMWARE_PROGRESS      RespMsgType = "resp_update_firmware_progress"
+	DOWN_FIRMWARE_WIFI_RESP       RespMsgType = "resp_update_firmware_wifi"
 	CHECK_SERIAL_PORT_RESP        RespMsgType = "resp_check_serial_port"
 	GET_BUILD_INFO_RESP           RespMsgType = "resp_get_build_info"
 	GET_SCALE_TIME_RESP           RespMsgType = "resp_get_scale_time"      //20240112@FLF
@@ -184,6 +188,13 @@ const (
 	BACKUP_DEF_SETTING_RESP       RespMsgType = "resp_backup_def_setting"
 	GET_EEPROM_TO_BIN_RESP        RespMsgType = "resp_get_eeprom_to_bin"
 	SET_EEPROM_FROM_BIN_RESP      RespMsgType = "resp_set_eeprom_from_bin"
+	GET_BASIC_DATA_RESP           RespMsgType = "resp_get_basic_data"
+	SET_LIMIT_TO_SCALE_RESP       RespMsgType = "resp_set_limit_to_scale"
+	SWITCH_LIMIT_RESP             RespMsgType = "resp_switch_limit_from_scale"
+	REV_DETAIl_HEAD_RESP          RespMsgType = "resp_rev_detail_head"
+	REV_DETAIl_MID_RESP           RespMsgType = "resp_rev_detail_mid"
+	REV_DETAIl_TAIL_RESP          RespMsgType = "resp_rev_detail_tail"
+	OPEN_BILL_SEND_RESP           RespMsgType = "resp_open_bill_send"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

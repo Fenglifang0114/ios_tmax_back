@@ -48,18 +48,20 @@ type TSerial struct {
 	tmpbuf     []byte // for storing temporary data read from scale
 	toQuit     bool   // for informing the read/write goroutine to quit
 	maxPackLen int    // max package size that scale can receive on time
-
+	isDefault  bool
 }
 
 // NewSerial creates a new serial port
-func NewSerial(pconf ComInfo, pickerFn picker.PickerFunc) (*TSerial, error) {
+func NewSerial(pconf ComInfo, pickerFn picker.PickerFunc, isDefault bool) (*TSerial, error) {
 	if pickerFn == nil {
 		return nil, fmt.Errorf("user NewSerial(), should provide a picker function")
 	}
 	var port serial.Port
 	var err error
 	mode := comInfo2SerialMode(pconf)
+
 	port, err = serial.Open(pconf.DevPath, mode)
+
 	log.Log.Infof("open port:%v with Mode: %v", pconf.DevPath, mode)
 	if err != nil {
 		log.Log.Errorf("error on open port:%v, error: %v", pconf.DevPath, err)
@@ -68,14 +70,15 @@ func NewSerial(pconf ComInfo, pickerFn picker.PickerFunc) (*TSerial, error) {
 		port.SetReadTimeout(20 * time.Millisecond)
 	}
 	s := &TSerial{
-		port:     port,
-		sendCh:   make(chan []byte, SEND_CH_SIZE),
-		recvCh:   make(chan comm.Packet, RECV_CH_SIZE),
-		queue:    util.NewCircularBuffer(QUEUE_SIZE),
-		pickerFn: pickerFn,
-		baud:     pconf.Baud,
-		tmpbuf:   make([]byte, TMP_BUF_SIZE),
-		toQuit:   false,
+		port:      port,
+		sendCh:    make(chan []byte, SEND_CH_SIZE),
+		recvCh:    make(chan comm.Packet, RECV_CH_SIZE),
+		queue:     util.NewCircularBuffer(QUEUE_SIZE),
+		pickerFn:  pickerFn,
+		baud:      pconf.Baud,
+		tmpbuf:    make([]byte, TMP_BUF_SIZE),
+		toQuit:    false,
+		isDefault: isDefault,
 	}
 
 	go s.write()
@@ -176,6 +179,7 @@ func (c *TSerial) read() {
 			if packLen > 0 {
 				if len(c.recvCh) >= RECV_CH_SIZE {
 					log.Log.Errorf("recvCh full, size: %v", len(c.recvCh))
+					fmt.Printf("recvCh full, size: %v", len(c.recvCh))
 				} else {
 					c.recvCh <- pack
 				}
@@ -197,16 +201,16 @@ func (s *TSerial) readScale() (int, error) {
 		log.Log.Errorf("Error reading scale: %v", err)
 		return 0, err
 	}
-	// fmt.Printf("data:%v", string(tmpbuf))
+	// fmt.Printf("data:%v", string(tmpBuf))
 
 	if s.queue.IsFull() {
 		s.queue.DequeueN(s.queue.Capacity) // handle abnormal case
 	}
 
 	if n > 0 {
-		log.Log.Debug(s.tmpbuf[0:n])
-		fmt.Printf("data:%x\n", string(s.tmpbuf[0:n]))
-		fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
+		// log.Log.Debug(s.tmpbuf[0:n])
+		fmt.Printf("data:%x ", string(s.tmpbuf[0:n]))
+		// fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
 		if err := s.queue.EnqueueN(s.tmpbuf[0:n], n); err != nil {
 			s.queue.Reset()
 		}
@@ -219,9 +223,9 @@ func (s *TSerial) readScale() (int, error) {
 func (s *TSerial) write() {
 	for message := range s.sendCh {
 		// send message to scale
-		if s.port != nil {
+		if s.port != nil && s.isDefault {
 			n, err := s.port.Write(message)
-			fmt.Printf("out:%x\n", message)
+			// fmt.Printf("out:%x\n", message)
 			// fmt.Printf("out:%s\n", string(message))
 			if err != nil || n != len(message) {
 				log.Log.Error(fmt.Sprintf("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error()))

@@ -58,6 +58,12 @@ func init() {
 		0xe101:                          m.WEIGHT_DATA_RESP,
 		0xfff3:                          m.REG_WEIGHT_RESP,
 		0xe108:                          m.UNREG_WEIGHT_RESP,
+		cmd.CMDID_PAY_BILL_ON_TMAX:      m.OPEN_BILL_SEND_RESP,
+		cmd.CMDID_SET_LIMIT_TMAX:        m.SET_LIMIT_TO_SCALE_RESP,
+		cmd.CMDID_SWITCH_LIMIT_TMAX:     m.SWITCH_LIMIT_RESP,
+		cmd.CMDID_PAY_BILL_HEAD_TMAX:    m.REV_DETAIl_HEAD_RESP,
+		cmd.CMDID_PAY_BILL_MID_TMAX:     m.REV_DETAIl_MID_RESP,
+		cmd.CMDID_PAY_BILL_TAIL_TMAX:    m.REV_DETAIl_TAIL_RESP,
 		0xfff6:                          m.GET_RECS_RESP,
 		0xfff7:                          m.ADD_REC_RESP,
 		0xfff8:                          m.DEL_REC_RESP,
@@ -71,6 +77,7 @@ func init() {
 		0x05f4:                          m.DIS_PASSTH_MODE_RESP,
 		cmd.CMDID_GET_FACTORY_INFO_TMAX: m.GET_FACTORY_INFO_RESP,
 		cmd.CMDID_GET_RANDOM_DATA:       m.GET_RANDOM_DATA_RESP,
+		cmd.CMDID_GET_BASIC_DATA:        m.GET_BASIC_DATA_RESP,
 
 		cmd.CMDID_ERASE_FLASH_TMAX:       m.ERASE_FLASH_RESP, //FLF//
 		cmd.CMDID_WRITE_FLASH_TMAX:       m.WRITE_DATA_FLASH_RESP,
@@ -96,7 +103,7 @@ func init() {
 		cmd.CMDID_MODIFY_VAR_TMAX:        m.MODIFY_VAR_RESP,
 		cmd.CMDID_EN_FACTORY_MODE:        m.EN_FACTORY_MODE_RESP,
 
-		0xff26: m.UNKNOWN_DATA,
+		0xff25: m.UNKNOWN_DATA,
 	}
 
 	responseHandlerMap = map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int){
@@ -132,6 +139,7 @@ func init() {
 		m.GET_SCALE_TIME_RESP:       handleGetScaleTimeResp,
 		m.SET_SCALE_TIME_RESP:       handleSetScaleTimeResp,
 		m.DOWN_PLU_RESP:             handleDownPluResp,
+		m.DOWN_FIRMWARE_WIFI_RESP:   handleDownFirmwareWifiResp,
 		m.DEL_PLU_RESP:              handleDelPluResp,
 		m.INSERT_PLU_ADDR_RESP:      handleInsertPluResp,
 		m.READ_FLASH_DATA_RESP:      handleReadFlashDataResp,
@@ -144,6 +152,13 @@ func init() {
 		m.DOWN_FACTORY_INFO_RESP:    handleDownFactorInfoResp,
 		m.GET_EEPROM_TO_BIN_RESP:    handleGetEepromToBinResp,
 		m.SET_EEPROM_FROM_BIN_RESP:  handleSetEepromFromBinResp,
+		m.GET_BASIC_DATA_RESP:       handleGetBasicDataResp,
+		m.SET_LIMIT_TO_SCALE_RESP:   handleSetLimitResp,
+		m.SWITCH_LIMIT_RESP:         handleSwitchLimitResp,
+		m.REV_DETAIl_HEAD_RESP:      handleRevDetailHeadResp,
+		m.REV_DETAIl_MID_RESP:       handleRevDetailMidResp,
+		m.REV_DETAIl_TAIL_RESP:      handleRevDetailTailResp,
+		m.OPEN_BILL_SEND_RESP:       handleOpenBillSendResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -172,12 +187,13 @@ func extractScalePassthDataTMAX(s *Scale, bufs *util.CircularBuffer, msgType m.R
 }
 
 func handleWeightDataMsg(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	// fmt.Printf("recived%s", data)
 	weightMsg, err := retrieveWeight(data)
 	if err != nil {
 		return ScaleRespMsg{}, len(data)
 	}
 	weightStr, err := json.MarshalToString(weightMsg)
-	if err == nil {
+	if err != nil {
 		fmt.Printf("%v", weightStr)
 	}
 	respMsg := ScaleRespMsg{MsgType: m.WEIGHT_DATA, MsgBody: weightStr, ScaleId: scaleId}
@@ -343,7 +359,6 @@ func handleSetScaleTimeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	//TODO:       20231101@FLF
 	//此处处理收到的数据
 	var scaleInfo SIFromScale
 	var siAddrInfos SIAddrInfos
@@ -358,7 +373,6 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	}
 	dataLen := int(binary.BigEndian.Uint32(data[:4]))
 
-	fmt.Println(dataLen)
 	loopTime := dataLen / 16
 	dataStart := 4
 	for i := 0; i < loopTime; i++ {
@@ -378,7 +392,6 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		}
 		dataStart = dataStart + 16
 	}
-
 	msg.MsgType = m.GET_SCALE_INFO_RESP
 	msg.ScaleId = scaleId
 	msg.MsgBody, _ = json.MarshalToString(scaleInfo)
@@ -414,11 +427,9 @@ func handleGetFactoryInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 			break
 		}
 	}
-
 	factoryInfo.ModelName = modelNameStr
 	factoryInfo.ScaleSn = snStr
 	msg.MsgBody, _ = json.MarshalToString(factoryInfo)
-
 	return msg, len(data)
 }
 
@@ -554,7 +565,6 @@ func handleDownDefaultPrnFmtResp(scaleId int64, data []byte) (ScaleRespMsg, int)
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
 }
-
 func handleDownFactorInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
@@ -563,11 +573,12 @@ func handleDownFactorInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 func handleGetEepromToBinResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
-}
 
+}
 func handleSetEepromFromBinResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
+
 }
 
 func handleDownPrnFmtResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
@@ -575,7 +586,82 @@ func handleDownPrnFmtResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	return ScaleRespMsg{}, 0
 }
 
+type ScaleBasicInfo struct {
+	ForcedShutdownCnt int `json:"ForcedShutdownCnt"`
+	PowerOnCnt        int `json:"PowerOnCnt"`
+	RunningTime       int `json:"RunningTime"`
+	CaliCnt           int `json:"CaliCnt"`
+	CalSwitchCnt      int `json:"CalSwitchCnt"`
+	Err4Cnt           int `json:"Err4Cnt"`
+	Err19Cnt          int `json:"Err19Cnt"`
+	OlTime            int `json:"OlTime"`
+	UlTime            int `json:"UlTime"`
+	WgtCnt            int `json:"WgtCnt"`
+}
+
+func handleGetBasicDataResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	msg := ScaleRespMsg{}
+	msg.MsgType = m.GET_BASIC_DATA_RESP
+	msg.ScaleId = scaleId
+	msg.MsgBody = "fail"
+
+	if len(data) < 36 {
+		return msg, len(data)
+	}
+	if len(data)%4 != 0 {
+		return msg, len(data)
+	}
+	basicInfo := ScaleBasicInfo{
+		PowerOnCnt:        0,
+		RunningTime:       0,
+		ForcedShutdownCnt: 0,
+		WgtCnt:            0,
+		OlTime:            0,
+		UlTime:            0,
+		CalSwitchCnt:      0,
+		Err4Cnt:           0,
+		Err19Cnt:          0,
+		CaliCnt:           0,
+	}
+	start := 0
+	for i := 0; i < len(data)/4; i++ {
+		switch i {
+		case 0:
+			basicInfo.PowerOnCnt = int(binary.BigEndian.Uint32(data[start : start+4]))
+		case 1:
+			basicInfo.RunningTime = int(binary.BigEndian.Uint32(data[start:start+4])) * 10
+		case 2:
+			basicInfo.ForcedShutdownCnt = int(binary.BigEndian.Uint32(data[start : start+4]))
+		case 3:
+			basicInfo.WgtCnt = int(binary.BigEndian.Uint32(data[start : start+4]))
+		case 4:
+			basicInfo.OlTime = int(binary.BigEndian.Uint32(data[start : start+4]))
+		case 5:
+			basicInfo.UlTime = int(binary.BigEndian.Uint32(data[start : start+4]))
+		case 6:
+			basicInfo.CalSwitchCnt = int(binary.BigEndian.Uint32(data[start : start+4]))
+		case 7:
+			basicInfo.Err4Cnt = int(binary.BigEndian.Uint32(data[start : start+4]))
+		case 8:
+			basicInfo.Err19Cnt = int(binary.BigEndian.Uint32(data[start : start+4]))
+		case 9:
+			basicInfo.CaliCnt = int(binary.BigEndian.Uint32(data[start : start+4]))
+		}
+		start += 4
+
+	}
+
+	msg.MsgBody, _ = json.MarshalToString(basicInfo)
+
+	return msg, len(data)
+}
+
 func handleDownPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	// TODO: Implement function
+	return ScaleRespMsg{}, 0
+}
+
+func handleDownFirmwareWifiResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
 }
@@ -591,6 +677,254 @@ func handleDelPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	} else {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DEL_PLU_RESP, MsgBody: "fail"}, len(data)
 	}
+	// TODO: Implement function
+}
+
+func handleSetLimitResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_LIMIT_TO_SCALE_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_LIMIT_TO_SCALE_RESP, MsgBody: "fail"}, len(data)
+	}
+	// TODO: Implement function
+}
+
+func handleSwitchLimitResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SWITCH_LIMIT_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SWITCH_LIMIT_RESP, MsgBody: "fail"}, len(data)
+	}
+	// TODO: Implement function
+}
+
+func handleOpenBillSendResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.OPEN_BILL_SEND_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.OPEN_BILL_SEND_RESP, MsgBody: "fail"}, len(data)
+	}
+	// TODO: Implement function
+}
+
+type DetailHeadData struct {
+	SettleAccountTimes string
+	TotalCount         string
+	PayPrice           string
+	TotalPrice         string
+	TaxKind            string
+}
+
+func parseDetailHeadData(str string) DetailHeadData {
+	result := DetailHeadData{}
+	parts := splitData(str)
+	for _, part := range parts {
+		keyValue := splitKeyValue(part)
+		if len(keyValue) == 2 {
+			key := keyValue[0]
+			value := keyValue[1]
+			switch key {
+			case "settle_account_times":
+				result.SettleAccountTimes = value
+			case "total_count":
+				result.TotalCount = value
+			case "pay_price":
+				result.PayPrice = value
+			case "total_price":
+				result.TotalPrice = value
+			case "tax_kind":
+				result.TaxKind = value
+			}
+		}
+	}
+	return result
+}
+
+func splitData(str string) []string {
+	return splitByDelimiter(str, ',')
+}
+
+func splitKeyValue(str string) []string {
+	return splitByDelimiter(str, ':')
+}
+
+func splitByDelimiter(str string, delimiter byte) []string {
+	var result []string
+	start := 0
+	for i := 0; i < len(str); i++ {
+		if str[i] == delimiter {
+			result = append(result, str[start:i])
+			start = i + 1
+		}
+	}
+	result = append(result, str[start:])
+	return result
+}
+
+func handleRevDetailHeadResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	detailHeadData := parseDetailHeadData(string(data))
+	println(string(data))
+
+	model := mSrvMgr.scales[scaleId].Model
+	sn := mSrvMgr.scales[scaleId].Sn
+	rec := DetailTotal{}
+	rec.PayPrice = detailHeadData.PayPrice
+	rec.ScaleModel = model
+	rec.ScaleSn = sn
+	rec.SettleAccountTimes = detailHeadData.SettleAccountTimes
+	rec.TaxKind = detailHeadData.TaxKind
+	rec.TotalCount = detailHeadData.TotalCount
+	rec.TotalPrice = detailHeadData.TotalPrice
+
+	mSrvMgr.scales[scaleId].detailInfo = DetailList{}
+	mSrvMgr.scales[scaleId].detailInfo.Total = rec
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_HEAD_RESP, MsgBody: "ok"}, len(data)
+}
+
+type DetailMidData struct {
+	SettleAccountTimes string
+	PluIndex           string
+	PluNum             string
+	PluTotalPrice      string
+	PluUnitPrice       string
+	PluTotalWeight     string
+	PluTare            string
+	PluQuantity        string
+	PluUnit            string
+	PluTaxType         string
+	PluReturnFlag      string
+	PluYear            string
+	PluMonth           string
+	PluDay             string
+	PluTaxPrice        string
+	PluChangeType      string
+	PluName            string
+}
+
+func parseDetailMidData(str string) DetailMidData {
+	result := DetailMidData{}
+	parts := splitData(str)
+	for _, part := range parts {
+		keyValue := splitKeyValue(part)
+		if len(keyValue) == 2 {
+			key := keyValue[0]
+			value := keyValue[1]
+			switch key {
+			case "settle_account_times":
+				result.SettleAccountTimes = value
+			case "plu_index":
+				result.PluIndex = value
+			case "plu_num":
+				result.PluNum = value
+			case "plu_total_price":
+				result.PluTotalPrice = value
+			case "plu_unit_price":
+				result.PluUnitPrice = value
+			case "plu_total_weight":
+				result.PluTotalWeight = value
+			case "plu_tare":
+				result.PluTare = value
+			case "plu_quantity":
+				result.PluQuantity = value
+			case "plu_unit":
+				result.PluUnit = value
+			case "plu_tax_type":
+				result.PluTaxType = value
+			case "plu_return_flag":
+				result.PluReturnFlag = value
+			case "plu_year":
+				result.PluYear = value
+			case "plu_month":
+				result.PluMonth = value
+			case "plu_day":
+				result.PluDay = value
+			case "plu_tax_price":
+				result.PluTaxPrice = value
+			case "plu_change_type":
+				result.PluChangeType = value
+			case "plu_name":
+				result.PluName = value
+			}
+		}
+	}
+	return result
+}
+
+func handleRevDetailMidResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	detailMidData := parseDetailMidData(string(data))
+
+	model := mSrvMgr.scales[scaleId].Model
+	sn := mSrvMgr.scales[scaleId].Sn
+	rec := DetailRec{}
+	rec.ScaleModel = model
+	rec.ScaleSn = sn
+	rec.SettleAccountTimes = detailMidData.SettleAccountTimes
+	rec.PluIndex = detailMidData.PluIndex
+	rec.PluNum = detailMidData.PluNum
+	rec.PluTotalPrice = detailMidData.PluTotalPrice
+	rec.PluUnitPrice = detailMidData.PluUnitPrice
+	rec.PluTotalWeight = detailMidData.PluTotalWeight
+	rec.PluTare = detailMidData.PluTare
+	rec.PluQuantity = detailMidData.PluQuantity
+	rec.PluUnit = detailMidData.PluUnit
+	rec.PluTaxType = detailMidData.PluTaxType
+	rec.PluReturnFlag = detailMidData.PluReturnFlag
+	rec.PluYear = detailMidData.PluYear
+	rec.PluMonth = detailMidData.PluMonth
+	rec.PluDay = detailMidData.PluDay
+	rec.PluTaxPrice = detailMidData.PluTaxPrice
+	rec.PluChangeType = detailMidData.PluChangeType
+	rec.PluName = detailMidData.PluName
+
+	head := mSrvMgr.scales[scaleId].detailInfo.Total
+	if head.SettleAccountTimes != "" && head.SettleAccountTimes == rec.SettleAccountTimes {
+		mSrvMgr.scales[scaleId].detailInfo.Details = append(mSrvMgr.scales[scaleId].detailInfo.Details, rec)
+	}
+
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_MID_RESP, MsgBody: "ok"}, len(data)
+	// TODO: Implement function
+}
+
+type DetailTailData struct {
+	SettleAccountTimes string
+}
+
+func parseDetailTailData(str string) DetailTailData {
+	result := DetailTailData{}
+	parts := splitData(str)
+	for _, part := range parts {
+		keyValue := splitKeyValue(part)
+		if len(keyValue) == 2 {
+			key := keyValue[0]
+			value := keyValue[1]
+			if key == "settle_account_times" {
+				result.SettleAccountTimes = value
+			}
+		}
+	}
+	return result
+}
+
+func handleRevDetailTailResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	parseDetailTailData := parseDetailTailData(string(data))
+	head := mSrvMgr.scales[scaleId].detailInfo.Total
+
+	if parseDetailTailData.SettleAccountTimes != head.SettleAccountTimes {
+		mSrvMgr.scales[scaleId].detailInfo = DetailList{}
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_TAIL_RESP, MsgBody: "fail"}, len(data)
+	}
+	mid := mSrvMgr.scales[scaleId].detailInfo.Details
+
+	if head.TotalCount != strconv.Itoa(len(mid)) {
+		mSrvMgr.scales[scaleId].detailInfo = DetailList{}
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_TAIL_RESP, MsgBody: "fail"}, len(data)
+	}
+
+	mSrvMgr.scaleMgr.detailPb.InsertTotalRec(head)
+	for _, rec := range mid {
+		mSrvMgr.scaleMgr.detailPb.InsertDetailRec(rec)
+	}
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_TAIL_RESP, MsgBody: "ok"}, len(data)
 	// TODO: Implement function
 }
 

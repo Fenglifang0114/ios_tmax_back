@@ -41,13 +41,14 @@ const (
 	REQ_CHECK_LICENSE_KEY ReqType = "check_license_key" // with parameter
 	REQ_UPDATE_LICENSE    ReqType = "update_license"    // with parameter
 
+	REQ_GET_DETAIL_LIST ReqType = "get_detail_list" // without parameter 20240903
 )
 
 type ReqAddScale struct {
 	ScaleModel string
 	ScaleSn    string
-	MediaType  MediaType
-	MediaInfo  string // will be ComInfo/NetInfo/BtInfo according to the media type
+	// MediaType  MediaType
+	MediaConf MediaConf // will be ComInfo/NetInfo/BtInfo according to the media type
 }
 
 type ReqDelScale struct {
@@ -58,6 +59,12 @@ type ReqModifyScale struct {
 	ScaleId int64
 	// MediaType MediaType
 	MediaConf  MediaConf
+	ScaleModel string
+}
+
+type ReqModifyScaleSn struct {
+	ScaleId    int64
+	Sn         string
 	ScaleModel string
 }
 
@@ -132,6 +139,7 @@ const (
 	SCALE_MGR_RESP_GET_LICENSE       ScaleMgrRespMsgType = "resp_get_license"       // with response of true or false
 	SCALE_MGR_RESP_CHECK_LICENSE_KEY ScaleMgrRespMsgType = "resp_check_license_key" // with response of true or false
 	SCALE_MGR_RESP_UPDATE_LICENSE    ScaleMgrRespMsgType = "resp_update_license"    // with response of true or false
+	SCALE_MGR_RESP_DETAIL_LIST       ScaleMgrRespMsgType = "resp_detail_list"       // with response of ScalesListMsg
 
 )
 
@@ -160,7 +168,9 @@ type ScaleConnMedia struct { // connection information will be stored in databas
 	TMedia     MediaType
 	MediaConf  MediaConf `gorm:"embedded;embeddedPrefix:mediainfo_"`
 	scale      *Scale    `gorm:"-"` // should not be stored in database
+	IsDefault  bool      //是否默认的连接方式   新增的秤连接方式都视为默认的，sn和model name 一样的连上后，将isdefault改为仅一个默认
 }
+
 type MediaConf struct {
 	Type          MediaType
 	MediaInfoJson string // will be unmarshaled json of ComInfo, NetInfo and BtInfo
@@ -225,6 +235,7 @@ const (
 	SREQ_GET_IP_MODE              SReqType = "get_ip_mode"
 	SREQ_GET_WIFI_INFO            SReqType = "get_wifi_info"
 	SREQ_UPDATE_FIRMWARE          SReqType = "update_firmware"
+	SREQ_DOWN_FIRMWARE_WIFI       SReqType = "update_firmware_wifi"
 	SREQ_CHECK_SERIAL_PORT        SReqType = "check_serial_port"
 	SREQ_GET_BUILD_INFO           SReqType = "get_build_info"      //20230926@FLF
 	SREQ_GET_SCALE_TIME           SReqType = "get_scale_time"      //20240112@FLF
@@ -254,6 +265,10 @@ const (
 	SREQ_BACKUP_DEF_SETTING       SReqType = "backup_def_setting"
 	SREQ_GET_EEPROM_TO_BIN        SReqType = "get_eeprom_to_bin"
 	SREQ_SET_EEPROM_FROM_BIN      SReqType = "set_eeprom_from_bin"
+	SREQ_GET_BASIC_DATA           SReqType = "get_basic_data"     //20240820@FLF
+	SREQ_SET_LIMIT_TO_SCALE       SReqType = "set_limit_to_scale" //20240829@FLF
+	SREQ_OPEN_BILL_SEND           SReqType = "open_bill_send"     //20240903@FLF
+
 )
 
 type ReqScaleRec struct {
@@ -299,6 +314,11 @@ type ReqPluData struct {
 	ScaleModel string `json:"ScaleModel"`
 	FilePath   string `json:"FilePath"`
 	NameMaxLen int    `json:"NameMaxLen"`
+}
+
+type ReqFirmwareInfo struct {
+	ModelName string `json:"modelName"`
+	Version   string `json:"version"`
 }
 
 type ReqSerialFileList struct {

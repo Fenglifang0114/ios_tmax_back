@@ -63,6 +63,9 @@ ws://127.0.0.1:7878/tmax?scaleid=0
     update license key => {"Req": "update_license","ReqData":"7f5ea60190eebe063d5ec40c8cf0a8642024-01-211771ccc88aa71ae5740ee8b21df3c74c"}
     response: 	{"MsgType":"resp_update_license","MsgBody":"ok"}
 
+17. get_detail_list => {"Req": "get_detail_list", "ReqData": ""}
+    response:  {"MsgType":"resp_detail_list","MsgBody":"[{\"Total\":{\"RecId\":1,\"ScaleModel\":\"T-MAX\",\"ScaleSn\":\"12345678\",\"SettleAccountTimes\":\"1\",\"TotalCount\":\"1\",\"PayPrice\":\"6.66\",\"TotalPrice\":\"5.66\",\"TaxKind\":\"0\",\"CreatedAt\":\"0001-01-01T00:00:00Z\"},\"Details\":[{\"RecId\":1,\"ScaleModel\":\"T-MAX\",\"ScaleSn\":\"12345678\",\"SettleAccountTimes\":\"1\",\"PluIndex\":\"1\",\"PluNum\":\"001\",\"PluTotalPrice\":\"5.66\",\"PluUnitPrice\":\"5.66\",\"PluTotalWeight\":\"1\",\"PluTare\":\"0\",\"PluQuantity\":\"0\",\"PluUnit\":\"0\",\"PluTaxType\":\"1\",\"PluReturnFlag\":\"0\",\"PluYear\":\"24\",\"PluMonth\":\"2\",\"PluDay\":\"3\",\"PluTaxPrice\":\"0.55\",\"PluChangeType\":\"0\",\"PluName\":\"apple\",\"CreatedAt\":\"0001-01-01T00:00:00Z\"}]}]"}
+
 To connect to TMax scale with scaleId websocket
 ws://127.0.0.1:7878/tmax?scaleid=1
 
@@ -315,7 +318,9 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"ReqData": "./1.bin"
 }
 {
-	"MsgType":"resp_get_eeprom_to_bin","MsgBody":"ok","ScaleId":1
+	"MsgType":"resp_get_eeprom_to_bin","MsgBody":"ok","ScaleId":1 
+				 
+			  
 }
 
 34. get eeprom data from scale =>{
@@ -325,6 +330,66 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
  {
 	"MsgType":"resp_set_eeprom_from_bin","MsgBody":"ok","ScaleId":1
 }
+
+35. update firmware wifi => {
+	"Req": "update_firmware_wifi",
+	"ReqData": "tmax_firmware.zip"
+}
+  
+	response: {"MsgType":"resp_update_firmware_wifi","MsgBody":"ok", "ScaleId":1}
+
+36. get basic data from scale=>{
+	"Req": "get_basic_data",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_get_basic_data","MsgBody":"{    
+    "ForcedShutdownCnt":50,
+	"PowerOnCnt":50,
+    "RunningTime.":200,
+    "CaliCnt":45,
+    "CalSwitchCnt":1000,
+	"Err4Cnt":1000,
+	"Err19Cnt":1000,
+	"OlTime":1000,
+	"UlTime":1000,
+	"WgtCnt":1000,	 
+}","ScaleId":1
+}
+
+37. set upper lower limit to scale=>{
+	"Req": "set_limit_to_scale",
+	"ReqData": "1.25,2.52"
+}
+ {
+	"MsgType":"resp_set_limit_to_scale","MsgBody":"ok","ScaleId":1
+}
+
+38. clear upper lower limit to scale=>{
+	"Req": "clear_limit_from_scale",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_clear_limit_from_scale","MsgBody":"ok","ScaleId":1
+}
+
+39. switch limit from scale=>{
+	"Req": "switch_limit_from_scale",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_switch_limit_from_scale","MsgBody":"ok","ScaleId":1
+}
+
+40. Open bill detail send=>{ //开启结账发送
+	"Req": "open_bill_send",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_open_bill_send","MsgBody":"ok","ScaleId":1
+}
+
+
 	
 
 To configure scale's wifi to connect to specific AP

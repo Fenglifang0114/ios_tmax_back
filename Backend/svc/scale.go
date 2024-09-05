@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"crypto/md5"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,8 +36,9 @@ const (
 	// 	CMD_IDENTIFY_TMAX              = 0xA0
 	// 	CMD_TYPE_TMAX                  = 0xB0
 	// 	PACKET_TAIL_TMAX               = 0xA55A
-	DATA_LENGTH_256_TMAX = 256
+
 	DATA_LENGTH_512_TMAX = 512
+	DATA_LENGTH_256_TMAX = 256
 	DATA_LENGTH_8_TMAX   = 8
 
 // FILE_CHUNK_SIZE_TMAX           = 272
@@ -136,6 +139,7 @@ type Scale struct {
 	// MediaConf string
 	// com port
 	MySerial *TSerial
+	MyNet    *TNet
 	// Network socket
 	// tcpSocket net.Socket
 	// Bluetooth
@@ -172,15 +176,21 @@ type Scale struct {
 	// composer object
 	composer *m.CmdComposer
 	Pcnf     ComInfo
+	Ncnf     NetInfo
 
 	isScalePassth    bool
 	IsScalePassthHex bool
+	detailInfo       DetailList
 }
 
 // NewScale creates a new scale
 func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, model string, sn string, isTest bool) (*Scale, error) {
 	var pcnf ComInfo
 	var sport *TSerial
+	var net *TNet
+	var ncnf NetInfo
+	var scale *Scale
+	var detailInfo DetailList
 	if conn.TMedia == MEDIA_COM {
 		// open COM connection
 		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &pcnf); err != nil {
@@ -188,13 +198,31 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 		}
 
 		picker := picker.GetPickerFn(scaleCat)
-		sport, _ = NewSerial(pcnf, picker)
+		sport, _ = NewSerial(pcnf, picker, conn.IsDefault)
+
+		scale = &Scale{
+			scaleMgr: scaleMgr, Conn: conn, ScaleCat: scaleCat, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
+			fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MySerial: sport, Pcnf: pcnf,
+			quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
+			detailInfo: detailInfo,
+		}
+
+	} else if conn.TMedia == MEDIA_NET {
+		//TODO:add new info
+		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &ncnf); err != nil {
+			l.Log.Errorf("error unmarshalling: %v", err)
+		}
+
+		picker := picker.GetPickerFn(scaleCat)
+		net, _ = NewNet(ncnf, picker, conn.IsDefault)
+		scale = &Scale{
+			scaleMgr: scaleMgr, Conn: conn, ScaleCat: scaleCat, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
+			fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MyNet: net, Ncnf: ncnf,
+			quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
+			detailInfo: detailInfo,
+		}
 	}
-	scale := &Scale{
-		scaleMgr: scaleMgr, Conn: conn, ScaleCat: scaleCat, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
-		fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MySerial: sport, Pcnf: pcnf,
-		quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
-	}
+
 	scale.respChansMap = map[m.RespMsgType][]chan *ScaleRespMsg{}
 	composer := cmdComposerFuncMap[scale.ScaleCat]
 	scale.composer = &composer
@@ -226,17 +254,105 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 
 	scale.scaleMgr = scaleMgr
 	scale.EnterAt = time.Now()
-	scale.MySerial = sport
+	if conn.TMedia == MEDIA_COM {
+		scale.MySerial = sport
+	} else if conn.TMedia == MEDIA_NET {
+		scale.MyNet = net
+		go scale.keepNetState()
+	}
+
 	go scale.procScaleRespMsg()
 	go scale.procToScaleMsg()
+
 	return scale, nil
 }
+
+func (s *Scale) keepNetState() {
+	for {
+		if s.MyNet == nil {
+			time.Sleep(10 * time.Millisecond)
+			break
+		}
+		if s.MyNet.toQuit {
+			break
+		}
+		if s.MyNet.conn != nil && s.MyNet.isAlive {
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		var err error
+		if s.MyNet != nil {
+			println(s.MyNet.ip)
+			s.MyNet.conn, err = s.MyNet.reconnect()
+			if err == nil {
+				s.MyNet.isAlive = true
+				s.keepNetOnline()
+				time.Sleep(10 * time.Second) // 明确等待 10 秒
+				continue
+			}
+			s.MyNet.isAlive = false
+
+		}
+
+		time.Sleep(10 * time.Second) // 连不上等待 10 秒
+	}
+}
+
+func (s *Scale) keepNetOnline() {
+	// for {
+	if s.MyNet == nil {
+		time.Sleep(10 * time.Millisecond)
+		// break
+		return
+	}
+	if s.MyNet.toQuit {
+		// break
+		return
+	}
+	if s.MyNet.conn != nil && s.MyNet.isAlive {
+		err, scaleModel, sn := getModelNameSn(s)
+		if err == nil {
+			req := ReqModifyScaleSn{
+				ScaleId:    s.Id,
+				ScaleModel: scaleModel,
+				Sn:         sn,
+			}
+			s.scaleMgr.UpdateScaleSn(req)
+
+		}
+
+	}
+
+}
+
+// func (s *Scale) keepComOnline() {
+// 	for {
+// 		if s.MySerial == nil {
+// 			time.Sleep(10 * time.Millisecond)
+// 			break
+// 		}
+// 		if s.MySerial.toQuit {
+// 			break
+// 		}
+// 		if s.MySerial != nil {
+// 			time.Sleep(10 * time.Second)
+// 			continue
+// 		}
+// 		s.scaleMgr.ModifyScaleInfo()
+
+// 		time.Sleep(10 * time.Second) // 连不上等待 10 秒
+// 	}
+// }
 
 func (s *Scale) Close() error {
 	close(s.quitProcScaleRespMessageCh)
 	close(s.quitProcToScaleMsgCh)
 	if s.MySerial != nil {
 		s.MySerial.Close()
+	}
+
+	if s.MyNet != nil {
+		s.MyNet.Close() //20240801
 	}
 	return nil
 }
@@ -255,31 +371,47 @@ func (s *Scale) HandleClientDisconnect() error {
 // to process msg from serial port
 func (s *Scale) procScaleRespMsg() {
 	quit := false
-	for {
-		if quit {
-			break
-		}
-		select {
-		case <-s.quitProcScaleRespMessageCh:
-			quit = true
-		case inPack := <-s.MySerial.recvCh:
-			if inPack.PayloadLen == 0 {
-				continue
-			}
-			l.Log.Debugf("From sport: %v", inPack)
+	if s.MySerial != nil {
+		for {
 
-			if s.ScaleCat == m.SCALE_C51 {
-			} else if s.ScaleCat == m.SCALE_T2200 {
-				msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
-				if err != nil {
+			if quit {
+				break
+			}
+			select {
+			case <-s.quitProcScaleRespMessageCh:
+				quit = true
+			case inPack := <-s.MySerial.recvCh:
+				if inPack.PayloadLen == 0 {
+
 					continue
 				}
-				sendMsgIntoChsOrWeightToClient(s, msg)
-			} else if s.ScaleCat == m.SCALE_TMAX || s.ScaleCat == m.SCALE_TMAX_PASSTH {
-				// find message buffer that associate to the message
+				l.Log.Debugf("From sport: %v", inPack)
 
-				if s.isScalePassth {
-					var cmdHex uint16 = cmd.CMDID_SCALE_PASSTH_DATA_TMAX
+				if s.ScaleCat == m.SCALE_C51 {
+				} else if s.ScaleCat == m.SCALE_T2200 {
+					msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
+					if err != nil {
+						continue
+					}
+					sendMsgIntoChsOrWeightToClient(s, msg)
+				} else if s.ScaleCat == m.SCALE_TMAX || s.ScaleCat == m.SCALE_TMAX_PASSTH {
+					// find message buffer that associate to the message
+
+					if s.isScalePassth {
+						var cmdHex uint16 = cmd.CMDID_SCALE_PASSTH_DATA_TMAX
+						bufName := utils.CmdsRespMap[utils.CmdID(cmdHex)]
+						if bufName == "" {
+							l.Log.Errorf("error on getting bufName for the cmd: %v", cmdHex)
+							continue
+						}
+
+						fmt.Println(bufName)
+						s.bufs.Write(string(bufName), inPack.Payload)
+						msg := extractScalePassthDataTMAX(s, s.bufs[string(bufName)], bufName)
+						sendMsgIntoChsOrWeightToClient(s, &msg) //20231023  @111
+						continue
+					}
+					var cmdHex uint16 = (uint16(inPack.CmdID) << 8) | uint16(inPack.CmdSubId)
 					bufName := utils.CmdsRespMap[utils.CmdID(cmdHex)]
 					if bufName == "" {
 						l.Log.Errorf("error on getting bufName for the cmd: %v", cmdHex)
@@ -288,25 +420,77 @@ func (s *Scale) procScaleRespMsg() {
 
 					fmt.Println(bufName)
 					s.bufs.Write(string(bufName), inPack.Payload)
-					msg := extractScalePassthDataTMAX(s, s.bufs[string(bufName)], bufName)
+					msg := extractMessageTMAX(s.Id, s.bufs[string(bufName)], bufName)
 					sendMsgIntoChsOrWeightToClient(s, &msg) //20231023  @111
-					continue
-				}
-				var cmdHex uint16 = (uint16(inPack.CmdID) << 8) | uint16(inPack.CmdSubId)
-				bufName := utils.CmdsRespMap[utils.CmdID(cmdHex)]
-				if bufName == "" {
-					l.Log.Errorf("error on getting bufName for the cmd: %v", cmdHex)
-					continue
-				}
-				fmt.Println(bufName)
-				s.bufs.Write(string(bufName), inPack.Payload)
-				msg := extractMessageTMAX(s.Id, s.bufs[string(bufName)], bufName)
-				sendMsgIntoChsOrWeightToClient(s, &msg) //20231023  @111
-			} else {
+				} else {
 
+				}
+			default:
+				time.Sleep(time.Microsecond * 100)
+				continue
 			}
 		}
+
+	} else if s.MyNet != nil {
+		for {
+			if quit {
+				break
+			}
+			select {
+			case <-s.quitProcScaleRespMessageCh:
+				quit = true
+			case inPack := <-s.MyNet.recvCh:
+				if inPack.PayloadLen == 0 {
+
+					continue
+				}
+				// l.Log.Debugf("From net: %v", inPack)
+
+				if s.ScaleCat == m.SCALE_C51 {
+				} else if s.ScaleCat == m.SCALE_T2200 {
+					msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
+					if err != nil {
+						continue
+					}
+					sendMsgIntoChsOrWeightToClient(s, msg)
+				} else if s.ScaleCat == m.SCALE_TMAX || s.ScaleCat == m.SCALE_TMAX_PASSTH {
+					// find message buffer that associate to the message
+
+					if s.isScalePassth {
+						var cmdHex uint16 = cmd.CMDID_SCALE_PASSTH_DATA_TMAX
+						bufName := utils.CmdsRespMap[utils.CmdID(cmdHex)]
+						if bufName == "" {
+							l.Log.Errorf("error on getting bufName for the cmd: %v", cmdHex)
+							continue
+						}
+
+						// fmt.Println(bufName)
+						s.bufs.Write(string(bufName), inPack.Payload)
+						msg := extractScalePassthDataTMAX(s, s.bufs[string(bufName)], bufName)
+						sendMsgIntoChsOrWeightToClient(s, &msg) //20231023  @111
+						continue
+					}
+					var cmdHex uint16 = (uint16(inPack.CmdID) << 8) | uint16(inPack.CmdSubId)
+					bufName := utils.CmdsRespMap[utils.CmdID(cmdHex)]
+					if bufName == "" {
+						l.Log.Errorf("error on getting bufName for the cmd: %v", cmdHex)
+						continue
+					}
+					fmt.Println(bufName)
+					s.bufs.Write(string(bufName), inPack.Payload)
+					msg := extractMessageTMAX(s.Id, s.bufs[string(bufName)], bufName)
+					sendMsgIntoChsOrWeightToClient(s, &msg) //20231023  @111
+				} else {
+
+				}
+			default:
+				time.Sleep(time.Microsecond * 100)
+				continue
+			}
+		}
+
 	}
+
 }
 
 func (s *Scale) procToScaleMsg() {
@@ -342,6 +526,9 @@ func (s *Scale) procToScaleMsg() {
 			if req, err := parseToScaleReq(string(data["message"])); err == nil {
 				go procToScaleReq(s, req) // TODO: handle error
 			}
+		default:
+			time.Sleep(time.Microsecond * 100)
+			continue
 		}
 	}
 }
@@ -368,13 +555,37 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 			return false
 		}
 		time.Sleep(1 * time.Second)
-		if s.MySerial, err = NewSerial(pcnf, pickFun); err != nil {
+		if s.MySerial, err = NewSerial(pcnf, pickFun, true); err != nil {
 			l.Log.Error(err.Error())
 		}
 		s.Pcnf = pcnf
 	} else if conf.Type == MEDIA_NET {
-		return false
+		//TODO: 要做修改IP    202406
+
+		var ncnf NetInfo
+		var err error
+		if err := json.Unmarshal([]byte(conf.MediaInfoJson), &ncnf); err != nil {
+			l.Log.Errorf("error unmarshalling: %v", err)
+		}
+		var pickFun picker.PickerFunc = nil
+		if s.MyNet != nil {
+			s.quitProcScaleRespMessageCh <- true
+			s.quitProcToScaleMsgCh <- true
+			pickFun = s.MyNet.pickerFn
+			s.MyNet.Close()
+			s.MyNet = nil
+		} else {
+			l.Log.Error("no net is assigned before")
+			return false
+		}
+		time.Sleep(1 * time.Second)
+		if s.MyNet, err = NewNet(ncnf, pickFun, true); err != nil {
+			l.Log.Error(err.Error())
+		}
+		s.Ncnf = ncnf
+
 	} else if conf.Type == MEDIA_BT {
+		//TODO: 要做修改蓝牙    202406
 		return false
 	} else {
 	}
@@ -498,7 +709,7 @@ func getAtVersion(s *Scale) (*ScaleRespMsg, error) {
 	return msg, err
 }
 
-func ReqConnectAp(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
+func ReqConnectAp(s *Scale, ssid string, bssid string, password string) (*ScaleRespMsg, error) {
 	////defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
 	if msg.MsgBody != "ok" {
@@ -590,8 +801,8 @@ func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
 	//defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_IP_MODE_RESP)
 	return msg, err
-}
 
+}
 func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	var eepromDataDown EepromDataDownResp
 	if err := json.UnmarshalFromString(req.ReqData, &eepromDataDown.EepromDataDown); err != nil {
@@ -1509,7 +1720,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 	}
 	if prnFmtAddr == 0 || prnFmtMaxLenth == 0 || eraseLen == 0 {
-		return &ScaleRespMsg{}, fmt.Errorf("get print address fail")
+		return &ScaleRespMsg{}, fmt.Errorf("get print format address fail")
 	}
 	var reqData ReqPrnData
 	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
@@ -1581,6 +1792,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				// dataPackCmd := buildSendDataPacket(addr, packetData)
 				packDataHexStr := hex.EncodeToString(packetData)
 				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
@@ -1864,6 +2076,84 @@ func getFileData(zipFilePath []string) ([]string, bool) {
 	return strFileDataArray, true
 }
 
+func getFileDataAndMd5(zipFilePath string) ([12]string, [12]string, bool) {
+	var strFileDataArray [12]string
+	var strMd5Array [12]string
+	r, err := zip.OpenReader(zipFilePath)
+	if err != nil {
+		return strFileDataArray, strMd5Array, false
+	}
+	defer r.Close()
+	for _, f := range r.File {
+		fmt.Println("File:", f.Name)
+		// 打开文件
+		rc, err := f.Open()
+		if err != nil {
+			return strFileDataArray, strMd5Array, false
+		}
+		defer rc.Close()
+		num, res := getFileNum(f.Name)
+		if !res {
+			return strFileDataArray, strMd5Array, false
+		}
+		tempContent, err := io.ReadAll(rc)
+		if err != nil {
+			return strFileDataArray, strMd5Array, false
+		}
+		if strings.Contains(f.Name, "fmt") {
+			tempStr := decryptCsv(string(tempContent))
+			if !strings.Contains(tempStr, "ROTATE") {
+				return strFileDataArray, strMd5Array, false
+			}
+			strFileDataArray[num-1] = tempStr
+		} else if strings.Contains(f.Name, "txt") {
+			strMd5Array[num-1] = string(tempContent)
+		}
+	}
+	return strFileDataArray, strMd5Array, true
+}
+
+func checkFilesMd5(strFileDataArray [12]string, strMd5Array [12]string) bool {
+	for i := 0; i < 12; i++ {
+		if strFileDataArray[i] != "" {
+			tempMd5Arr := calculateMD5(strFileDataArray[i] + MD5SEED) //统一为seed,要改打包的UI，此处先暂定这样
+			var md5TmpStr string
+			for _, b := range tempMd5Arr {
+				md5TmpStr += fmt.Sprintf("%02X", b) // 将每个字节转换为两位16进制格式的字符串并拼接
+			}
+			if !strings.EqualFold(md5TmpStr, strMd5Array[i]) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func getFileNum(fNameStr string) (int, bool) {
+	re := regexp.MustCompile(`(\d+)`) // 使用正则表达式提取数字部分
+	match := re.FindStringSubmatch(fNameStr)
+
+	if len(match) > 1 {
+		numStr := match[1]               // 提取到的数字部分
+		num, err := strconv.Atoi(numStr) // 将字符串转换为int类型
+		if err == nil {
+			return num, true
+		} else {
+			return 0, false
+		}
+	}
+	return 0, false
+}
+
+func decryptByte(encryptedBytes []byte) []byte {
+	var decryptedBytes []byte
+	for i := 0; i < len(encryptedBytes); i += 2 {
+		decryptedByte := (int32(encryptedBytes[i])-3)<<4 | (int32(encryptedBytes[i+1])-3)&0x0F
+		decryptedBytes = append(decryptedBytes, byte(decryptedByte))
+	}
+	return decryptedBytes
+}
+
 func decryptCsv(encryptedCsv string) string {
 	var decryptedBytes []byte
 	encryptedBytes := []byte(encryptedCsv)
@@ -2027,7 +2317,443 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	return &ScaleRespMsg{m.INSERT_PLU_RESP, "ok", c.Id}, nil
 }
+func unzipAndReadFilesSrec(zipPath string) ([]byte, []byte) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		fmt.Println("Error opening ZIP:", err)
+		return nil, nil
+	}
+	defer r.Close()
 
+	var binData, infoData []byte
+	res1 := false
+	res2 := false
+
+	if len(r.File) != 2 {
+		return nil, nil
+	}
+
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return nil, nil
+		}
+		defer rc.Close()
+
+		buf := make([]byte, f.UncompressedSize64)
+		_, err = io.ReadFull(rc, buf)
+		if err != nil && err != io.EOF {
+			fmt.Println("Error reading file:", err)
+			return nil, nil
+		}
+
+		if strings.Contains(f.Name, ".srec") {
+			binData = buf
+			res1 = true
+		} else if strings.Contains(f.Name, ".txt") {
+			infoData = buf
+			res2 = true
+		}
+	}
+	if res1 && res2 {
+		return binData, infoData
+	}
+	return nil, nil
+
+}
+
+func unzipAndReadFiles(zipPath string) ([]byte, []byte) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		fmt.Println("Error opening ZIP:", err)
+		return nil, nil
+	}
+	defer r.Close()
+
+	var binData, infoData []byte
+	res1 := false
+	res2 := false
+
+	if len(r.File) != 2 {
+		return nil, nil
+	}
+
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			fmt.Println("Error opening file:", err)
+			return nil, nil
+		}
+		defer rc.Close()
+
+		buf := make([]byte, f.UncompressedSize64)
+		_, err = io.ReadFull(rc, buf)
+		if err != nil && err != io.EOF {
+			fmt.Println("Error reading file:", err)
+			return nil, nil
+		}
+
+		if strings.Contains(f.Name, ".bin") {
+			binData = buf
+			res1 = true
+		} else if strings.Contains(f.Name, ".txt") {
+			infoData = buf
+			res2 = true
+		}
+	}
+	if res1 && res2 {
+		return binData, infoData
+	}
+	return nil, nil
+
+}
+
+func bytesToMd5(data []byte) string {
+	hash := md5.New()
+	hash.Write(data)
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+// 合并[]byte
+func mergeByteSlices(slice1, slice2 []byte) []byte {
+	result := make([]byte, len(slice1)+len(slice2))
+	copy(result[:len(slice1)], slice1)
+	copy(result[len(slice1):], slice2)
+	return result
+}
+
+// 获取modelName 和sn
+func getModelNameSn(c *Scale) (error, string, string) {
+	composer := c.composer
+	fn := composer.ComposeCmd
+	var dataStruct FIFromScale
+
+	cmd, timeoutMs, err := fn(composer, m.CMD_GET_FACTORY_INFO, m.CmdData{})
+	if err != nil {
+		return err, "", ""
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.GET_FACTORY_INFO_RESP, timeoutMs); err != nil {
+		return err, "", ""
+	} else if res.MsgBody == "" {
+		return err, "", ""
+	} else {
+		msgBodyStr, ok := res.MsgBody.(string)
+		if !ok {
+			return err, "", ""
+		}
+		err := json.UnmarshalFromString(msgBodyStr, &dataStruct)
+		if err != nil {
+			return err, "", ""
+		}
+	}
+	if dataStruct.ModelName == "" || dataStruct.ScaleSn == "" {
+		return err, "", ""
+	}
+	return err, dataStruct.ModelName, dataStruct.ScaleSn
+}
+
+// 从zip中获取bin和机种名
+func getZipInfo(fileName string) (error, []byte, string) {
+	readBinData, txtData := unzipAndReadFiles(fileName)
+	if readBinData == nil || txtData == nil {
+		return fmt.Errorf("file error"), nil, ""
+	}
+
+	parts := strings.Split(string(txtData), "\n")
+	if len(parts) != 2 {
+		return fmt.Errorf("file error"), nil, ""
+
+	}
+	readMd5 := parts[0]
+	infoJosnStr := parts[1]
+	tempByte := mergeByteSlices(readBinData, []byte(infoJosnStr))
+	tempByte = mergeByteSlices(tempByte, []byte(MD5SEED))
+	calMd5Str := bytesToMd5(tempByte)
+	if strings.Trim(readMd5, " ") != calMd5Str {
+		return fmt.Errorf("file error"), nil, ""
+	}
+	var reqInfo ReqFirmwareInfo
+	if err := json.UnmarshalFromString(infoJosnStr, &reqInfo); err != nil {
+		return fmt.Errorf("file error"), nil, ""
+	}
+	modelName := reqInfo.ModelName
+	return nil, readBinData, modelName
+}
+
+// 从zip中获取srec 和机种
+func getZipInfoSrec(fileName string) (error, []byte, string) {
+	readBinData, txtData := unzipAndReadFilesSrec(fileName)
+	if readBinData == nil || txtData == nil {
+		return fmt.Errorf("file error"), nil, ""
+	}
+
+	parts := strings.Split(string(txtData), "\n")
+	if len(parts) != 2 {
+		return fmt.Errorf("file error"), nil, ""
+
+	}
+	readMd5 := parts[0]
+	infoJosnStr := parts[1]
+	tempByte := mergeByteSlices(readBinData, []byte(infoJosnStr))
+	tempByte = mergeByteSlices(tempByte, []byte(MD5SEED))
+	calMd5Str := bytesToMd5(tempByte)
+	if strings.Trim(readMd5, " ") != calMd5Str {
+		return fmt.Errorf("file error"), nil, ""
+	}
+	var reqInfo ReqFirmwareInfo
+	if err := json.UnmarshalFromString(infoJosnStr, &reqInfo); err != nil {
+		return fmt.Errorf("file error"), nil, ""
+	}
+	modelName := reqInfo.ModelName
+	return nil, readBinData, modelName
+}
+
+// 更新srec之前要先验证 机种是否匹配
+func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	err, readBinData, modelName := getZipInfoSrec(req.ReqData)
+	if err != nil || len(readBinData) == 0 {
+		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
+	}
+	err, scaleName, _ := getModelNameSn(c)
+	if err != nil {
+		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,check connection.", c.Id}, nil
+	}
+	if scaleName != modelName {
+		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,the model does not match.", c.Id}, nil
+	}
+	binData := decryptByte(readBinData)
+	tmpFile, err := os.CreateTemp("", "update_*.srec")
+	if err != nil {
+		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,write file error.", c.Id}, nil
+	}
+	defer tmpFile.Close()
+	writeStringToFile(string(binData), tmpFile.Name())
+	return c.UpdateFirmware(tmpFile.Name())
+
+}
+func writeStringToFile(str string, filePath string) {
+	file, err := os.Create(filePath)
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(str)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+	}
+}
+
+// 获取基础数据 OL UL 开关机次数等
+func ReqGetBasicData(c *Scale) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+	return excuteSimpCmd(c, m.CMD_GET_BASIC_DATA, m.GET_BASIC_DATA_RESP)
+}
+
+// 将string 转为 浮点数的小端模式的8个字节  Tmax是这样存的
+// 123.456   77 BE 9F 1A 2F DD 5E 40
+func stringToLittleEndianDouble(s string) ([]byte, error) {
+	buf := make([]byte, 8)
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return buf, err
+	}
+	binary.LittleEndian.PutUint64(buf, math.Float64bits(f))
+	return buf, err
+}
+
+// 设置上下限
+func ReqSetLimitToScale(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	// reg, err, res := openFactory(c)
+	// if err != nil || !res {
+	// 	return reg, err
+	// }
+	strList := strings.Split(req.ReqData, ",")
+
+	if len(strList) != 2 {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,req data error")
+	}
+	dataLow, err := stringToLittleEndianDouble(strList[0])
+	if err != nil {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,req data error")
+	}
+	dataHigh, err := stringToLittleEndianDouble(strList[1])
+	if err != nil {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,req data error")
+	}
+	combined := mergeByteSlices(dataLow, dataHigh)
+	packDataHexStr := hex.EncodeToString(combined)
+	l.Log.Debug("send cmd to scale")
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_LIMIT_TO_SCALE, m.CmdData{Type: m.DATA_TYPE_STR, Data: packDataHexStr})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	if _, err := perfCmdNwaitResult(c, cmd, m.SET_LIMIT_TO_SCALE_RESP, timeoutMs); err != nil {
+		// 	return &ScaleRespMsg{}, err
+		// } else if res.MsgBody != "ok" {
+		// 	return &ScaleRespMsg{}, fmt.Errorf("set limit fail")
+		return &ScaleRespMsg{m.SET_LIMIT_TO_SCALE_RESP, "ok", c.Id}, nil
+	}
+	return &ScaleRespMsg{m.SET_LIMIT_TO_SCALE_RESP, "ok", c.Id}, nil
+
+}
+
+func ReqOpenBillSend(c *Scale) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+	return excuteSimpCmd(c, m.CMD_OPEN_BILL_SEND, m.OPEN_BILL_SEND_RESP)
+}
+
+// 在线升级bin
+func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	err, readBinData, modelName := getZipInfo(req.ReqData)
+	if err != nil {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
+	}
+
+	if len(readBinData) == 0 {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
+	}
+
+	err, scaleName, _ := getModelNameSn(c)
+	if err != nil {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,check connection")
+	}
+
+	if scaleName != modelName {
+		//如果modelname 不一样，不能升级
+	}
+
+	binData := decryptByte(readBinData)
+	if len(binData) == 0 || len(binData) > 1024*128 {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
+	}
+
+	composer := c.composer
+	fn := composer.ComposeCmd
+
+	// 擦除
+	addr := 0x2002A000 //这个地址是不是统一的？
+	size := 128 * 1024
+	loopCnt := size / 4096
+	addrInLoop := addr
+	for i := 0; i < loopCnt; i++ {
+		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("erase fail")
+		}
+		addrInLoop += 4096
+	}
+	//开始写
+	//开辟4K的空间来存储校验和尾巴，尾巴为8个字节，前四个字节为bin长度，后四个字节为固定的 5a a5 a5 5a
+	loopDataLen := 4096
+	last4kByte := make([]byte, loopDataLen)
+
+	binDataAdd := padOrReturnBytes(binData)
+
+	crcLoop := len(binDataAdd) / loopDataLen
+	crcLen := 4
+	for i := 0; i < crcLoop; i++ {
+		// 计算本包数据
+		start := i * loopDataLen
+		end := start + loopDataLen
+		startCrc := i * crcLen
+
+		if end > len(binDataAdd) {
+			end = len(binDataAdd)
+		}
+		packetData := binDataAdd[start:end]
+		checksum := utils.Crc32MPEG2(packetData)
+		binary.BigEndian.PutUint32(last4kByte[startCrc:], checksum)
+	}
+	binary.LittleEndian.PutUint32(last4kByte[loopDataLen-8:], uint32(len(binData)))
+	binary.BigEndian.PutUint16(last4kByte[loopDataLen-4:], 0x5aa5)
+	binary.BigEndian.PutUint16(last4kByte[loopDataLen-2:], 0xa55a)
+
+	packetCount := len(binDataAdd) / DATA_LENGTH_256_TMAX
+	println(packetCount)
+
+	l.Log.Debug("send data package to scale")
+	loopAddr := addr
+	for i := 0; i < packetCount; i++ {
+		// 计算本包数据
+		start := i * DATA_LENGTH_256_TMAX
+		end := start + DATA_LENGTH_256_TMAX
+		if end > len(binDataAdd) {
+			end = len(binDataAdd)
+		}
+		packetData := binDataAdd[start:end]
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+		}
+		loopAddr += DATA_LENGTH_256_TMAX
+	}
+	//写最后4K
+	lastLoop := len(last4kByte) / DATA_LENGTH_256_TMAX
+	println(lastLoop)
+
+	l.Log.Debug("send data package to scale")
+	lastLoopAddr := addr + 1024*124
+
+	for i := 0; i < lastLoop; i++ {
+		// 计算本包数据
+		start := i * DATA_LENGTH_256_TMAX
+		end := start + DATA_LENGTH_256_TMAX
+		if end > len(last4kByte) {
+			end = len(last4kByte)
+		}
+		packetData := last4kByte[start:end]
+		packDataHexStr := hex.EncodeToString(packetData)
+		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", lastLoopAddr, packDataHexStr)})
+		if err != nil {
+			return &ScaleRespMsg{}, err
+		}
+		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
+			return &ScaleRespMsg{}, err
+		} else if res.MsgBody != "ok" {
+			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+		}
+		lastLoopAddr += DATA_LENGTH_256_TMAX
+	}
+
+	l.Log.Info("send bin ok")
+
+	return &ScaleRespMsg{m.DOWN_FIRMWARE_WIFI_RESP, "ok", c.Id}, nil
+}
+
+func padOrReturnBytes(data []byte) []byte {
+	remainder := len(data) % 4096
+	if remainder == 0 {
+		return data
+	}
+	paddedData := make([]byte, len(data)+(4096-remainder))
+	copy(paddedData, data)
+	for i := len(data); i < len(paddedData); i++ {
+		paddedData[i] = 0xFF
+	}
+	return paddedData
+}
+
+// 下发PLU
 func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	var reqData ReqPluData
 	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
@@ -2216,6 +2942,7 @@ func CopyFile(srcFilePath, dstFilePath string) (written int64, err error) {
 
 }
 
+// 设置秤上的时间
 func ReqSetScaleTime(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 	num, err := strconv.ParseUint(reqData, 10, 32)
@@ -2291,6 +3018,7 @@ func deleteFile(fileName string) error {
 	return nil
 }
 
+// 获取OL UL的异常数据
 func ReqGetWeightErr(c *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("send enable factory mode cmd to scale")
 	reg, err, res := openFactory(c)
@@ -2332,7 +3060,7 @@ func ReqGetWeightErr(c *Scale) (*ScaleRespMsg, error) {
 		}
 	}
 	if olAddr == 0 || ulAddr == 0 {
-		return &ScaleRespMsg{}, fmt.Errorf("get plu address fail")
+		return &ScaleRespMsg{}, fmt.Errorf("get address fail")
 	}
 
 	byteOLArray, resOL := getOlUlFromScale(c, olAddr)
@@ -2945,6 +3673,15 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		sendRespMsgClient(s, msg)
 		return
 	}
+	if msg.MsgType == m.SWITCH_LIMIT_RESP { // send switch limit to client if it doesn't not register this message
+		sendRespMsgClient(s, msg) //此处单独来了切换上下限的功能，要不要这样处理 TODO:
+		return
+	}
+	if msg.MsgType == m.REV_DETAIl_TAIL_RESP { // send switch limit to client if it doesn't not register this message
+		sendRespMsgClient(s, msg) //此处单独来了切换上下限的功能，要不要这样处理 TODO:
+		return
+	}
+
 }
 
 func sendRespMsgClient(s *Scale, msg *ScaleRespMsg) {

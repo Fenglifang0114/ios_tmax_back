@@ -55,7 +55,6 @@ func findPrinterName(s string) string {
 	}
 	return ""
 }
-
 func ParserFmtToFile(utf8Buff string, printerModel string, fmtLen int) bool {
 	var buffer *bytes.Buffer
 	printMode := printerModel
@@ -80,7 +79,6 @@ func ParserFmtToFile(utf8Buff string, printerModel string, fmtLen int) bool {
 	} else {
 		buffer = ParserRptFmtToBuf(utf8Buff, printerName, fmtLen)
 	}
-
 	// 7.创建bin文件
 
 	if creatFile("formatBin.bin", buffer) {
@@ -237,7 +235,6 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 	}
 	copy(prtName[:len(tmpNameStr)], []byte(tmpNameStr))
 	FinalRptFmtInfo.printerName = prtName
-
 	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].addr = uint32(lastAddr)
 	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].formatLen = uint32(everyBufLen[TotalVarDataIndex])
 	FinalRptFmtInfo.everyFormatInfo[TotalVarDataIndex].varNum = uint32(lastVarNum)
@@ -321,6 +318,8 @@ func ParserDefFmtToFile(fmtDataList []string, printerModel string, fmtLen int) b
 	var buffer *bytes.Buffer
 	if printerModel == "EPM205" {
 		buffer = ParserDefFmtToBuf(fmtDataList, printerModel, fmtLen)
+	} else {
+		return false
 	}
 	// 7.创建bin文件
 	if buffer.Len() > 0 {

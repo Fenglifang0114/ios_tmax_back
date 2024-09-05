@@ -3,6 +3,7 @@ package svc
 import (
 	"math/big"
 	"strings"
+	"time"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -80,8 +81,9 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		for _, item := range licKeyList {
 			if len(item) == 74 || len(item) == 78 {
 				gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
-
-				gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
+				if gIsKeyValid {
+					gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
+				}
 
 			}
 
@@ -151,7 +153,10 @@ func (h *SrvMgr) Run() {
 			if _, ok := h.clients[client]; ok {
 				// TODO: handle client disconnect
 				if client.scaleId != 0 {
-					h.scales[client.scaleId].HandleClientDisconnect()
+					if h.scales[client.scaleId] != nil {
+						h.scales[client.scaleId].HandleClientDisconnect()
+					}
+
 				}
 				client.Close()
 
@@ -227,6 +232,9 @@ func (h *SrvMgr) Run() {
 				l.Log.Debugf("%v\n", string(outData))
 				client.sendCh <- outData
 			}
+		default:
+			time.Sleep(time.Microsecond * 100)
+			continue
 		}
 	}
 }
@@ -362,6 +370,9 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_LICENSE, MsgBody: "fail"}
 		}
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_LICENSE, MsgBody: "ok"}
+
+	case REQ_GET_DETAIL_LIST: // TODO: should we check the input parameters?
+		DetailListed.Trigger(detailListed, scaleMgr)
 
 		// below commented: due to UI maintains records itself
 		// 	case SREQ_GET_RECS: // TODO: should we check the input parameters?

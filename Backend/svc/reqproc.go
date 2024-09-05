@@ -40,6 +40,7 @@ func procToScaleReq(s *Scale, req SRequest) {
 	}
 	// send msg to web socket client
 	result, _ := json.Marshal(resp)
+
 	if s.client != nil {
 		s.client.sendCh <- result
 
@@ -129,10 +130,30 @@ func procDownDefaultPrnFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func procBackupDefSetting(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqBackupDefSetting(scale, req)
+
 }
 
 func procDownPlu(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownPlu(scale, req)
+}
+
+func procDownFirmwareWifi(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDownFirmware(scale, req)
+}
+
+func procGetBasicData(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetBasicData(scale)
+}
+func procSetLimitToScale(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetLimitToScale(scale, req)
+}
+
+func procOpenBillSend(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqOpenBillSend(scale)
+}
+
+func procUpdateFirmware(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqUpdateFirmware(scale, req)
 }
 
 func procDelPlu(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -169,7 +190,7 @@ func procRescanAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func procConnectAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	data := utils.JsonToMap(req.ReqData)
-	return ReqConnectAp(scale, data["ssid"].(string), data["password"].(string), data["bssid"].(string))
+	return ReqConnectAp(scale, data["ssid"].(string), data["bssid"].(string), data["password"].(string))
 }
 
 func procConnectApOneKey(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -276,8 +297,8 @@ func procOpenScalePassth(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 func procCloseScalePassth(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	l.Log.Debugf("process Close Scale Passth")
 	scale.isScalePassth = false
-	picker := picker.GetPickerFn(scale.ScaleCat)
-	scale.MySerial.ChangePickFunc(picker)
+	// picker := picker.GetPickerFn(scale.ScaleCat)
+	// scale.MySerial.ChangePickFunc(picker)//TODO:  暂时屏蔽，要改的FLF202406
 	return scale.CloseScalePassth()
 }
 
@@ -307,9 +328,9 @@ func GetResVsResp(reqType SReqType) m.RespMsgType {
 	return conversionMap[reqType]
 }
 
-func procUpdateFirmware(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return scale.UpdateFirmware(req.ReqData)
-}
+// func procUpdateFirmware(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+// 	return scale.UpdateFirmware(req.ReqData)
+// }
 
 func ProcCheckSerialPort(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return scale.CheckSerialPort()
@@ -423,6 +444,10 @@ func init() {
 		SREQ_BACKUP_DEF_SETTING:       procBackupDefSetting,
 		SREQ_GET_EEPROM_TO_BIN:        procGetEepromToBin,
 		SREQ_SET_EEPROM_FROM_BIN:      procSetEepromFromBin,
+		SREQ_DOWN_FIRMWARE_WIFI:       procDownFirmwareWifi,
+		SREQ_GET_BASIC_DATA:           procGetBasicData,
+		SREQ_SET_LIMIT_TO_SCALE:       procSetLimitToScale,
+		SREQ_OPEN_BILL_SEND:           procOpenBillSend,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -473,5 +498,9 @@ func init() {
 		SREQ_BACKUP_DEF_SETTING:       m.BACKUP_DEF_SETTING_RESP,
 		SREQ_GET_EEPROM_TO_BIN:        m.GET_EEPROM_TO_BIN_RESP,
 		SREQ_SET_EEPROM_FROM_BIN:      m.SET_EEPROM_FROM_BIN_RESP,
+		SREQ_DOWN_FIRMWARE_WIFI:       m.DOWN_FIRMWARE_WIFI_RESP,
+		SREQ_GET_BASIC_DATA:           m.GET_BASIC_DATA_RESP,
+		SREQ_SET_LIMIT_TO_SCALE:       m.SET_LIMIT_TO_SCALE_RESP,
+		SREQ_OPEN_BILL_SEND:           m.OPEN_BILL_SEND_RESP,
 	}
 }

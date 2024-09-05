@@ -56,6 +56,7 @@ func IsKeyValid(licenseKey string) (bool, string, string, string) {
 		log.Log.Debugf("MachineId:%s\n", machineId)
 		saltedData := append([]byte(machineIDStr[0:10]), []byte(salt)...)
 		saltedData = append([]byte(licenseKey[32:36]), saltedData...)
+		// saltedData = append([]byte(licenseKey[32:36]), []byte(salt)...)
 		hash := md5.Sum(saltedData)
 		hashStr := hex.EncodeToString(hash[:])
 		if !reflect.DeepEqual(licenseKey[0:32], hashStr) {

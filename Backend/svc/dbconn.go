@@ -108,6 +108,27 @@ func (d *DbScaleConn) UpdateScaleConn(conn ScaleConnMedia) error {
 	return nil
 }
 
+func (d *DbScaleConn) UpdateScaleInfo(conn ScaleConnMedia) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	rowAffected := db.Model(&conn).Where("scale_id=?", conn.ScaleId).Updates(&conn).RowsAffected
+	if rowAffected == 0 {
+		return errors.New("@UpdateScaleConn failed, mybe record not existing")
+	} //写成save模式不生效，又改回来了
+
+	return nil
+}
+
 func (d *DbScaleConn) DeleteScaleConn(inConn ScaleConnMedia) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})

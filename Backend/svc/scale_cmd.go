@@ -2,6 +2,7 @@ package svc
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,11 +28,11 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 		l.Log.Debug(err)
 
 	}
-	excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA, 1)
-	// reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP, 1)
-	// if reqMsg.MsgBody != "ok" {
-	//
-	// }
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP, 1)
+	if reqMsg.MsgBody != "ok" {
+		//to do nothing
+		excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA, 1)
+	}
 
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()
@@ -105,11 +106,13 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 				result, _ := json.Marshal(respMsg)
 				c.client.sendCh <- result
 			}
+
 		}
 	}
-	if c.MySerial, err = NewSerial(c.Pcnf, pickerFn); err != nil {
+	if c.MySerial, err = NewSerial(c.Pcnf, pickerFn, true); err != nil {
 		l.Log.Error(err.Error())
 	}
+	os.Remove(name)
 	return respMsg, nil
 }
 
@@ -136,6 +139,12 @@ func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
 
 func (c *Scale) GetBuildInfo() (*ScaleRespMsg, error) {
 	l.Log.Debug("get build info")
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		l.Log.Debug(err)
+		respMsg := &ScaleRespMsg{MsgType: m.GET_BUILD_INFO_RESP, MsgBody: "failed to open factory", ScaleId: c.Id}
+		return respMsg, err
+	}
 	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_BUILD_INFO, m.GET_BUILD_INFO_RESP)
 	return reqMsg, err
 }
@@ -529,7 +538,7 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 	curTimeoutMs := 10000 //3000 // 3000 ms
 	var ret *ScaleRespMsg
 	var err error = nil
-	var sendCmdTimes = 3
+	var sendCmdTimes = 5
 
 	if len(timeoutMs) > 0 {
 		curTimeoutMs = timeoutMs[0]
@@ -576,8 +585,13 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 			err = fmt.Errorf("no response, time out")
 			time.Sleep(500 * time.Millisecond)
 			continue
+			// default:
+			// 	time.Sleep(time.Microsecond * 100)
+			// 	continue
 		}
+
 		fmt.Printf("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
+
 		break
 
 	}
@@ -586,14 +600,24 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 }
 
 func writeScale(c *Scale, data []byte) error {
-	if c.MySerial == nil {
-		return fmt.Errorf("scale without a ComPort")
+	if c.MySerial != nil && c.MySerial.isDefault {
+		if len(c.MySerial.sendCh) > SEND_CH_SIZE {
+			return fmt.Errorf("serial sendCh full")
+		}
+		c.MySerial.sendCh <- data
 	}
 
-	if len(c.MySerial.sendCh) > SEND_CH_SIZE {
-		return fmt.Errorf("serial sendCh full")
+	if c.MyNet != nil && c.MyNet.isAlive && c.MyNet.isDefault {
+		if c.MyNet.conn != nil {
+			if len(c.MyNet.sendCh) > SEND_CH_SIZE {
+				return fmt.Errorf("net sendCh full")
+			}
+			c.MyNet.sendCh <- data
+		}
 	}
-	c.MySerial.sendCh <- data
+	if c.MySerial == nil && c.MyNet == nil {
+		return fmt.Errorf("scale without a ComPort or net")
+	}
 	return nil
 }
 
@@ -611,6 +635,9 @@ func (c *Scale) write() {
 			}
 			// send message to scale
 			c.MySerial.Write([]byte(message))
+		default:
+			time.Sleep(time.Microsecond * 100)
+			continue
 		}
 	}
 }
