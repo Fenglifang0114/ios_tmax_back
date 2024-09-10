@@ -116,7 +116,11 @@ func ParserFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buf
 		dataCamp.Write(ESC_CHANGE_EPL_205)
 	}
 
-	formatbuf = ParseEplLines(buff, dataCamp, lastVarPos)
+	if printerModel == "ZEBRA" {
+		formatbuf = ParseEplZebraLines(buff, dataCamp, lastVarPos)
+	} else {
+		formatbuf = ParseEplLines(buff, dataCamp, lastVarPos)
+	}
 
 	everyBufLen = append(everyBufLen, formatbuf.Len())
 

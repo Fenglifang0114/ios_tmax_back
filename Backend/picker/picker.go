@@ -22,7 +22,6 @@ func GetPickerFn(stype comm.ScaleCat) PickerFunc {
 		return pickerFnTmax
 	case comm.SCALE_TMAX_PASSTH:
 		return pickerFnTmaxPassth
-
 	}
 
 	return nil

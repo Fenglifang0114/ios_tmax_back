@@ -297,8 +297,8 @@ func procOpenScalePassth(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 func procCloseScalePassth(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	l.Log.Debugf("process Close Scale Passth")
 	scale.isScalePassth = false
-	// picker := picker.GetPickerFn(scale.ScaleCat)
-	// scale.MySerial.ChangePickFunc(picker)//TODO:  暂时屏蔽，要改的FLF202406
+	picker := picker.GetPickerFn(scale.ScaleCat)
+	scale.MySerial.ChangePickFunc(picker)
 	return scale.CloseScalePassth()
 }
 

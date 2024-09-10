@@ -466,6 +466,7 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 	conn.IsDefault = true
 	conn.IsOnline = true
 	conn.ScaleCat = comm.SCALE_TMAX
+	conn.ScaleName = "Scale" + strconv.FormatInt(conn.ScaleId, 10)
 
 	var scale *Scale
 

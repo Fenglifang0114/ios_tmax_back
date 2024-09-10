@@ -169,6 +169,7 @@ type ScaleConnMedia struct { // connection information will be stored in databas
 	MediaConf  MediaConf `gorm:"embedded;embeddedPrefix:mediainfo_"`
 	scale      *Scale    `gorm:"-"` // should not be stored in database
 	IsDefault  bool      //是否默认的连接方式   新增的秤连接方式都视为默认的，sn和model name 一样的连上后，将isdefault改为仅一个默认
+	ScaleName  string
 }
 
 type MediaConf struct {

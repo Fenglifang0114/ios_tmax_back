@@ -205,10 +205,10 @@ func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 	l.Log.Debug("register weight data")
 	c.isSendUnolicitedData = true
-	// _, err := EnFacMode(c)
-	// if err != nil {
-	// 	return &ScaleRespMsg{}, err //FLF
-	// }
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		l.Log.Debug(err)
+	}
 	// DisFacMode(c) // TODO: check return value
 	// enable scale sending weighing info continually
 	return excuteSimpCmd(c, m.CMD_EN_CONTINUE_MODE, m.REG_WEIGHT_RESP)
@@ -225,10 +225,11 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	c.isSendUnolicitedData = false
-	_, err, res := openFactory(c)
-	if err != nil || !res {
-		l.Log.Debug(err)
-	}
+	// _, err, res := openFactory(c)
+	// if err != nil || !res {
+	// 	l.Log.Debug(err)
+	// }
+
 	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)
@@ -258,6 +259,10 @@ func (c *Scale) CloseScalePassth() (*ScaleRespMsg, error) {
 	// if err != nil {
 	// 	return &ScaleRespMsg{}, err
 	// }
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		l.Log.Debug(err)
+	}
 	// enable scale sending weighing info continually
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)
@@ -544,9 +549,9 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 		curTimeoutMs = timeoutMs[0]
 	}
 
-	if len(timeoutMs) > 1 {
-		sendCmdTimes = timeoutMs[1]
-	}
+	// if len(timeoutMs) > 1 {
+	// 	sendCmdTimes = timeoutMs[1]
+	// }
 
 	for i := 0; i < sendCmdTimes; i++ {
 
