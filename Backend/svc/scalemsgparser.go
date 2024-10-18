@@ -76,8 +76,9 @@ func init() {
 		0x05f3:                          m.EN_PASSTH_MODE_RESP,
 		0x05f4:                          m.DIS_PASSTH_MODE_RESP,
 		cmd.CMDID_GET_FACTORY_INFO_TMAX: m.GET_FACTORY_INFO_RESP,
-		cmd.CMDID_GET_RANDOM_DATA:       m.GET_RANDOM_DATA_RESP,
-		cmd.CMDID_GET_BASIC_DATA:        m.GET_BASIC_DATA_RESP,
+		cmd.CMDID_GET_RANDOM_DATA_TMAX:  m.GET_RANDOM_DATA_RESP,
+		cmd.CMDID_GET_BASIC_DATA_TMAX:   m.GET_BASIC_DATA_RESP,
+		cmd.CMDID_EN_USER_CONT_TMAX:     m.EN_USER_CONT_RESP,
 
 		cmd.CMDID_ERASE_FLASH_TMAX:       m.ERASE_FLASH_RESP, //FLF//
 		cmd.CMDID_WRITE_FLASH_TMAX:       m.WRITE_DATA_FLASH_RESP,
@@ -159,6 +160,7 @@ func init() {
 		m.REV_DETAIl_MID_RESP:       handleRevDetailMidResp,
 		m.REV_DETAIl_TAIL_RESP:      handleRevDetailTailResp,
 		m.OPEN_BILL_SEND_RESP:       handleOpenBillSendResp,
+		m.EN_USER_CONT_RESP:         handleEnUserContResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -707,6 +709,15 @@ func handleOpenBillSendResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 }
 
+func handleEnUserContResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.OPEN_BILL_SEND_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.OPEN_BILL_SEND_RESP, MsgBody: "fail"}, len(data)
+	}
+	// TODO: Implement function
+}
+
 type DetailHeadData struct {
 	SettleAccountTimes string
 	TotalCount         string
@@ -972,8 +983,20 @@ func handleReadFlashDataResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleErrSerialResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
+	msg := ScaleRespMsg{}
+
+	msg.MsgType = m.ERR_SERIAL_RESP
+	msg.ScaleId = scaleId
+	msg.MsgBody = ""
+	return msg, 0
+}
+func checkData(data []byte) bool {
+	for _, value := range data {
+		if value == 0x5a || value == 0xa5 {
+			return true
+		}
+	}
+	return false
 }
 
 func handleScalePassthData(scaleId int64, data []byte, isHexMode bool) (ScaleRespMsg, int) {
@@ -983,6 +1006,10 @@ func handleScalePassthData(scaleId int64, data []byte, isHexMode bool) (ScaleRes
 	index := bytes.LastIndex(data, target)
 	if index == -1 {
 		return ScaleRespMsg{}, 0
+	}
+	if checkData(data) {
+		return ScaleRespMsg{}, index + 2
+
 	}
 	var passthStr string
 	if isHexMode {
@@ -1000,6 +1027,7 @@ func handleScalePassthData(scaleId int64, data []byte, isHexMode bool) (ScaleRes
 }
 
 // var okBytes = []byte("\r\nOK\r\n")
+
 var okBytes = []byte("\r\n\r\nOK\r\n") //20240718  更换wifi模块
 
 func containsOK(response []byte) bool {
@@ -1325,21 +1353,40 @@ func extractWifiAPInfo(response string) (WifiAPInfo, error) {
 	// 	+CWJAP_DEF:<ssid>, <bssid>, <channel>, <rssi>
 	// OK
 	// split response string into multiple lines
-	lines := strings.Split(response, "\n")
 
 	// iterates on each lines to extract ssid, bssid, channel, rssi
-	for _, line := range lines {
-		line = strings.Trim(line, "\t")
-		line = strings.Replace(line, `\"`, "", -1)
-		line = strings.Replace(line, `"`, "", -1)
-		if strings.HasPrefix(line, "+CWJAP:") {
-			data := line[len("+CWJAP:"):]
-			dataSplit := strings.Split(data, ",")
-			info.Ssid = dataSplit[0]
-			info.Bssid = dataSplit[1]
-			info.Channel = dataSplit[2]
-			level, _ := strconv.ParseInt(dataSplit[3], 10, 64)
-			info.Rssi = getRssiLevel(int(level))
+	if strings.Contains(response, "CWJAP_DEF") {
+		lines := strings.Split(response, "\r\n")
+		for _, line := range lines {
+			line = strings.Trim(line, "\t")
+			line = strings.Replace(line, `\"`, "", -1)
+			line = strings.Replace(line, `"`, "", -1)
+			if strings.HasPrefix(line, "+CWJAP_DEF:") {
+				data := line[len("+CWJAP_DEF:"):]
+				dataSplit := strings.Split(data, ",")
+				info.Ssid = dataSplit[0]
+				info.Bssid = dataSplit[1]
+				info.Channel = dataSplit[2]
+				level, _ := strconv.ParseInt(dataSplit[3], 10, 64)
+				info.Rssi = getRssiLevel(int(level))
+			}
+		}
+
+	} else {
+		lines := strings.Split(response, "\n")
+		for _, line := range lines {
+			line = strings.Trim(line, "\t")
+			line = strings.Replace(line, `\"`, "", -1)
+			line = strings.Replace(line, `"`, "", -1)
+			if strings.HasPrefix(line, "+CWJAP:") {
+				data := line[len("+CWJAP:"):]
+				dataSplit := strings.Split(data, ",")
+				info.Ssid = dataSplit[0]
+				info.Bssid = dataSplit[1]
+				info.Channel = dataSplit[2]
+				level, _ := strconv.ParseInt(dataSplit[3], 10, 64)
+				info.Rssi = getRssiLevel(int(level))
+			}
 		}
 	}
 
@@ -1352,23 +1399,28 @@ func extractIPInfo(response string) (IPInfo, error) {
 	// 根据字符串中的换行符分割字符串
 	lines := strings.Split(response, "\r\n")
 
-	// 遍历每一行字符串，提取 IP、网关和子网掩码的值
-	// for _, line := range lines {
-	// 	if strings.HasPrefix(line, "+CIPSTA_CUR:ip:") {
-	// 		info.IP = strings.Trim(line[len("+CIPSTA_CUR:ip:\""):], "\"")
-	// 	} else if strings.HasPrefix(line, "+CIPSTA_CUR:gateway:") {
-	// 		info.Gateway = strings.Trim(line[len("+CIPSTA_CUR:gateway:\""):], "\"")
-	// 	} else if strings.HasPrefix(line, "+CIPSTA_CUR:netmask:") {
-	// 		info.Netmask = strings.Trim(line[len("+CIPSTA_CUR:netmask:\""):], "\"")
-	// 	}
-	// }
-	for _, line := range lines {
-		if strings.HasPrefix(line, "+CIPSTA:ip:") {
-			info.IP = strings.Trim(line[len("+CIPSTA:ip:\""):], "\"")
-		} else if strings.HasPrefix(line, "+CIPSTA:gateway:") {
-			info.Gateway = strings.Trim(line[len("+CIPSTA:gateway:\""):], "\"")
-		} else if strings.HasPrefix(line, "+CIPSTA:netmask:") {
-			info.Netmask = strings.Trim(line[len("+CIPSTA:netmask:\""):], "\"")
+	//遍历每一行字符串，提取 IP、网关和子网掩码的值
+	if strings.Contains(response, "+CIPSTA_CUR:ip:") {
+		for _, line := range lines {
+			if strings.HasPrefix(line, "+CIPSTA_CUR:ip:") {
+				info.IP = strings.Trim(line[len("+CIPSTA_CUR:ip:\""):], "\"")
+			} else if strings.HasPrefix(line, "+CIPSTA_CUR:gateway:") {
+				info.Gateway = strings.Trim(line[len("+CIPSTA_CUR:gateway:\""):], "\"")
+			} else if strings.HasPrefix(line, "+CIPSTA_CUR:netmask:") {
+				info.Netmask = strings.Trim(line[len("+CIPSTA_CUR:netmask:\""):], "\"")
+			}
+		}
+
+	} else if strings.Contains(response, "+CIPSTA:ip:") {
+		//ESP_32
+		for _, line := range lines {
+			if strings.HasPrefix(line, "+CIPSTA:ip:") {
+				info.IP = strings.Trim(line[len("+CIPSTA:ip:\""):], "\"")
+			} else if strings.HasPrefix(line, "+CIPSTA:gateway:") {
+				info.Gateway = strings.Trim(line[len("+CIPSTA:gateway:\""):], "\"")
+			} else if strings.HasPrefix(line, "+CIPSTA:netmask:") {
+				info.Netmask = strings.Trim(line[len("+CIPSTA:netmask:\""):], "\"")
+			}
 		}
 	}
 
@@ -1388,19 +1440,38 @@ func extractIPMode(response string) (bool, error) {
 	lines := strings.Split(response, "\r\n")
 
 	// 遍历每一行字符串，提取 IP mode
-	for _, line := range lines {
-		if strings.HasPrefix(line, "+CWDHCP:") {
-			modeNo := line[len("+CWDHCP:"):]
-			if modeNo == "2" || modeNo == "3" {
-				mode = true
-			} else if modeNo == "0" || modeNo == "1" {
-				mode = false
-			} else {
-				mode = false
-				err = fmt.Errorf("invalid response")
+	if strings.Contains(response, "CWDHCP_CUR") {
+		for _, line := range lines {
+			if strings.HasPrefix(line, "+CWDHCP_CUR:") {
+				modeNo := line[len("+CWDHCP_CUR:"):]
+				if modeNo == "2" || modeNo == "3" {
+					mode = true
+				} else if modeNo == "0" || modeNo == "1" {
+					mode = false
+				} else {
+					mode = false
+					err = fmt.Errorf("invalid response")
+				}
+				break
 			}
-			break
 		}
+
+	} else {
+		for _, line := range lines {
+			if strings.HasPrefix(line, "+CWDHCP:") {
+				modeNo := line[len("+CWDHCP:"):]
+				if modeNo == "3" {
+					mode = true
+				} else if modeNo == "0" || modeNo == "1" || modeNo == "2" {
+					mode = false
+				} else {
+					mode = false
+					err = fmt.Errorf("invalid response")
+				}
+				break
+			}
+		}
+
 	}
 
 	return mode, err

@@ -21,7 +21,8 @@ const (
 	QUEUE_SIZE    = 102400
 )
 
-var RESP_SERIAL_ERROR = []byte{0x5a, 0xa5, 0x00, 0x01, 0x7f, 0xBD, 0x86, 0x1C, 0x86, 0xa5, 0x5a}
+// var RESP_SERIAL_ERROR = []byte{0x5a, 0xa5, 0x00, 0x01, 0x7f, 0xBD, 0x86, 0x1C, 0x86, 0xa5, 0x5a}
+var RESP_SERIAL_ERROR = []byte{0x5a, 0xa5, 0x00, 0x0B, 0xff, 0x12, 0x00, 0xD9, 0x02, 0x8D, 0x99, 0xa5, 0x5a}
 
 // this function should try to scan the input buffer to find the first packet,
 // and return the package start position, the package len and how many bytes should be removed from the buffer,
@@ -165,7 +166,7 @@ func (c *TSerial) read() {
 		if n, err := c.readScale(); err != nil { // data will be stored in the queue
 			log.Log.Errorf("@TSerial read(), err: %v\n", err)
 			if !IsPacketChClosed(c.recvCh) {
-				c.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
+				c.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0xff, CmdSubId: 0x12, SeqNum: 0, Payload: []byte{}}
 			}
 			time.Sleep(10 * time.Second) // to avoid sending error too often to UI
 			continue
@@ -199,6 +200,7 @@ func (s *TSerial) readScale() (int, error) {
 	n, err := s.port.Read(s.tmpbuf)
 	if err != nil {
 		log.Log.Errorf("Error reading scale: %v", err)
+
 		return 0, err
 	}
 	// fmt.Printf("data:%v", string(tmpBuf))
@@ -209,8 +211,8 @@ func (s *TSerial) readScale() (int, error) {
 
 	if n > 0 {
 		// log.Log.Debug(s.tmpbuf[0:n])
-		fmt.Printf("data:%x ", string(s.tmpbuf[0:n]))
-		// fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
+		// fmt.Printf("data:%x ", string(s.tmpbuf[0:n]))
+		fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
 		if err := s.queue.EnqueueN(s.tmpbuf[0:n], n); err != nil {
 			s.queue.Reset()
 		}

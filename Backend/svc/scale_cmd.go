@@ -205,6 +205,7 @@ func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 	l.Log.Debug("register weight data")
 	c.isSendUnolicitedData = true
+	c.isScalePassth = false //TODO:
 	_, err, res := openFactory(c)
 	if err != nil || !res {
 		l.Log.Debug(err)
@@ -225,6 +226,7 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	c.isSendUnolicitedData = false
+	c.isScalePassth = false
 	// _, err, res := openFactory(c)
 	// if err != nil || !res {
 	// 	l.Log.Debug(err)
@@ -394,8 +396,8 @@ func EnPassthrough(s *Scale) (*ScaleRespMsg, error) {
 
 // 关闭BT透传模式
 func DisPassthrough(s *Scale) (*ScaleRespMsg, error) {
-	// return excuteSimpCmd(s, m.CMD_DIS_PASSTH, m.DIS_PASSTH_MODE_RESP)
-	return &ScaleRespMsg{MsgType: m.DIS_PASSTH_MODE_RESP, MsgBody: "ok", ScaleId: s.Id}, nil
+	return excuteSimpCmd(s, m.CMD_DIS_PASSTH, m.DIS_PASSTH_MODE_RESP)
+	// return &ScaleRespMsg{MsgType: m.DIS_PASSTH_MODE_RESP, MsgBody: "ok", ScaleId: s.Id}, nil
 }
 
 var GExpectBTResp m.RespMsgType
@@ -427,6 +429,12 @@ func GetWifiAtMode(c *Scale) (*ScaleRespMsg, error) {
 func GetApList(c *Scale) (*ScaleRespMsg, error) {
 	GExpectWifiResp = m.GET_AP_LIST_RESP
 	return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_LIST, m.GET_AP_LIST_RESP)
+}
+
+// Get Wifi AP info ESP32
+func GetWifiApInfo32(c *Scale) (*ScaleRespMsg, error) {
+	GExpectWifiResp = m.GET_WIFI_AP_INFO_RESP
+	return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_INFO_32, m.GET_WIFI_AP_INFO_RESP)
 }
 
 // Get Wifi AP info
@@ -463,9 +471,25 @@ func SetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(s, m.CMD_WIFI_EN_DHCP, m.SET_WIFI_DYNAMIC_IP_RESP, 1)
 }
 
+func SetWifiDynamicIp32(s *Scale) (*ScaleRespMsg, error) {
+	l.Log.Debug("set wifi to dynamic IP")
+	GExpectWifiResp = m.SET_WIFI_DYNAMIC_IP_RESP
+	return excuteSimpCmd(s, m.CMD_WIFI_EN_DHCP_32, m.SET_WIFI_DYNAMIC_IP_RESP, 1)
+}
+
 func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
 	l.Log.Debug("set wifi to static IP")
 	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_SET_STATIC_IP, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ip, gateway, netmask)})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.SET_WIFI_STATIC_IP_RESP
+	return perfCmdNwaitResult(s, cmd, m.SET_WIFI_STATIC_IP_RESP, timeoutMs, 1)
+}
+
+func SetWifiStaticIp32(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
+	l.Log.Debug("set wifi to static IP")
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_SET_STATIC_IP_32, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s,%s,%s", ip, gateway, netmask)})
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
@@ -511,6 +535,13 @@ func GetIpInfo(s *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO, m.GET_IP_INFO_RESP)
 }
 
+// Get IP info from scale
+func GetIpInfo32(s *Scale) (*ScaleRespMsg, error) {
+	l.Log.Debug("Get IP info from Scale")
+	GExpectWifiResp = m.GET_IP_INFO_RESP
+	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO_32, m.GET_IP_INFO_RESP)
+}
+
 func ChangeWifiMode(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Change wifi mode from Scale")
 	GExpectWifiResp = m.CHANGE_WIFI_MODE_RESP
@@ -521,6 +552,12 @@ func GetIpMode(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Get IP mode from Scale")
 	GExpectWifiResp = m.GET_IP_MODE_RESP
 	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_MODE, m.GET_IP_MODE_RESP)
+}
+
+func GetIpMode32(s *Scale) (*ScaleRespMsg, error) {
+	l.Log.Debug("Get IP mode from Scale")
+	GExpectWifiResp = m.GET_IP_MODE_RESP
+	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_MODE_32, m.GET_IP_MODE_RESP)
 }
 
 func perfCmd(c *Scale, cmd []byte) bool {
@@ -549,10 +586,12 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 		curTimeoutMs = timeoutMs[0]
 	}
 
-	// if len(timeoutMs) > 1 {
-	// 	sendCmdTimes = timeoutMs[1]
-	// }
-
+	if len(timeoutMs) > 1 {
+		sendCmdTimes = timeoutMs[1]
+	}
+	for _, b := range cmd {
+		fmt.Printf("%02x ", b) // 打印每个字节的 16 进制表示并用空格分隔
+	}
 	for i := 0; i < sendCmdTimes; i++ {
 
 		if curTimeoutMs == mcmd.CMD_TIMEOUT_IMMEDIATE {

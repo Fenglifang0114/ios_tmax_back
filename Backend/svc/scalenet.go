@@ -65,8 +65,9 @@ func NewNet(ncnf NetInfo, pickerFn picker.PickerFunc, isDefault bool) (*TNet, er
 func (tnet *TNet) Close() error {
 	// inform read/write goroutines to quit
 	tnet.toQuit = true
+	println("toQuit==============")
 	// time.Sleep(100000 * time.Millisecond) // to let goroutines run
-	time.Sleep(10 * time.Millisecond) // to let goroutines run
+	time.Sleep(100 * time.Millisecond) // to let goroutines run
 	if tnet.conn != nil {
 		err := tnet.conn.Close()
 		if err != nil {
@@ -85,6 +86,10 @@ func (tnet *TNet) Close() error {
 	// wait for goroutine quit
 	if !IsPacketChClosed(tnet.recvCh) {
 		close(tnet.recvCh)
+	}
+
+	if !tnet.toQuit {
+		tnet.toQuit = true
 	}
 
 	// close tcp connect

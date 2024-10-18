@@ -59,6 +59,9 @@ func init() {
 	createModifyScaleNotifier := modifyScaleNotifier{}
 	scaleModified.Register(createModifyScaleNotifier)
 
+	createModifyScaleNameNotifier := modifyScaleNameNotifier{}
+	scaleNameModified.Register(createModifyScaleNameNotifier)
+
 	createProductListNotifier := productListedNotifier{}
 	productsListed.Register(createProductListNotifier)
 
@@ -85,6 +88,12 @@ func init() {
 
 	createDetailListNotifier := detailListedNotifier{}
 	detailListed.Register(createDetailListNotifier)
+
+	createWifiPwdListNotifier := wifiPwdListedNotifier{}
+	wifiListed.Register(createWifiPwdListNotifier)
+
+	createAddWifiPwdNotifier := addWifiPwdNotifier{}
+	wifiAdded.Register(createAddWifiPwdNotifier)
 }
 
 type portListedNotifier struct{}
@@ -96,6 +105,8 @@ type addScaleNotifier struct{}
 type delScaleNotifier struct{}
 
 type modifyScaleNotifier struct{}
+
+type modifyScaleNameNotifier struct{}
 
 type productListedNotifier struct{}
 
@@ -112,6 +123,10 @@ type addUserNotifier struct{}
 type delUserNotifier struct{}
 
 type modifyUserNotifier struct{}
+
+type wifiPwdListedNotifier struct{}
+
+type addWifiPwdNotifier struct{}
 
 type detailListedNotifier struct{}
 
@@ -187,7 +202,7 @@ func (p detailListedNotifier) Handle(scaleMgr *ScaleMgr) {
 
 func (p delScaleNotifier) Handle(payload ReqDelScale) { //修改秤的属性
 	// Do something for this event
-	log.Log.Debug("Handle modifyScaleNotifier called")
+	log.Log.Debug("Handle delScaleNotifier called")
 	if err := mSrvMgr.scaleMgr.DelScale(payload.ScaleId); err != nil {
 		log.Log.Errorf("%v\n", err)
 		resp := MgrRespMsg{IsAck: true, AckData: err.Error()}
@@ -205,6 +220,21 @@ func (p modifyScaleNotifier) Handle(payload ReqModifyScale) { //修改秤的属�
 	// Do something for this event
 	log.Log.Debug("Handle modifyScaleNotifier called")
 	if err := mSrvMgr.scaleMgr.UpdateScale(payload); err != nil {
+		log.Log.Errorf("%v\n", err)
+		resp := MgrRespMsg{IsAck: true, AckData: err.Error()}
+		jsonStr, _ := json.MarshalToString(resp)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_MODIFY, MsgBody: jsonStr}
+	}
+	resp := MgrRespMsg{IsAck: true, AckData: ""}
+	jsonStr, _ := json.MarshalToString(resp)
+	// send ports list back to requestee
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_MODIFY, MsgBody: jsonStr}
+}
+
+func (p modifyScaleNameNotifier) Handle(payload ReqModifyScaleName) { //修改秤的属性
+	// Do something for this event
+	log.Log.Debug("Handle modifyScaleNameNotifier called")
+	if err := mSrvMgr.scaleMgr.UpdateScaleName(payload); err != nil {
 		log.Log.Errorf("%v\n", err)
 		resp := MgrRespMsg{IsAck: true, AckData: err.Error()}
 		jsonStr, _ := json.MarshalToString(resp)
@@ -244,9 +274,10 @@ func (s *ScaleMgr) Run() {
 		}
 
 		ports, _ := getPortsList()
+
 		// portsNotInUse := handlePortState(&ports, &s.conns)
 		_ = handlePortState(&ports, &s.medias)
-		// _ = handleNetState(&s.medias)
+		_ = handleNetState(&s.medias)
 		// fmt.Printf("%v\n", portsNotInUse)
 		// TODO: scan ports for finding scales and handle new finding scales
 
@@ -277,6 +308,22 @@ func (s *ScaleMgr) ModifyScaleInfo(scaleId int64, modelName string, sn string) e
 		if media.ScaleId == scaleId {
 			s.medias[i].ScaleModel = modelName
 			s.medias[i].ScaleSn = sn
+			isFound = true
+			break
+		}
+	}
+	if !isFound {
+		return fmt.Errorf("Not found the scale conf")
+	}
+
+	return nil
+}
+
+func (s *ScaleMgr) ModifyScaleName(scaleId int64, name string) error {
+	isFound := false
+	for i, media := range s.medias {
+		if media.ScaleId == scaleId {
+			s.medias[i].ScaleName = name
 			isFound = true
 			break
 		}
@@ -331,6 +378,7 @@ func handlePortState(inPorts *[]string, conns *[]*ScaleConnMedia) (portsNotInUse
 				if err := json.UnmarshalFromString(conn.MediaConf.MediaInfoJson, &comInfo); err != nil {
 					return nil // TODO: check error
 				}
+
 				if port == comInfo.DevPath {
 					isFound = true
 					break
@@ -348,6 +396,10 @@ func handlePortState(inPorts *[]string, conns *[]*ScaleConnMedia) (portsNotInUse
 				return nil // TODO: check error
 			}
 			if _, isFound := contains(*inPorts, comInfo.DevPath); isFound {
+				if !(*conns)[i].IsOnline {
+					(*conns)[i].IsOnline = true
+				}
+
 				continue
 			}
 			(*conns)[i].IsOnline = false
@@ -370,34 +422,35 @@ func handleNetState(conns *[]*ScaleConnMedia) (netsNotInUse []string) {
 				return nil
 			}
 			if conn.scale == nil {
-				return nil
-			}
-
-			if conn.scale.MyNet == nil {
-				return nil
-			}
-
-			if conn.scale.MyNet.conn != nil && conn.scale.MyNet.isAlive {
-				fmt.Printf("already connect :", conn.scale.MyNet.ip)
+				if (*conns)[i].IsOnline {
+					(*conns)[i].IsOnline = false
+				}
 				continue
 			}
 
-			var err error
-			if !conn.scale.MyNet.toQuit {
-				if conn.scale.MyNet != nil {
-					conn.scale.MyNet.conn, err = conn.scale.MyNet.reconnect()
-					fmt.Printf("reconnect ip :", conn.scale.MyNet.ip)
-					if err == nil {
-						conn.scale.MyNet.isAlive = true
-						continue
-					}
-					if i >= len(*conns) {
-						return nil
-					}
-
+			if conn.scale.MyNet == nil {
+				if (*conns)[i].IsOnline {
 					(*conns)[i].IsOnline = false
-					conn.scale.MyNet.isAlive = false
 				}
+				continue
+			}
+			if conn.scale.MyNet.conn == nil {
+				if (*conns)[i].IsOnline {
+					(*conns)[i].IsOnline = false
+					fmt.Println("false" + (*conns)[i].scale.MyNet.ip)
+				}
+				fmt.Println("false" + (*conns)[i].scale.MyNet.ip)
+				continue
+
+			}
+
+			if conn.scale.MyNet.conn != nil && conn.scale.MyNet.isAlive {
+				if !(*conns)[i].IsOnline {
+					(*conns)[i].IsOnline = true
+					fmt.Println("true" + (*conns)[i].scale.MyNet.ip)
+				}
+				fmt.Println("true" + (*conns)[i].scale.MyNet.ip)
+				continue
 
 			}
 
@@ -473,10 +526,13 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 	scale, _ = NewScale(s, conn, conn.ScaleCat, conn.ScaleModel, conn.ScaleSn, false)
 	scale.Id = conn.ScaleId
 	conn.scale = scale
+
 	s.scales[scale.Id] = scale
 	s.srvMgr.addScale <- scale // register new scale instance to srvMgr
+
 	nextScaleId++
 	s.connPb.connPb.InsertScaleConn(*conn)
+	s.AddMediaList(scale.Id, *conn)
 
 	return nil
 
@@ -506,13 +562,14 @@ func (s *ScaleMgr) DelScale(id int64) error {
 		} // terminate the socket that associate with the scale
 	}
 	// remove the conn then add new one s.conns
-
+	scale.MyNet.toQuit = true
 	scale.Close()
 	s.srvMgr.removeScale <- scale
 	s.connPb.connPb.DeleteScaleConn(*conn)
 	if s.scales[scale.Id] != nil { // scale not existing
 		s.scales[scale.Id] = nil
 	}
+	s.DelMediaList(scale.Id, *conn)
 
 	return nil
 
@@ -543,26 +600,32 @@ func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 	conn.MediaConf = req.MediaConf
 	// TODO: change scale's mediaConf
 	s.scales[id].ModifyMedia(req.MediaConf)
-	// client := s.srvMgr.clientOfScales[s.srvMgr.scales[id]]
-	// // remove the conn then add new one s.conns
-	// if client != nil && client.scaleId == id {
-	// 	s.srvMgr.unregister <- client
-	// 	if client.conn != nil {
-	// 		client.conn.Close()
-	// 	} // terminate the socket that associate with the scale
-	// }
-	//---------------------上面的先删除试试
-	// s.srvMgr.removeScale <- s.scales[id]                                                // remove the old scale
-	// scale, _ := NewScale(s.srvMgr.scaleMgr, conn, conn.ScaleModel, conn.ScaleSn, false) // TODO: check this blocks
-	// scale.Id = nextScaleId
-	// conn.ScaleId = scale.Id
-	// s.scales[scale.Id] = scale
-	// s.srvMgr.addScale <- scale // register new scale instance to srvMgr
-	// nextScaleId++
 	s.srvMgr.scaleMgr.ModifyMediaList(id, conn.MediaConf)
 	conn.ScaleCat = scale.ScaleCat
 	conn.ScaleModel = scale.Model
 	s.connPb.connPb.UpdateScaleConn(*conn)
+	return nil
+}
+
+// for user to update a scale name
+func (s *ScaleMgr) UpdateScaleName(req ReqModifyScaleName) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	id := req.ScaleId
+	scale := s.scales[id]
+	if scale == nil {
+		return fmt.Errorf("can't find scale with id: %v", id)
+	}
+
+	if scale.Conn.ScaleName == req.ScaleName {
+		return nil
+	}
+
+	conn := scale.Conn
+	conn.ScaleName = req.ScaleName
+
+	s.srvMgr.scaleMgr.ModifyScaleName(id, req.ScaleName)
+	s.connPb.connPb.UpdateScaleInfo(*conn)
 	return nil
 }
 

@@ -244,15 +244,35 @@
             "valuename": "CopyTimes_P",
             "id": 62,
             "comment": "CopyTimes_P"
+        },		
+		{
+            "valuename": "ModelName_P",
+            "id": 63,
+            "comment": "ModelName_P"
         },
+		{
+            "valuename": "ScaleName_P",
+            "id": 64,
+            "comment": "ScaleName_P"
+        },
+		{
+            "valuename": "TaxName_P",
+            "id": 65,
+            "comment": "TaxName_P"
+        },
+		{
+            "valuename": "SettleAccountTimes_P",
+            "id": 66,
+            "comment": "SettleAccountTimes_P"
+        },		
         {
             "valuename": "PLU_Tax_P",
-            "id": 63,
+            "id": 67,
             "comment": "PLU_Tax_P"
         },
         {
             "valuename": "TotalNoTax_P",
-            "id": 64,
+            "id": 68,
             "comment": "TotalNoTax_P"
         },			
         {

@@ -43,6 +43,7 @@ type SrvMgr struct {
 	// productPb
 	productPd   *ProductRecProvider
 	userPd      *UserRecProvider
+	wifiPd      *WifiRecProvider
 	uiConfig    *UiConfig
 	modeSetting *ModeSettingProvider
 }
@@ -66,6 +67,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	productPb := NewProductRecProvider()
 	userPb := NewUserRecProvider()
 	modeSettingPb := NewModeSettingProvider()
+	wifiPb := NewWifiRecProvider()
 
 	var licKey string
 	var err error
@@ -113,6 +115,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		quitch:             quitch,
 		productPd:          productPb,
 		userPd:             userPb,
+		wifiPd:             wifiPb,
 		uiConfig:           NewUiConfig(),
 		modeSetting:        modeSettingPb,
 	}
@@ -275,6 +278,15 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			ScaleModified.Trigger(scaleModified, data)
 		}
+	case REQ_MODIFY_SCALE_NAME:
+		jsonStr := req.ReqData
+		var data ReqModifyScaleName
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			ScaleNameModified.Trigger(scaleNameModified, data)
+		}
+
 	case REQ_GET_PRODUCT_LIST:
 		productsListed.Trigger(scaleMgr.srvMgr)
 	case REQ_ADD_PRODUCT:
@@ -373,124 +385,18 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 
 	case REQ_GET_DETAIL_LIST: // TODO: should we check the input parameters?
 		DetailListed.Trigger(detailListed, scaleMgr)
-
-		// below commented: due to UI maintains records itself
-		// 	case SREQ_GET_RECS: // TODO: should we check the input parameters?
-		// 		var recs []ScaleRec
-		// 		var err error
-		// 		if recs, err = srvMgr.scaleMgr.GetScaleRecs(scale); err != nil {
-		// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: GET_RECS_RESP, MsgBody: err.Error()}
-		// 		}
-		// 		msg, _ := json.MarshalToString(recs)
-		// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: GET_RECS_RESP, MsgBody: msg}
-		// 	case SREQ_ADD_REC:
-		// 		var rec ReqAddScaleRec
-		// 		if err := json.UnmarshalFromString(req.ReqData, &rec); err != nil {
-		// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: ADD_REC_RESP, MsgBody: err.Error()}
-		// 			break
-		// 		}
-		// 		var scaleRec ScaleRec = ScaleRec{ScaleModel: scale.Model, ScaleSn: scale.Sn, Product: rec.Product, Weight: rec.Weight, Price: rec.Price}
-		// 		if err := srvMgr.scaleMgr.InsertScaleRec(scaleRec); err != nil {
-		// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: ADD_REC_RESP, MsgBody: err.Error()}
-		// 		}
-		// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: ADD_REC_RESP, MsgBody: "ok"}
-		// 	case SREQ_DEL_REC:
-		// 		var rec ReqDelScaleRec
-		// 		if err := json.UnmarshalFromString(req.ReqData, &rec); err != nil {
-		// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: DEL_REC_RESP, MsgBody: err.Error()}
-		// 			break
-		// 		}
-		// 		if err := srvMgr.scaleMgr.DeleteScaleRec(rec.RecId); err != nil {
-		// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: DEL_REC_RESP, MsgBody: err.Error()}
-		// 			break
-		// 		}
-		// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: DEL_REC_RESP, MsgBody: "ok"}
+	case REQ_GET_WIFI_PWD_LIST:
+		wifiListed.Trigger(scaleMgr.srvMgr)
+	case REQ_WIFI_PWD:
+		jsonStr := req.ReqData
+		var data ReqAddWifi
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			wifiAdded.Trigger(scaleMgr.srvMgr, data)
+		}
 	}
 }
-
-// below commented: due to UI maintains records itself
-// func parseToScaleReq(reqStr string) (SRequest, error) {
-// 	var req SRequest
-// 	if err := json.UnmarshalFromString(reqStr, &req); err != nil {
-// 		log.Log.Error(err)
-// 		return SRequest{}, err
-// 	}
-
-// 	return req, nil
-// }
-
-// func procToScaleReq(req SRequest, scaleId int64, srvMgr *SrvMgr, scale *Scale) error {
-// 	var err error
-// 	switch req.Req {
-// 	case SREQ_GET_WEIGHT:
-// 		// if scale.isBusy {
-// 		// 	srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: WEIGHT_DATA_RESP, MsgBody: fmt.Errorf("scale is busy")}
-// 		// 	return nil
-// 		// }
-// 		ok := scale.ReadWeight()
-// 		if !ok {
-// 			err = fmt.Errorf("Get weight error")
-// 			msg := ScaleRespMsg{ScaleId: scaleId, MsgType: WEIGHT_DATA_RESP, MsgBody: err.Error()}
-// 			msgStr, _ := json.MarshalToString(msg)
-// 			scale.client.sendCh <- []byte(msgStr)
-// 			// srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: WEIGHT_DATA_RESP, MsgBody: err.Error()}
-// 			return nil
-// 		}
-// 		return nil
-// 	case SREQ_ZERO:
-// 		if ok := scale.PerfZero(); !ok {
-// 			err = fmt.Errorf("Perform zero error")
-// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: ZERO_CMD_RESP, MsgBody: err.Error()}
-// 		}
-// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: ZERO_CMD_RESP, MsgBody: ""}
-// 	case SREQ_TARE:
-// 		if ok := scale.PerfTare(); !ok {
-// 			err = fmt.Errorf("Perform tare error")
-// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: TARE_CMD_RESP, MsgBody: ""}
-// 		}
-// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: TARE_CMD_RESP, MsgBody: ""}
-// 	case SREQ_REG_WEIGHT_DATA:
-// 		_ = scale.RegWeightData(srvMgr.recvScaleNotifyMsg)
-// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: REG_WEIGHT_RESP, MsgBody: ""}
-// 	case SREQ_UNREG_WEIGHT_DATA:
-// 		_ = scale.UnRegWeightData(srvMgr.recvScaleNotifyMsg)
-// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: UNREG_WEIGHT_RESP, MsgBody: ""}
-// 	case SREQ_GET_RECS: // TODO: should we check the input parameters?
-// 		var recs []ScaleRec
-// 		var err error
-// 		if recs, err = srvMgr.scaleMgr.GetScaleRecs(scale); err != nil {
-// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: GET_RECS_RESP, MsgBody: err.Error()}
-// 		}
-// 		msg, _ := json.MarshalToString(recs)
-// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: GET_RECS_RESP, MsgBody: msg}
-// 	case SREQ_ADD_REC:
-// 		var rec ReqAddScaleRec
-// 		if err := json.UnmarshalFromString(req.ReqData, &rec); err != nil {
-// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: ADD_REC_RESP, MsgBody: err.Error()}
-// 			break
-// 		}
-// 		var scaleRec ScaleRec = ScaleRec{ScaleModel: scale.Model, ScaleSn: scale.Sn, Product: rec.Product, Weight: rec.Weight, Price: rec.Price}
-// 		if err := srvMgr.scaleMgr.InsertScaleRec(scaleRec); err != nil {
-// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: ADD_REC_RESP, MsgBody: err.Error()}
-// 		}
-// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: ADD_REC_RESP, MsgBody: "ok"}
-// 	case SREQ_DEL_REC:
-// 		var rec ReqDelScaleRec
-// 		if err := json.UnmarshalFromString(req.ReqData, &rec); err != nil {
-// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: DEL_REC_RESP, MsgBody: err.Error()}
-// 			break
-// 		}
-// 		if err := srvMgr.scaleMgr.DeleteScaleRec(rec.RecId); err != nil {
-// 			srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: DEL_REC_RESP, MsgBody: err.Error()}
-// 			break
-// 		}
-// 		srvMgr.recvScaleMsg <- &ScaleRespMsg{ScaleId: scaleId, MsgType: DEL_REC_RESP, MsgBody: "ok"}
-// 	default:
-// 		return fmt.Errorf("unsuported request type")
-// 	}
-
-// 	return fmt.Errorf("not processed")
-// }
 
 func (p productListedNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
@@ -585,4 +491,31 @@ func (p modifyUserNotifier) Handle(mgr *SrvMgr, payload ReqModifyUser) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_USER_MODIFY, MsgBody: err.Error()}
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_USER_MODIFY, MsgBody: ""}
+}
+
+func (p wifiPwdListedNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle wifiPwdListedNotifier called")
+	// Do something with this event
+	wifis, _ := NewWifiRecProvider().GetRecsList()
+
+	var wifiStr string
+	var err error
+	if wifiStr, err = json.MarshalToString(wifis); err != nil {
+		l.Log.Error(err)
+		// TODO: error handling
+	}
+	// send wifi pwd list back to requestee
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_WIFI_PWD_LIST, MsgBody: wifiStr}
+}
+
+func (p addWifiPwdNotifier) Handle(mgr *SrvMgr, payload ReqAddWifi) {
+	// Do something for this event
+	l.Log.Debug("Handle addWifiNotifier called")
+	var rec WifiRec = WifiRec{Ssid: payload.Ssid, Pwd: payload.Pwd}
+	if err := NewWifiRecProvider().InsertRec(rec); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_WIFI_PWD_ADD, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_WIFI_PWD_ADD, MsgBody: "ok"}
 }

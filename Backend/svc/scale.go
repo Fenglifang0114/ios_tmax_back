@@ -256,6 +256,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 	scale.EnterAt = time.Now()
 	if conn.TMedia == MEDIA_COM {
 		scale.MySerial = sport
+		go scale.keepSerialPortState()
 	} else if conn.TMedia == MEDIA_NET {
 		scale.MyNet = net
 		go scale.keepNetState()
@@ -267,6 +268,46 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 	return scale, nil
 }
 
+func (s *Scale) keepSerialPortState() {
+	cont := 1
+	isReconnecting := false // 添加一个标记表示是否正在重连
+
+	for {
+		if s.MySerial == nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if s.MySerial.toQuit {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if !s.Conn.IsOnline {
+			if !isReconnecting {
+				cont = 0
+				time.Sleep(100 * time.Millisecond)
+
+			} else {
+				// 正在重连过程中，跳过本次循环
+				time.Sleep(1 * time.Second)
+				continue
+			}
+		}
+		if s.Conn.IsOnline && cont == 0 {
+			isReconnecting = true
+			req := ReqModifyScale{ScaleId: s.Id, MediaConf: s.Conn.MediaConf, ScaleModel: s.Conn.ScaleModel}
+			s.scaleMgr.UpdateScale(req)
+			isReconnecting = false
+			cont = 1
+			continue
+		}
+		if s.Conn.IsOnline {
+			cont = 1
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+	}
+}
+
 func (s *Scale) keepNetState() {
 	for {
 		if s.MyNet == nil {
@@ -274,9 +315,13 @@ func (s *Scale) keepNetState() {
 			break
 		}
 		if s.MyNet.toQuit {
+			if s.MyNet.conn != nil {
+				s.MyNet.conn.Close()
+			}
 			break
 		}
 		if s.MyNet.conn != nil && s.MyNet.isAlive {
+
 			time.Sleep(10 * time.Second)
 			continue
 		}
@@ -318,31 +363,9 @@ func (s *Scale) keepNetOnline() {
 				Sn:         sn,
 			}
 			s.scaleMgr.UpdateScaleSn(req)
-
 		}
-
 	}
-
 }
-
-// func (s *Scale) keepComOnline() {
-// 	for {
-// 		if s.MySerial == nil {
-// 			time.Sleep(10 * time.Millisecond)
-// 			break
-// 		}
-// 		if s.MySerial.toQuit {
-// 			break
-// 		}
-// 		if s.MySerial != nil {
-// 			time.Sleep(10 * time.Second)
-// 			continue
-// 		}
-// 		s.scaleMgr.ModifyScaleInfo()
-
-// 		time.Sleep(10 * time.Second) // 连不上等待 10 秒
-// 	}
-// }
 
 func (s *Scale) Close() error {
 	close(s.quitProcScaleRespMessageCh)
@@ -377,12 +400,15 @@ func (s *Scale) procScaleRespMsg() {
 			if quit {
 				break
 			}
+			if s.MySerial == nil {
+				time.Sleep(time.Microsecond * 100)
+				continue
+			}
 			select {
 			case <-s.quitProcScaleRespMessageCh:
 				quit = true
 			case inPack := <-s.MySerial.recvCh:
 				if inPack.PayloadLen == 0 {
-
 					continue
 				}
 				l.Log.Debugf("From sport: %v", inPack)
@@ -441,7 +467,6 @@ func (s *Scale) procScaleRespMsg() {
 				quit = true
 			case inPack := <-s.MyNet.recvCh:
 				if inPack.PayloadLen == 0 {
-
 					continue
 				}
 				// l.Log.Debugf("From net: %v", inPack)
@@ -651,7 +676,7 @@ func enablePassthrough(s *Scale, respType m.RespMsgType) (*ScaleRespMsg, error) 
 }
 
 func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.MODIFY_BT_NAME_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.MODIFY_BT_NAME_RESP
@@ -661,7 +686,7 @@ func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
 }
 
 func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SEND_DATA_TO_BT_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.SEND_DATA_TO_BT_RESP
@@ -672,7 +697,7 @@ func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
 }
 
 func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SEND_DATA_TO_WIFI_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.SEND_DATA_TO_WIFI_RESP
@@ -683,18 +708,24 @@ func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
 }
 
 func ReqGetWifiApInfo(s *Scale) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_WIFI_AP_INFO_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.GET_WIFI_AP_INFO_RESP
 		return msg, err
 	}
+	msg, _ = getAtVersion(s)
+	if msg.MsgBody == m.AT_VERSION {
+		return GetWifiApInfo32(s)
 
-	return GetWifiApInfo(s)
+	} else {
+		return GetWifiApInfo(s)
+	}
+
 }
 
 func ReqGetApList(s *Scale) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_AP_LIST_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.GET_AP_LIST_RESP
@@ -710,7 +741,7 @@ func getAtVersion(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func ReqConnectAp(s *Scale, ssid string, bssid string, password string) (*ScaleRespMsg, error) {
-	////defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.CONNECT_AP_RESP
@@ -728,7 +759,7 @@ func ReqConnectAp(s *Scale, ssid string, bssid string, password string) (*ScaleR
 }
 
 func ReqConnectApOneKey(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
-	////defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.CONNECT_AP_RESP
@@ -740,36 +771,52 @@ func ReqConnectApOneKey(s *Scale, ssid string, password string, bssid string) (*
 }
 
 func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
-	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
+	defer DisPassthrough(s)
+
+	msg, err := enablePassthrough(s, m.SET_WIFI_DYNAMIC_IP_RESP)
+
 	if msg.MsgBody != "ok" {
-		msg.MsgType = m.SET_WIFI_STATIC_IP_RESP
+		msg.MsgType = m.SET_WIFI_DYNAMIC_IP_RESP
 		return msg, err
 	}
-
-	return SetWifiDynamicIp(s)
+	msg, _ = getAtVersion(s)
+	if msg.MsgBody == m.AT_VERSION {
+		return SetWifiDynamicIp32(s)
+	} else {
+		return SetWifiDynamicIp(s)
+	}
 }
 
 func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.SET_WIFI_STATIC_IP_RESP
 		return msg, err
 	}
-
-	return SetWifiStaticIp(s, ip, gateway, netmask)
+	msg, _ = getAtVersion(s)
+	if msg.MsgBody == m.AT_VERSION {
+		return SetWifiStaticIp32(s, ip, gateway, netmask)
+	} else {
+		return SetWifiStaticIp(s, ip, gateway, netmask)
+	}
 }
 
 func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
 	if msg.MsgBody != "ok" {
 		msg.MsgType = m.SET_WIFI_STATIC_IP_RESP
 		return msg, err
 	}
 
-	return GetIpInfo(s)
+	msg, _ = getAtVersion(s)
+	if msg.MsgBody == m.AT_VERSION {
+		return GetIpInfo32(s)
+	} else {
+		return GetIpInfo(s)
+	}
+
 }
 
 func getAtMode(s *Scale) (*ScaleRespMsg, error) {
@@ -778,7 +825,14 @@ func getAtMode(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+
+	reg, err, res := openFactory(s)
+	if err != nil || !res {
+		reg.MsgType = m.CHANGE_WIFI_MODE_RESP
+		return reg, err
+
+	}
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CHANGE_WIFI_MODE_RESP)
 
 	if msg.MsgBody != "ok" {
@@ -798,9 +852,19 @@ func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
-	//defer DisPassthrough(s)
+	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_IP_MODE_RESP)
-	return msg, err
+
+	if msg.MsgBody != "ok" {
+		msg.MsgType = m.GET_IP_MODE_RESP
+		return msg, err
+	}
+	msg, _ = getAtVersion(s)
+	if msg.MsgBody == m.AT_VERSION {
+		return GetIpMode32(s)
+	} else {
+		return GetIpMode(s)
+	}
 
 }
 func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -1220,6 +1284,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			packetData := stringToLittleEndianBytes(modifyData[i].CurrValue, modifyData[i].Size)
 			packDataHexStr := hex.EncodeToString(packetData)
 			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
+
 			if err != nil {
 				return &ScaleRespMsg{}, err
 			}
@@ -1527,17 +1592,13 @@ func ReqModifyVarValue(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 					fmt.Printf("%02x ", b) // 打印每个字节的 16 进制表示并用空格分隔
 				}
 				// 发送数据包
-
 				if res, err := perfCmdNwaitResult(s, cmd, m.MODIFY_VAR_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{m.MODIFY_VAR_RESP, "fail", s.Id}, err
 				} else if res.MsgBody != "ok" {
 					return &ScaleRespMsg{m.MODIFY_VAR_RESP, "fail", s.Id}, fmt.Errorf("write eeprom fail")
 				}
-
 			}
-
 		}
-
 	}
 
 	return &ScaleRespMsg{m.MODIFY_VAR_RESP, "ok", s.Id}, nil
@@ -2673,6 +2734,13 @@ func writeStringToFile(str string, filePath string) {
 	}
 }
 
+//关闭wifi 蓝牙的透传
+
+func ReqDisWifiPassthrough(c *Scale) (*ScaleRespMsg, error) {
+
+	return excuteSimpCmd(c, m.CMD_DIS_PASSTH, m.DIS_PASSTH_MODE_RESP)
+}
+
 // 获取基础数据 OL UL 开关机次数等
 func ReqGetBasicData(c *Scale) (*ScaleRespMsg, error) {
 	reg, err, res := openFactory(c)
@@ -2736,6 +2804,34 @@ func ReqOpenBillSend(c *Scale) (*ScaleRespMsg, error) {
 		return reg, err
 	}
 	return excuteSimpCmd(c, m.CMD_OPEN_BILL_SEND, m.OPEN_BILL_SEND_RESP)
+}
+
+func ReqEnUserCont(c *Scale) (*ScaleRespMsg, error) {
+	//打开工厂模式
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+	//关闭连续发送
+	c.isSendUnolicitedData = false
+	if c.isScalePassth {
+		c.isScalePassth = false
+		picker := picker.GetPickerFn(c.ScaleCat)
+		c.MySerial.ChangePickFunc(picker)
+	}
+	msgStr, err := c.UnRegWeightData()
+	if err != nil || msgStr.MsgBody != "ok" {
+		return msgStr, err
+	}
+
+	//开启用户的连续发送
+	msgStr, err = excuteSimpCmd(c, m.CMD_EN_USR_CONT_MODE, m.EN_USER_CONT_RESP)
+	c.isSendUnolicitedData = true
+	c.isScalePassth = true
+	c.IsScalePassthHex = false
+	picker := picker.GetPickerFn(c.ScaleCat + 1)
+	c.MySerial.ChangePickFunc(picker)
+	return msgStr, err
 }
 
 // 在线升级bin
@@ -3800,12 +3896,13 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		sendRespMsgClient(s, msg)
 		return
 	}
-	if msg.MsgType == m.SWITCH_LIMIT_RESP { // send switch limit to client if it doesn't not register this message
-		sendRespMsgClient(s, msg) //此处单独来了切换上下限的功能，要不要这样处理 TODO:
+	if msg.MsgType == m.ERR_SERIAL_RESP {
+
+		sendRespMsgClient(s, msg) //此处单独来了串口错误功能，直接送出去
 		return
 	}
-	if msg.MsgType == m.REV_DETAIl_TAIL_RESP { // send switch limit to client if it doesn't not register this message
-		sendRespMsgClient(s, msg) //此处单独来了切换上下限的功能，要不要这样处理 TODO:
+	if msg.MsgType == m.REV_DETAIl_TAIL_RESP {
+		sendRespMsgClient(s, msg) //此处单独来了明细数据
 		return
 	}
 

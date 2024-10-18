@@ -66,6 +66,12 @@ ws://127.0.0.1:7878/tmax?scaleid=0
 17. get_detail_list => {"Req": "get_detail_list", "ReqData": ""}
     response:  {"MsgType":"resp_detail_list","MsgBody":"[{\"Total\":{\"RecId\":1,\"ScaleModel\":\"T-MAX\",\"ScaleSn\":\"12345678\",\"SettleAccountTimes\":\"1\",\"TotalCount\":\"1\",\"PayPrice\":\"6.66\",\"TotalPrice\":\"5.66\",\"TaxKind\":\"0\",\"CreatedAt\":\"0001-01-01T00:00:00Z\"},\"Details\":[{\"RecId\":1,\"ScaleModel\":\"T-MAX\",\"ScaleSn\":\"12345678\",\"SettleAccountTimes\":\"1\",\"PluIndex\":\"1\",\"PluNum\":\"001\",\"PluTotalPrice\":\"5.66\",\"PluUnitPrice\":\"5.66\",\"PluTotalWeight\":\"1\",\"PluTare\":\"0\",\"PluQuantity\":\"0\",\"PluUnit\":\"0\",\"PluTaxType\":\"1\",\"PluReturnFlag\":\"0\",\"PluYear\":\"24\",\"PluMonth\":\"2\",\"PluDay\":\"3\",\"PluTaxPrice\":\"0.55\",\"PluChangeType\":\"0\",\"PluName\":\"apple\",\"CreatedAt\":\"0001-01-01T00:00:00Z\"}]}]"}
 
+18. get_wifi_pwd_list => {"Req": "get_wifi_pwd_list", "ReqData": ""}
+	response:
+	{"MsgType":"resp_wifi_pwd_list","MsgBody":"[{\"Id\":1,\"Ssid\":\"wifi\",\"Pwd\":\"Ted123456\",\"CreatedAt\":\"2023-02-22T11:07:32.5259104+08:00\"}]"}
+
+19. add wifi record => {"Req": "add_wifi_pwd","ReqData": "{\"Ssid\":\"wifiname\",\"Pwd\":\"TED9856545\"}"}
+
 To connect to TMax scale with scaleId websocket
 ws://127.0.0.1:7878/tmax?scaleid=1
 
@@ -250,13 +256,10 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 }
 
 26. To modify scale name  
-    {"Req":"modify_scale_name", "ReqData":"modelName,scale_sn,scale_name"}
+     
+	{"Req":"modify_scale_name","ReqData":"{\"ScaleId\":4,\"ScaleName\":\"LppScale水果区\"}"} 
     response:
-    {"ScaleId":1,"MsgType":resp_modify_scale_name,"MsgBody":"{
-    "ScaleSn":"sdfsdfsdsdfs",
-    "ModelName":"sdfsdfsdsdfs",
-	"ScaleName":"sdfsdfsdsdfs",     
-}"}	
+    {"ScaleId":1,"MsgType":resp_modify_scale_name,"MsgBody":"ok"}	
 
 27. To modify variable value
     {"Req":"modify_var_value", "ReqData":"[{\"id\":\"1",\"value\":\"123456\"},
@@ -389,6 +392,24 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"MsgType":"resp_open_bill_send","MsgBody":"ok","ScaleId":1
 }
 
+40. en user continue from scale=>{ //开启工厂模式下用户模式的连续发送
+	"Req": "en_user_cont",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_en_user_cont","MsgBody":"ok","ScaleId":1
+}
+
+41. dis passthrough=>{ //关闭蓝牙wifi的透传
+	"Req": "dis_passth_mode",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_dis_passth_mode","MsgBody":"ok","ScaleId":1
+}
+
+ 
+
 
 	
 
@@ -427,6 +448,8 @@ ws://127.0.0.1:7878/tmax?scaleid=1
 
 	response:
 	{ "ScaleId":1, "MsgType":"resp_set_wifi_static_ip, "MsgBody":"ok"}
+
+	
 4.2 Set wifi with dynamic IP
    {"Req":"set_wifi_dynamic_ip", "ReqData":""}
 

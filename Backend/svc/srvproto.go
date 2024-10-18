@@ -17,14 +17,16 @@ type Request struct {
 type ReqType string
 
 const (
-	REQ_GET_PORT_LIST    ReqType = "get_port_list"    // without parameter
-	REQ_GET_SCALE_LIST   ReqType = "get_scale_list"   // without parameter
-	REQ_GET_PRODUCT_LIST ReqType = "get_product_list" // without parameter
-	REQ_GET_USER_LIST    ReqType = "get_user_list"    // without parameter
+	REQ_GET_PORT_LIST     ReqType = "get_port_list"     // without parameter
+	REQ_GET_SCALE_LIST    ReqType = "get_scale_list"    // without parameter
+	REQ_GET_PRODUCT_LIST  ReqType = "get_product_list"  // without parameter
+	REQ_GET_USER_LIST     ReqType = "get_user_list"     // without parameter
+	REQ_GET_WIFI_PWD_LIST ReqType = "get_wifi_pwd_list" // without parameter
 
-	REQ_ADD_SCALE    ReqType = "add_scale"    // with ReqAddScale parameter
-	REQ_DEL_SCALE    ReqType = "del_scale"    // with ReqDelScale parameter
-	REQ_MODIFY_SCALE ReqType = "modify_scale" // with ReqModifyScale parameter
+	REQ_ADD_SCALE         ReqType = "add_scale"         // with ReqAddScale parameter
+	REQ_DEL_SCALE         ReqType = "del_scale"         // with ReqDelScale parameter
+	REQ_MODIFY_SCALE      ReqType = "modify_scale"      // with ReqModifyScale parameter
+	REQ_MODIFY_SCALE_NAME ReqType = "modify_scale_name" // with ReqModifyScale parameter
 
 	REQ_ADD_PRODUCT    ReqType = "add_product"    // with ReqAddScale parameter
 	REQ_DEL_PRODUCT    ReqType = "del_product"    // with ReqDelScale parameter
@@ -42,6 +44,9 @@ const (
 	REQ_UPDATE_LICENSE    ReqType = "update_license"    // with parameter
 
 	REQ_GET_DETAIL_LIST ReqType = "get_detail_list" // without parameter 20240903
+
+	REQ_WIFI_PWD ReqType = "add_wifi_pwd" // with ReqAddWifiPwd parameter
+
 )
 
 type ReqAddScale struct {
@@ -60,6 +65,11 @@ type ReqModifyScale struct {
 	// MediaType MediaType
 	MediaConf  MediaConf
 	ScaleModel string
+}
+
+type ReqModifyScaleName struct {
+	ScaleId   int64
+	ScaleName string
 }
 
 type ReqModifyScaleSn struct {
@@ -95,6 +105,11 @@ type ReqAddUser struct {
 	IsFemale bool
 	Phone    string
 	Remarks  string
+}
+
+type ReqAddWifi struct {
+	Ssid string
+	Pwd  string
 }
 
 type ReqDelUser struct {
@@ -140,6 +155,8 @@ const (
 	SCALE_MGR_RESP_CHECK_LICENSE_KEY ScaleMgrRespMsgType = "resp_check_license_key" // with response of true or false
 	SCALE_MGR_RESP_UPDATE_LICENSE    ScaleMgrRespMsgType = "resp_update_license"    // with response of true or false
 	SCALE_MGR_RESP_DETAIL_LIST       ScaleMgrRespMsgType = "resp_detail_list"       // with response of ScalesListMsg
+	SCALE_MGR_RESP_WIFI_PWD_LIST     ScaleMgrRespMsgType = "resp_wifi_pwd_list"     // with response of ScalesListMsg
+	SCALE_MGR_RESP_WIFI_PWD_ADD      ScaleMgrRespMsgType = "resp_wifi_pwd_add"      // with response
 
 )
 
@@ -269,6 +286,8 @@ const (
 	SREQ_GET_BASIC_DATA           SReqType = "get_basic_data"     //20240820@FLF
 	SREQ_SET_LIMIT_TO_SCALE       SReqType = "set_limit_to_scale" //20240829@FLF
 	SREQ_OPEN_BILL_SEND           SReqType = "open_bill_send"     //20240903@FLF
+	SREQ_EN_USER_CONT             SReqType = "en_user_cont"       //20240914@FLF
+	SREQ_DIS_PASSTH_MODE          SReqType = "dis_passth_mode"    //20240914@FLF
 
 )
 

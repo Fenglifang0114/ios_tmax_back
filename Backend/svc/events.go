@@ -72,6 +72,28 @@ func (u ScaleModified) Trigger(payload ReqModifyScale) {
 	}
 }
 
+var scaleNameModified ScaleNameModified
+
+type ScaleNameModified struct {
+	handlers []interface {
+		Handle(payload ReqModifyScaleName)
+	}
+}
+
+// Register modify an event handler for this event
+func (u *ScaleNameModified) Register(handler interface {
+	Handle(payload ReqModifyScaleName)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ScaleNameModified) Trigger(payload ReqModifyScaleName) {
+	for _, handler := range u.handlers {
+		go handler.Handle(payload)
+	}
+}
+
 var scaleDeleted ScaleDeleted
 
 type ScaleDeleted struct {
@@ -273,5 +295,43 @@ func (u *DetailListed) Register(handler interface{ Handle(payload *ScaleMgr) }) 
 func (u DetailListed) Trigger(payload *ScaleMgr) {
 	for _, handler := range u.handlers {
 		go handler.Handle(payload)
+	}
+}
+
+var wifiListed WifiListed
+
+type WifiListed struct {
+	handlers []interface{ Handle(srvMgr *SrvMgr) }
+}
+
+// Register adds an event handler for this event
+func (u *WifiListed) Register(handler interface{ Handle(payload *SrvMgr) }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u WifiListed) Trigger(payload *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(payload)
+	}
+}
+
+var wifiAdded WifiAdded
+
+type WifiAdded struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqAddWifi)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *WifiAdded) Register(handler interface{ Handle(*SrvMgr, ReqAddWifi) }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u WifiAdded) Trigger(mgr *SrvMgr, payload ReqAddWifi) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
 	}
 }

@@ -25,6 +25,8 @@ const (
 	CMD_EN_CONTINUE_MODE
 	CMD_DIS_CONTINUE_MODE
 
+	CMD_EN_USR_CONT_MODE
+
 	CMD_EN_PASSTH
 	CMD_DIS_PASSTH
 
@@ -37,11 +39,15 @@ const (
 	CMD_WIFI_DATA_PASSTH
 	CMD_WIFI_GET_AP_LIST
 	CMD_WIFI_EN_DHCP
-	CMD_WIFI_DIS_DHCP
+	CMD_WIFI_EN_DHCP_32
 	CMD_WIFI_SET_STATIC_IP
+	CMD_WIFI_SET_STATIC_IP_32
 	CMD_WIFI_GET_AP_INFO
+	CMD_WIFI_GET_AP_INFO_32
 	CMD_WIFI_GET_IP_INFO
+	CMD_WIFI_GET_IP_INFO_32
 	CMD_WIFI_GET_IP_MODE
+	CMD_WIFI_GET_IP_MODE_32
 	CMD_WIFI_CONN_AP
 	CMD_WIFI_CONN_AP32
 	CMD_WIFI_CONN_AP_ONE_KEY
@@ -160,7 +166,7 @@ const (
 	GET_ONE_EEPROM_INFO_RESP      RespMsgType = "resp_get_one_eeprom_info" //20240125@FLF
 	GET_ALL_EEPROM_INFO_RESP      RespMsgType = "resp_get_all_eeprom_info" //20240125@FLF
 	SET_OUTPUT_FMT_RESP           RespMsgType = "resp_set_output_fmt"
-	OPEN_SCALE_PASSTHROUGH_RESP   RespMsgType = "resp_open_scale_passthrough" //20231023@FLF
+	OPEN_SCALE_PASSTHROUGH_RESP   RespMsgType = "resp_open_scale_passthrough" //20231023@FLF 连续发送的透传
 	CLOSE_SCALE_PASSTHROUGH_RESP  RespMsgType = "resp_close_scale_passthrough"
 	SCALE_PASSTH_DATA             RespMsgType = "scale_passth_data"
 	CHANGE_SCALE_PASSTH_MODE_RESP RespMsgType = "resp_change_scale_passth_mode"
@@ -195,6 +201,7 @@ const (
 	REV_DETAIl_MID_RESP           RespMsgType = "resp_rev_detail_mid"
 	REV_DETAIl_TAIL_RESP          RespMsgType = "resp_rev_detail_tail"
 	OPEN_BILL_SEND_RESP           RespMsgType = "resp_open_bill_send"
+	EN_USER_CONT_RESP             RespMsgType = "resp_en_user_cont"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

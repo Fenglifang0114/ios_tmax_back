@@ -35,6 +35,7 @@ var (
 	GET_FACTORY_INFO_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf6, 0x00, 0xCE, 0xD9, 0x29, 0x24, 0xa5, 0x5a}
 	GET_BASIC_DATA_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf8, 0x00, 0xA1, 0x47, 0xD5, 0xD0, 0xa5, 0x5a}
 	PAY_BILL_ON_CMD_TMAX      []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x09, 0x01, 0x22, 0xad, 0x50, 0xe6, 0xa5, 0x5a} //20240829@FLF结账发送开启
+	EN_USER_CONT_CMD_TMX      []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0xF9, 0x00, 0x73, 0x5E, 0x14, 0x0C, 0xA5, 0x5A} //20240914 工厂模式下
 
 )
 
@@ -64,6 +65,8 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return READ_WEIGHT_CMD_TMAX, CMD_TIMEOUT_SHORT_1500_MS, nil
 	case m.CMD_EN_CONTINUE_MODE:
 		return EN_CONT_MODE_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_EN_USR_CONT_MODE:
+		return EN_USER_CONT_CMD_TMX, CMD_TIMEOUT_IMMEDIATE, nil
 	case m.CMD_DIS_CONTINUE_MODE:
 		return DIS_CONT_MODE_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	case m.CMD_REBOOT:
@@ -122,19 +125,30 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getAtModeCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_EN_DHCP:
 		return EnWifiDhcpCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
-	case m.CMD_WIFI_DIS_DHCP:
-		return DisWifiDhcpCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_EN_DHCP_32:
+		return EnWifiDhcp32CmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+
 	case m.CMD_WIFI_SET_STATIC_IP:
 		fields := strings.Split(cmdData.Data.(string), ",")
 		return setWifiStaticIpCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_SET_STATIC_IP_32:
+		fields := strings.Split(cmdData.Data.(string), ",")
+		return setWifiStaticIp32CmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_GET_IP_INFO:
 		return getIpInfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
+	case m.CMD_WIFI_GET_IP_INFO_32:
+		return getIp32InfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
+
 	case m.CMD_CHANGE_WIFI_MODE:
 		return changeWifiModeCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_GET_AP_INFO:
 		return getApInfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
+	case m.CMD_WIFI_GET_AP_INFO_32:
+		return getAp32InfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_GET_IP_MODE:
 		return getIpModCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
+	case m.CMD_WIFI_GET_IP_MODE_32:
+		return getIp32ModCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_CONN_AP:
 		fields := strings.Split(cmdData.Data.(string), ",")
 		return connectWifiApCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_LONG_20000_MS, nil //ESP8266 默认超时15秒
@@ -184,19 +198,15 @@ var CONNECT_AP_CMD_32 []byte = []byte("AT+CWJAP=\"%s\",\"%s\"\r\n")          // 
 var CONNECT_AP_CMD_32_B []byte = []byte("AT+CWJAP=\"%s\",\"%s\",\"%s\"\r\n") // ssid, password, bssid
 var CONNECT_AP_CMD_B []byte = []byte("AT+CWJAP=\"%s\",\"%s\"\r\n")           // ssid, password, bssid
 var DISCONNECT_AP_CMD []byte = []byte("AT+CWQAP\r\n")                        // ssid, password, bssid
-// var GET_AP_INFO_CMD []byte = []byte("AT+CWJAP_DEF?\r\n")                     // ssid, password, bssid
-var GET_AP_INFO_CMD []byte = []byte("AT+CWJAP?\r\n") // ssid, password, bssid
-// var GET_IP_INFO_CMD []byte = []byte("AT+CIPSTA_CUR?\r\n")                    // ssid, password, bssid
-var GET_IP_INFO_CMD []byte = []byte("AT+CIPSTA?\r\n")    // ssid, password, bssid
-var GET_IP_INFO_CMD_32 []byte = []byte("AT+CIPSTA?\r\n") // ssid, password, bssid
-// var GET_IP_MODE_CMD []byte = []byte("AT+CWDHCP_CUR?\r\n")//改为CWDHCP
-var GET_IP_MODE_CMD []byte = []byte("AT+CWDHCP?\r\n") //改为CWDHCP
-var GET_IP_MODE_CMD_32 []byte = []byte("CWDHCP?\r\n")
+var GET_AP_INFO_CMD []byte = []byte("AT+CWJAP_DEF?\r\n")                     // ssid, password, bssid
+var GET_AP_INFO_CMD_32 []byte = []byte("AT+CWJAP?\r\n")                      // ssid, password, bssid
+var GET_IP_INFO_CMD []byte = []byte("AT+CIPSTA_CUR?\r\n")                    // ssid, password, bssid
+var GET_IP_INFO_CMD_32 []byte = []byte("AT+CIPSTA?\r\n")                     // ssid, password, bssid
+var GET_IP_MODE_CMD []byte = []byte("AT+CWDHCP_CUR?\r\n")                    //改为CWDHCP
+var GET_IP_MODE_CMD_32 []byte = []byte("AT+CWDHCP?\r\n")                     //改为CWDHCP
 
 var EN_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,1\r\n")
 var EN_DHCP_DEF_CMD_32 []byte = []byte("AT+CWDHCP=1,1\r\n")
-var DIS_DHCP_DEF_CMD []byte = []byte("AT+CWDHCP_DEF=1,0")
-var DIS_DHCP_DEF_CMD_32 []byte = []byte("AT+CWDHCP=0,0")
 
 var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=\"%s\",\"%s\",\"%s\"\r\n") // ip, gateway, netmask
 var SET_WIFI_STATIC_IP_DEF_CMD_32 []byte = []byte("AT+CIPSTA=\"%s\",\"%s\",\"%s\"\r\n")  // ip, gateway, netmask
@@ -253,8 +263,9 @@ const (
 	CMDID_DIS_PASSTH_TMAX        = 0x05F4
 	CMDID_GET_MAX_PACK_SIZE_TMAX = 0x05F5
 	CMDID_GET_FACTORY_INFO_TMAX  = 0x05F6
-	CMDID_GET_RANDOM_DATA        = 0x05F7
-	CMDID_GET_BASIC_DATA         = 0x05F8
+	CMDID_GET_RANDOM_DATA_TMAX   = 0x05F7
+	CMDID_GET_BASIC_DATA_TMAX    = 0x05F8
+	CMDID_EN_USER_CONT_TMAX      = 0x05F9
 )
 const (
 	CMDID_READ_FLASH_TMAX        = 0xF101
@@ -562,14 +573,20 @@ func EnWifiDhcpCmdTMAX() []byte {
 	return composeCmd(0xf202, 0, EN_DHCP_DEF_CMD)
 }
 
-func DisWifiDhcpCmdTMAX() []byte {
-	l.Log.Debug("compose disable wifi dhcp cmd")
-	return composeCmd(0xf202, 0, DIS_DHCP_DEF_CMD)
+func EnWifiDhcp32CmdTMAX() []byte {
+	l.Log.Debug("compose set wifi dynamic IP cmd")
+	return composeCmd(0xf202, 0, EN_DHCP_DEF_CMD_32)
 }
 
 func setWifiStaticIpCmdTMAX(ip string, gateway string, netmask string) []byte {
 	l.Log.Debug("compose set wifi to static IP cmd")
 	return composeCmd(0xf202, 0, []byte(fmt.Sprintf(string(SET_WIFI_STATIC_IP_DEF_CMD), ip, gateway, netmask)))
+}
+
+// 连接静态IP ESP32
+func setWifiStaticIp32CmdTMAX(ip string, gateway string, netmask string) []byte {
+	l.Log.Debug("compose set wifi to static IP cmd")
+	return composeCmd(0xf202, 0, []byte(fmt.Sprintf(string(SET_WIFI_STATIC_IP_DEF_CMD_32), ip, gateway, netmask)))
 }
 
 // Connect to specifi AP
@@ -587,7 +604,8 @@ func connectWifiAp32CmdTMAX(ssid string, passwd string, bssid string) []byte {
 	if bssid == "" {
 		return composeCmd(0xf202, 0, []byte(fmt.Sprintf(string(CONNECT_AP_CMD_32), ssid, passwd)))
 	}
-	return composeCmd(0xf202, 0, []byte(fmt.Sprintf(string(CONNECT_AP_CMD_32_B), ssid, passwd, bssid)))
+	return composeCmd(0xf202, 0, []byte(fmt.Sprintf(string(CONNECT_AP_CMD_32), ssid, passwd))) //测试可用
+	// return composeCmd(0xf202, 0, []byte(fmt.Sprintf(string(CONNECT_AP_CMD_32_B), ssid, passwd, bssid)))
 }
 
 // Connect to specifi AP
@@ -602,15 +620,33 @@ func getApInfoCmdTMAX() []byte {
 	return composeCmd(0xf202, 0, GET_AP_INFO_CMD)
 }
 
+// Get wifi AP info from scale 32
+func getAp32InfoCmdTMAX() []byte {
+	l.Log.Debug("compose get IP info cmd")
+	return composeCmd(0xf202, 0, GET_AP_INFO_CMD_32)
+}
+
 // Get IP info from scale
 func getIpInfoCmdTMAX() []byte {
 	l.Log.Debug("compose get IP info cmd")
 	return composeCmd(0xf202, 0, GET_IP_INFO_CMD)
 }
 
+// Get IP info from scale 32
+func getIp32InfoCmdTMAX() []byte {
+	l.Log.Debug("compose get IP info cmd")
+	return composeCmd(0xf202, 0, GET_IP_INFO_CMD_32)
+}
+
 func getIpModCmdTMAX() []byte {
 	l.Log.Debug("compose get IP mode cmd")
 	return composeCmd(0xf202, 0, GET_IP_MODE_CMD)
+}
+
+func getIp32ModCmdTMAX() []byte {
+	l.Log.Debug("compose get IP mode cmd")
+	return composeCmd(0xf202, 0, GET_IP_MODE_CMD_32)
+
 }
 
 func getDelPluCmdTMAX(data string) []byte {

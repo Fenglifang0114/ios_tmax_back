@@ -144,12 +144,21 @@ func procDownFirmwareWifi(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 func procGetBasicData(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetBasicData(scale)
 }
+
+func procDisPassthMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDisWifiPassthrough(scale)
+}
+
 func procSetLimitToScale(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetLimitToScale(scale, req)
 }
 
 func procOpenBillSend(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqOpenBillSend(scale)
+}
+
+func procEnUserCont(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqEnUserCont(scale)
 }
 
 func procUpdateFirmware(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -274,6 +283,14 @@ func procRegWeight(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func procUnRegWeight(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	// return scale.UnRegWeightData()
+
+	scale.isSendUnolicitedData = false
+	if scale.isScalePassth {
+		scale.isScalePassth = false
+		picker := picker.GetPickerFn(scale.ScaleCat)
+		scale.MySerial.ChangePickFunc(picker)
+	}
 	return scale.UnRegWeightData()
 }
 
@@ -448,6 +465,8 @@ func init() {
 		SREQ_GET_BASIC_DATA:           procGetBasicData,
 		SREQ_SET_LIMIT_TO_SCALE:       procSetLimitToScale,
 		SREQ_OPEN_BILL_SEND:           procOpenBillSend,
+		SREQ_EN_USER_CONT:             procEnUserCont,
+		SREQ_DIS_PASSTH_MODE:          procDisPassthMode,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -502,5 +521,6 @@ func init() {
 		SREQ_GET_BASIC_DATA:           m.GET_BASIC_DATA_RESP,
 		SREQ_SET_LIMIT_TO_SCALE:       m.SET_LIMIT_TO_SCALE_RESP,
 		SREQ_OPEN_BILL_SEND:           m.OPEN_BILL_SEND_RESP,
+		SREQ_EN_USER_CONT:             m.EN_USER_CONT_RESP,
 	}
 }
