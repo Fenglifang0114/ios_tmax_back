@@ -123,6 +123,18 @@ func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
 	if reqMsg.MsgBody == nil {
 		return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
 	}
+	var dataStruct FIFromScale
+	msgBodyStr, _ := reqMsg.MsgBody.(string)
+	err := json.UnmarshalFromString(msgBodyStr, &dataStruct)
+	if err == nil {
+		req := ReqModifyScaleSn{
+			ScaleId:    c.Id,
+			ScaleModel: dataStruct.ModelName,
+			Sn:         dataStruct.ScaleSn,
+		}
+		c.scaleMgr.UpdateScaleSn(req)
+
+	}
 
 	return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: reqMsg.MsgBody, ScaleId: c.Id}, nil
 }
@@ -227,10 +239,10 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	c.isSendUnolicitedData = false
 	c.isScalePassth = false
-	// _, err, res := openFactory(c)
-	// if err != nil || !res {
-	// 	l.Log.Debug(err)
-	// }
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		l.Log.Debug(err)
+	}
 
 	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
 	//sendErrMsg(c, msg)
@@ -261,10 +273,6 @@ func (c *Scale) CloseScalePassth() (*ScaleRespMsg, error) {
 	// if err != nil {
 	// 	return &ScaleRespMsg{}, err
 	// }
-	_, err, res := openFactory(c)
-	if err != nil || !res {
-		l.Log.Debug(err)
-	}
 	// enable scale sending weighing info continually
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)

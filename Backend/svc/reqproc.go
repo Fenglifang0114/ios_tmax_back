@@ -157,10 +157,6 @@ func procOpenBillSend(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqOpenBillSend(scale)
 }
 
-func procEnUserCont(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqEnUserCont(scale)
-}
-
 func procUpdateFirmware(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqUpdateFirmware(scale, req)
 }
@@ -465,7 +461,6 @@ func init() {
 		SREQ_GET_BASIC_DATA:           procGetBasicData,
 		SREQ_SET_LIMIT_TO_SCALE:       procSetLimitToScale,
 		SREQ_OPEN_BILL_SEND:           procOpenBillSend,
-		SREQ_EN_USER_CONT:             procEnUserCont,
 		SREQ_DIS_PASSTH_MODE:          procDisPassthMode,
 	}
 
@@ -521,6 +516,5 @@ func init() {
 		SREQ_GET_BASIC_DATA:           m.GET_BASIC_DATA_RESP,
 		SREQ_SET_LIMIT_TO_SCALE:       m.SET_LIMIT_TO_SCALE_RESP,
 		SREQ_OPEN_BILL_SEND:           m.OPEN_BILL_SEND_RESP,
-		SREQ_EN_USER_CONT:             m.EN_USER_CONT_RESP,
 	}
 }

@@ -201,7 +201,6 @@ const (
 	REV_DETAIl_MID_RESP           RespMsgType = "resp_rev_detail_mid"
 	REV_DETAIl_TAIL_RESP          RespMsgType = "resp_rev_detail_tail"
 	OPEN_BILL_SEND_RESP           RespMsgType = "resp_open_bill_send"
-	EN_USER_CONT_RESP             RespMsgType = "resp_en_user_cont"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

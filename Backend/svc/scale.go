@@ -298,6 +298,7 @@ func (s *Scale) keepSerialPortState() {
 			s.scaleMgr.UpdateScale(req)
 			isReconnecting = false
 			cont = 1
+
 			continue
 		}
 		if s.Conn.IsOnline {
@@ -2804,34 +2805,6 @@ func ReqOpenBillSend(c *Scale) (*ScaleRespMsg, error) {
 		return reg, err
 	}
 	return excuteSimpCmd(c, m.CMD_OPEN_BILL_SEND, m.OPEN_BILL_SEND_RESP)
-}
-
-func ReqEnUserCont(c *Scale) (*ScaleRespMsg, error) {
-	//打开工厂模式
-	reg, err, res := openFactory(c)
-	if err != nil || !res {
-		return reg, err
-	}
-	//关闭连续发送
-	c.isSendUnolicitedData = false
-	if c.isScalePassth {
-		c.isScalePassth = false
-		picker := picker.GetPickerFn(c.ScaleCat)
-		c.MySerial.ChangePickFunc(picker)
-	}
-	msgStr, err := c.UnRegWeightData()
-	if err != nil || msgStr.MsgBody != "ok" {
-		return msgStr, err
-	}
-
-	//开启用户的连续发送
-	msgStr, err = excuteSimpCmd(c, m.CMD_EN_USR_CONT_MODE, m.EN_USER_CONT_RESP)
-	c.isSendUnolicitedData = true
-	c.isScalePassth = true
-	c.IsScalePassthHex = false
-	picker := picker.GetPickerFn(c.ScaleCat + 1)
-	c.MySerial.ChangePickFunc(picker)
-	return msgStr, err
 }
 
 // 在线升级bin

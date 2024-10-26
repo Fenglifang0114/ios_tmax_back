@@ -286,7 +286,6 @@ const (
 	SREQ_GET_BASIC_DATA           SReqType = "get_basic_data"     //20240820@FLF
 	SREQ_SET_LIMIT_TO_SCALE       SReqType = "set_limit_to_scale" //20240829@FLF
 	SREQ_OPEN_BILL_SEND           SReqType = "open_bill_send"     //20240903@FLF
-	SREQ_EN_USER_CONT             SReqType = "en_user_cont"       //20240914@FLF
 	SREQ_DIS_PASSTH_MODE          SReqType = "dis_passth_mode"    //20240914@FLF
 
 )

@@ -35,7 +35,6 @@ var (
 	GET_FACTORY_INFO_CMD_TMAX []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf6, 0x00, 0xCE, 0xD9, 0x29, 0x24, 0xa5, 0x5a}
 	GET_BASIC_DATA_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf8, 0x00, 0xA1, 0x47, 0xD5, 0xD0, 0xa5, 0x5a}
 	PAY_BILL_ON_CMD_TMAX      []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x09, 0x01, 0x22, 0xad, 0x50, 0xe6, 0xa5, 0x5a} //20240829@FLF结账发送开启
-	EN_USER_CONT_CMD_TMX      []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0xF9, 0x00, 0x73, 0x5E, 0x14, 0x0C, 0xA5, 0x5A} //20240914 工厂模式下
 
 )
 
@@ -65,8 +64,6 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return READ_WEIGHT_CMD_TMAX, CMD_TIMEOUT_SHORT_1500_MS, nil
 	case m.CMD_EN_CONTINUE_MODE:
 		return EN_CONT_MODE_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
-	case m.CMD_EN_USR_CONT_MODE:
-		return EN_USER_CONT_CMD_TMX, CMD_TIMEOUT_IMMEDIATE, nil
 	case m.CMD_DIS_CONTINUE_MODE:
 		return DIS_CONT_MODE_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	case m.CMD_REBOOT:
@@ -265,7 +262,6 @@ const (
 	CMDID_GET_FACTORY_INFO_TMAX  = 0x05F6
 	CMDID_GET_RANDOM_DATA_TMAX   = 0x05F7
 	CMDID_GET_BASIC_DATA_TMAX    = 0x05F8
-	CMDID_EN_USER_CONT_TMAX      = 0x05F9
 )
 const (
 	CMDID_READ_FLASH_TMAX        = 0xF101

@@ -392,7 +392,7 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"MsgType":"resp_open_bill_send","MsgBody":"ok","ScaleId":1
 }
 
-40. en user continue from scale=>{ //开启工厂模式下用户模式的连续发送
+40. en user continue from scale=>{ //开启工厂模式下用户模式的连续发送  废弃（秤无法包头包尾）
 	"Req": "en_user_cont",
 	"ReqData": ""
 }
