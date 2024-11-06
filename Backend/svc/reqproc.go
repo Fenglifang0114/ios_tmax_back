@@ -236,8 +236,16 @@ func procSetEepromFromBin(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetEepromFromBin(scale, req)
 }
 
-func procDownFactoryInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqDownFactoryInfo(scale, req)
+func procSetEepromFromBinFc(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetEepromFromBinFc(scale, req)
+}
+
+func procDownFactoryInfoFc(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDownFactoryInfoFc(scale, req)
+}
+
+func procDownFactoryInfoTmax(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDownFactoryInfoTmax(scale, req)
 }
 
 func procModifyVarValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -449,7 +457,8 @@ func init() {
 		SREQ_CHANGE_WIFI_MODE:         procChangeWifiMode,
 		SREQ_MODIFY_EEPROM_INFO:       procModifyEepromInfo,
 		SREQ_DOWN_EEPROM_INFO:         procDownEepromInfo,
-		SREQ_DOWN_FACTORY_INFO:        procDownFactoryInfo,
+		SREQ_DOWN_FACTORY_INFO_FC:     procDownFactoryInfoFc,
+		SREQ_DOWN_FACTORY_INFO:        procDownFactoryInfoTmax,
 		SREQ_MODIFY_VAR_VALUE:         procModifyVarValue,
 		SREQ_SET_SERVER_IP:            procSetServerIp,
 		SREQ_EN_FACTORY_MODE:          procEnFactoryMode,
@@ -457,6 +466,7 @@ func init() {
 		SREQ_BACKUP_DEF_SETTING:       procBackupDefSetting,
 		SREQ_GET_EEPROM_TO_BIN:        procGetEepromToBin,
 		SREQ_SET_EEPROM_FROM_BIN:      procSetEepromFromBin,
+		SREQ_SET_EEPROM_FROM_BIN_FC:   procSetEepromFromBinFc,
 		SREQ_DOWN_FIRMWARE_WIFI:       procDownFirmwareWifi,
 		SREQ_GET_BASIC_DATA:           procGetBasicData,
 		SREQ_SET_LIMIT_TO_SCALE:       procSetLimitToScale,
@@ -508,10 +518,12 @@ func init() {
 		SREQ_SET_SERVER_IP:            m.SET_SERVER_IP_RESP,
 		SREQ_EN_FACTORY_MODE:          m.EN_FACTORY_MODE_RESP,
 		SREQ_DOWN_DEFAULT_PRN_FMT:     m.DOWN_DEFAULT_PRN_FMT_RESP,
+		SREQ_DOWN_FACTORY_INFO_FC:     m.DOWN_FACTORY_INFO_FC_RESP,
 		SREQ_DOWN_FACTORY_INFO:        m.DOWN_FACTORY_INFO_RESP,
 		SREQ_BACKUP_DEF_SETTING:       m.BACKUP_DEF_SETTING_RESP,
 		SREQ_GET_EEPROM_TO_BIN:        m.GET_EEPROM_TO_BIN_RESP,
 		SREQ_SET_EEPROM_FROM_BIN:      m.SET_EEPROM_FROM_BIN_RESP,
+		SREQ_SET_EEPROM_FROM_BIN_FC:   m.SET_EEPROM_FROM_BIN_RESP,
 		SREQ_DOWN_FIRMWARE_WIFI:       m.DOWN_FIRMWARE_WIFI_RESP,
 		SREQ_GET_BASIC_DATA:           m.GET_BASIC_DATA_RESP,
 		SREQ_SET_LIMIT_TO_SCALE:       m.SET_LIMIT_TO_SCALE_RESP,

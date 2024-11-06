@@ -46,6 +46,7 @@ const (
 	SI_PLU_INFO      = 4
 	SI_OL_INFO       = 5
 	SI_UL_INFO       = 6
+	SI_SN_INFO       = 7
 )
 
 var responseHandlerMap map[m.RespMsgType]func(int64, []byte) (ScaleRespMsg, int)
@@ -148,6 +149,7 @@ func init() {
 		m.EN_FACTORY_MODE_RESP:      handleEnFactoryModeResp,
 		m.GET_RANDOM_DATA_RESP:      handleGetRandomDataResp,
 		m.DOWN_DEFAULT_PRN_FMT_RESP: handleDownDefaultPrnFmtResp,
+		m.DOWN_FACTORY_INFO_FC_RESP: handleDownFactorInfoFcResp,
 		m.DOWN_FACTORY_INFO_RESP:    handleDownFactorInfoResp,
 		m.GET_EEPROM_TO_BIN_RESP:    handleGetEepromToBinResp,
 		m.SET_EEPROM_FROM_BIN_RESP:  handleSetEepromFromBinResp,
@@ -378,7 +380,7 @@ func handleGetScaleInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 		id := int(binary.BigEndian.Uint32(data[dataStart : dataStart+4]))
 		switch id {
-		case SI_DEF_PRN_INFO, SI_FREE_PRN_INFO, SI_SERIAL_OUTPUT, SI_PLU_INFO, SI_OL_INFO, SI_UL_INFO:
+		case SI_DEF_PRN_INFO, SI_FREE_PRN_INFO, SI_SERIAL_OUTPUT, SI_PLU_INFO, SI_OL_INFO, SI_UL_INFO, SI_SN_INFO:
 
 			var infoByte = data[dataStart+4 : dataStart+16]
 			siAddrInfos.Type = id
@@ -564,6 +566,11 @@ func handleDownDefaultPrnFmtResp(scaleId int64, data []byte) (ScaleRespMsg, int)
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0
 }
+func handleDownFactorInfoFcResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	// TODO: Implement function
+	return ScaleRespMsg{}, 0
+}
+
 func handleDownFactorInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 	return ScaleRespMsg{}, 0

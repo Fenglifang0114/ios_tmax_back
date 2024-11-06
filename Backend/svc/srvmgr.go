@@ -70,34 +70,28 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	wifiPb := NewWifiRecProvider()
 
 	var licKey string
-	var err error
+
 	var licKeyList []string
 
-	if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil || len(licKey) < 74 {
+	licKey, _ = lic.ReadLicFile(comm.LICENSE_FILE)
+
+	licKeyList = strings.Split(licKey, "\r\n")
+	for _, item := range licKeyList {
+		if len(item) == 74 || len(item) == 78 {
+			gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
+			if gIsKeyValid {
+				gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
+			}
+		}
+	}
+
+	if len(gLicenseInfoList) == 0 {
 		var temp []string
 		licKeyList = temp
 		gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid("d7a0a41239d92ee1724cd1a311ffffff2023-05-2594df26ebd828dbff03ede5f76effffff")
 		gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
-	} else {
-		licKeyList = strings.Split(licKey, "\r\n")
-		for _, item := range licKeyList {
-			if len(item) == 74 || len(item) == 78 {
-				gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
-				if gIsKeyValid {
-					gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
-				}
 
-			}
-
-		}
 	}
-
-	// if licKey, err = lic.ReadLicFile(comm.LICENSE_FILE); err != nil || len(licKey) != 74 {
-	// 	l.Log.Errorf("readLicFile: %v, err: %v", comm.LICENSE_FILE, err)
-	// 	gIsKeyValid, gMachineId, gLicValidDate,gModuleName = lic.IsKeyValid("d7a0a41239d92ee1724cd1a311ffffff2023-05-2594df26ebd828dbff03ede5f76effffff")
-	// } else {
-	// 	gIsKeyValid, gMachineId, gLicValidDate,gModuleName = lic.IsKeyValid(licKey)
-	// }
 
 	return &SrvMgr{
 		scaleMgr:           scaleMgr,
