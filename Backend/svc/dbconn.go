@@ -26,7 +26,7 @@ func NewDbScaleConn(dbName string) (*DbScaleConn, error) {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
-	if err = db.AutoMigrate(&ScaleConnMedia{}); err != nil {
+	if err = db.AutoMigrate(&ScaleConnMedia{}, &SrvScaleRel{}); err != nil {
 		panic("failed to migrate database of scale connection")
 	}
 	return &DbScaleConn{dbName: dbName}, nil
@@ -100,7 +100,7 @@ func (d *DbScaleConn) UpdateScaleConn(conn ScaleConnMedia) error {
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
-	rowAffected := db.Model(&conn).Where("scale_sn=?", conn.ScaleSn).Updates(&conn).RowsAffected
+	rowAffected := db.Model(&conn).Where("scale_id=?", conn.ScaleId).Updates(&conn).RowsAffected
 	if rowAffected == 0 {
 		return errors.New("@UpdateScaleConn failed, mybe record not existing")
 	} //写成save模式不生效，又改回来了
@@ -129,6 +129,59 @@ func (d *DbScaleConn) UpdateScaleInfo(conn ScaleConnMedia) error {
 	return nil
 }
 
+func (d *DbScaleConn) UpdateScaleSn(conn ScaleConnMedia) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 使用Updates函数时，只传入需要更新的字段
+	result := db.Model(&conn).Where("scale_id=?", conn.ScaleId).Updates(map[string]interface{}{
+		"ScaleModel": conn.ScaleModel,
+		"ScaleSn":    conn.ScaleSn,
+	})
+	rowAffected := result.RowsAffected
+	if rowAffected == 0 {
+		return errors.New("@UpdateScaleConn failed, maybe record not existing")
+	}
+
+	return nil
+}
+
+func (d *DbScaleConn) UpdateScaleName(conn ScaleConnMedia) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 使用Updates函数时，只传入需要更新的字段
+	result := db.Model(&conn).Where("scale_id=?", conn.ScaleId).Updates(map[string]interface{}{
+		"ScaleName": conn.ScaleName,
+	})
+	rowAffected := result.RowsAffected
+	if rowAffected == 0 {
+		return errors.New("@UpdateScaleConn failed, maybe record not existing")
+	}
+
+	return nil
+}
+
 func (d *DbScaleConn) DeleteScaleConn(inConn ScaleConnMedia) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -146,6 +199,138 @@ func (d *DbScaleConn) DeleteScaleConn(inConn ScaleConnMedia) error {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.Where("scale_model=?", inConn.ScaleModel).Where("scale_sn=?", inConn.ScaleSn).Delete((&inConn))
+	db.Where("scale_id=?", inConn.ScaleId).Delete((&inConn))
+	return nil
+}
+
+func (d *DbScaleConn) InsertSrvScaleRel(rel SrvScaleRel) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	tx := db.Create(&rel)
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	return nil
+}
+
+func (d *DbScaleConn) GetSrvScaleRelList() ([]*SrvScaleRel, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	var rels []*SrvScaleRel
+	db.Find(&rels)
+
+	return rels, nil
+}
+
+func (d *DbScaleConn) UpdateSrvScaleRel(rel SrvScaleRel) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	updateFields := make(map[string]interface{})
+	updateFields["is_used"] = rel.IsUsed
+
+	result := db.Model(&rel).Where("scale_id=?", rel.ScaleId).Where("srv_id=?", rel.SrvId).Updates(updateFields)
+	rowAffected := result.RowsAffected
+	if rowAffected == 0 {
+		return errors.New("@UpdateSrvScaleRel failed, maybe record not existing")
+	}
+
+	return nil
+}
+
+func (d *DbScaleConn) DeleteSrvScaleRel(rel SrvScaleRel) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	db.Where("scale_id=?", rel.ScaleId).Where("srv_id=?", rel.SrvId).Delete(&rel)
+
+	return nil
+}
+
+func (d *DbScaleConn) DeleteSrvScaleRelByScaleId(scaleId int64) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	result := db.Where("scale_id =?", scaleId).Delete(&SrvScaleRel{})
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (d *DbScaleConn) DeleteSrvScaleRelAll() error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 使用Delete方法时不传入具体条件，即可删除所有记录
+	result := db.Delete(&SrvScaleRel{})
+	if result.Error != nil {
+		return result.Error
+	}
+
 	return nil
 }

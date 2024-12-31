@@ -79,6 +79,7 @@ func init() {
 		cmd.CMDID_GET_FACTORY_INFO_TMAX:  m.GET_FACTORY_INFO_RESP,
 		cmd.CMDID_GET_RANDOM_DATA_TMAX:   m.GET_RANDOM_DATA_RESP,
 		cmd.CMDID_GET_BASIC_DATA_TMAX:    m.GET_BASIC_DATA_RESP,
+		cmd.CMDID_ANSWER_ALIVE_TMAX:      m.ANSWER_ALIVE_RESP,
 		cmd.CMDID_ERASE_FLASH_TMAX:       m.ERASE_FLASH_RESP, //FLF//
 		cmd.CMDID_WRITE_FLASH_TMAX:       m.WRITE_DATA_FLASH_RESP,
 		0xff11:                           m.DOWN_PRN_FMT_RESP,
@@ -160,6 +161,7 @@ func init() {
 		m.REV_DETAIl_MID_RESP:       handleRevDetailMidResp,
 		m.REV_DETAIl_TAIL_RESP:      handleRevDetailTailResp,
 		m.OPEN_BILL_SEND_RESP:       handleOpenBillSendResp,
+		m.ANSWER_ALIVE_RESP:         handleAnswerAliveResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -486,6 +488,14 @@ func handleEnFacModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_FAC_MODE_RESP, MsgBody: "ok"}, len(data)
 	} else {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_FAC_MODE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleAnswerAliveResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x05 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.ANSWER_ALIVE_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.ANSWER_ALIVE_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
@@ -816,8 +826,31 @@ type DetailMidData struct {
 	PluName            string
 }
 
-func parseDetailMidData(str string) DetailMidData {
-	result := DetailMidData{}
+// 单笔交易分包
+type PackDetailMidData struct {
+	SettleAccountTimes string
+	PluIndex           string
+	PackT              string
+	PackS              string
+	PluNum             string
+	PluTotalPrice      string
+	PluUnitPrice       string
+	PluTotalWeight     string
+	PluTare            string
+	PluQuantity        string
+	PluUnit            string
+	PluTaxType         string
+	PluReturnFlag      string
+	PluYear            string
+	PluMonth           string
+	PluDay             string
+	PluTaxPrice        string
+	PluChangeType      string
+	PluName            string
+}
+
+func parseDetailMidData(str string) PackDetailMidData {
+	result := PackDetailMidData{}
 	parts := splitData(str)
 	for _, part := range parts {
 		keyValue := splitKeyValue(part)
@@ -829,6 +862,10 @@ func parseDetailMidData(str string) DetailMidData {
 				result.SettleAccountTimes = value
 			case "plu_index":
 				result.PluIndex = value
+			case "pack_t":
+				result.PackT = value
+			case "pack_s":
+				result.PackS = value
 			case "plu_num":
 				result.PluNum = value
 			case "plu_total_price":
@@ -859,6 +896,7 @@ func parseDetailMidData(str string) DetailMidData {
 				result.PluChangeType = value
 			case "plu_name":
 				result.PluName = value
+
 			}
 		}
 	}
@@ -867,33 +905,89 @@ func parseDetailMidData(str string) DetailMidData {
 
 func handleRevDetailMidResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	detailMidData := parseDetailMidData(string(data))
+	if detailMidData.PackS == "1" {
+		mSrvMgr.scales[scaleId].packDetailMid = []PackDetailMidData{}
+		mSrvMgr.scales[scaleId].packDetailMid = append(mSrvMgr.scales[scaleId].packDetailMid, detailMidData)
+	} else {
+		if len(mSrvMgr.scales[scaleId].packDetailMid) < 1 {
+			return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_MID_RESP, MsgBody: "ok"}, len(data)
+		}
+		if detailMidData.SettleAccountTimes != mSrvMgr.scales[scaleId].packDetailMid[0].SettleAccountTimes || detailMidData.PluIndex != mSrvMgr.scales[scaleId].packDetailMid[0].PluIndex {
+			return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_MID_RESP, MsgBody: "ok"}, len(data)
+		}
+		mSrvMgr.scales[scaleId].packDetailMid = append(mSrvMgr.scales[scaleId].packDetailMid, detailMidData)
+	}
+	packLen := len(mSrvMgr.scales[scaleId].packDetailMid)
+	pcakLenString := strconv.Itoa(packLen)
 
-	model := mSrvMgr.scales[scaleId].Model
-	sn := mSrvMgr.scales[scaleId].Sn
-	rec := DetailRec{}
-	rec.ScaleModel = model
-	rec.ScaleSn = sn
-	rec.SettleAccountTimes = detailMidData.SettleAccountTimes
-	rec.PluIndex = detailMidData.PluIndex
-	rec.PluNum = detailMidData.PluNum
-	rec.PluTotalPrice = detailMidData.PluTotalPrice
-	rec.PluUnitPrice = detailMidData.PluUnitPrice
-	rec.PluTotalWeight = detailMidData.PluTotalWeight
-	rec.PluTare = detailMidData.PluTare
-	rec.PluQuantity = detailMidData.PluQuantity
-	rec.PluUnit = detailMidData.PluUnit
-	rec.PluTaxType = detailMidData.PluTaxType
-	rec.PluReturnFlag = detailMidData.PluReturnFlag
-	rec.PluYear = detailMidData.PluYear
-	rec.PluMonth = detailMidData.PluMonth
-	rec.PluDay = detailMidData.PluDay
-	rec.PluTaxPrice = detailMidData.PluTaxPrice
-	rec.PluChangeType = detailMidData.PluChangeType
-	rec.PluName = detailMidData.PluName
+	if packLen < 1 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_MID_RESP, MsgBody: "ok"}, len(data)
+	}
+	if pcakLenString == mSrvMgr.scales[scaleId].packDetailMid[0].PackT {
+		model := mSrvMgr.scales[scaleId].Model
+		sn := mSrvMgr.scales[scaleId].Sn
+		rec := DetailRec{}
+		rec.ScaleModel = model
+		rec.ScaleSn = sn
+		for _, packMid := range mSrvMgr.scales[scaleId].packDetailMid {
+			if packMid.SettleAccountTimes != "" {
+				rec.SettleAccountTimes = packMid.SettleAccountTimes
+			}
+			if packMid.PluIndex != "" {
+				rec.PluIndex = packMid.PluIndex
+			}
+			if packMid.PluNum != "" {
+				rec.PluNum = packMid.PluNum
+			}
+			if packMid.PluTotalPrice != "" {
+				rec.PluTotalPrice = packMid.PluTotalPrice
+			}
+			if packMid.PluUnitPrice != "" {
+				rec.PluUnitPrice = packMid.PluUnitPrice
+			}
+			if packMid.PluTotalWeight != "" {
+				rec.PluTotalWeight = packMid.PluTotalWeight
+			}
+			if packMid.PluTare != "" {
+				rec.PluTare = packMid.PluTare
+			}
+			if packMid.PluQuantity != "" {
+				rec.PluQuantity = packMid.PluQuantity
+			}
+			if packMid.PluUnit != "" {
+				rec.PluUnit = packMid.PluUnit
+			}
+			if packMid.PluTaxType != "" {
+				rec.PluTaxType = packMid.PluTaxType
+			}
+			if packMid.PluReturnFlag != "" {
+				rec.PluReturnFlag = packMid.PluReturnFlag
+			}
+			if packMid.PluYear != "" {
+				rec.PluYear = packMid.PluYear
+			}
+			if packMid.PluMonth != "" {
+				rec.PluMonth = packMid.PluMonth
+			}
+			if packMid.PluDay != "" {
+				rec.PluDay = packMid.PluDay
+			}
+			if packMid.PluTaxPrice != "" {
+				rec.PluTaxPrice = packMid.PluTaxPrice
+			}
+			if packMid.PluChangeType != "" {
+				rec.PluChangeType = packMid.PluChangeType
+			}
+			if packMid.PluName != "" {
+				rec.PluName = packMid.PluName
+			}
+		}
 
-	head := mSrvMgr.scales[scaleId].detailInfo.Total
-	if head.SettleAccountTimes != "" && head.SettleAccountTimes == rec.SettleAccountTimes {
-		mSrvMgr.scales[scaleId].detailInfo.Details = append(mSrvMgr.scales[scaleId].detailInfo.Details, rec)
+		head := mSrvMgr.scales[scaleId].detailInfo.Total
+		if head.SettleAccountTimes != "" && head.SettleAccountTimes == rec.SettleAccountTimes {
+			mSrvMgr.scales[scaleId].detailInfo.Details = append(mSrvMgr.scales[scaleId].detailInfo.Details, rec)
+		}
+
 	}
 
 	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_MID_RESP, MsgBody: "ok"}, len(data)
@@ -935,10 +1029,20 @@ func handleRevDetailTailResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_TAIL_RESP, MsgBody: "fail"}, len(data)
 	}
 
-	mSrvMgr.scaleMgr.detailPb.InsertTotalRec(head)
-	for _, rec := range mid {
-		mSrvMgr.scaleMgr.detailPb.InsertDetailRec(rec)
-	}
+	//直接失败不要数据了
+	// // mSrvMgr.scaleMgr.detailPb.InsertTotalRec(head)//主服务不再写数据库
+	// totalStr, _ := json.MarshalToString(head)
+	// recStr := ""
+	// mSrvMgr.recvScaleMgrMsgSrv <- &SrvMgrRespMsg{MsgType: SCALE_MGR_RESP_DETAIL_LIST, MsgBody: totalStr, ScaleId: scaleId}
+	// for _, rec := range mid {
+	// 	// mSrvMgr.scaleMgr.detailPb.InsertDetailRec(rec) //主服务不再写数据库
+	// 	recStr, _ = json.MarshalToString(rec)
+	// 	mSrvMgr.recvScaleMgrMsgSrv <- &SrvMgrRespMsg{MsgType: SCALE_MGR_RESP_DETAIL_LIST, MsgBody: recStr, ScaleId: scaleId}
+	// }
+	list := mSrvMgr.scales[scaleId].detailInfo
+	recStr, _ := json.MarshalToString(list)
+	mSrvMgr.recvScaleMgrMsgSrv <- &SrvMgrRespMsg{MsgType: SCALE_MGR_RESP_DETAIL_LIST, MsgBody: recStr, ScaleId: scaleId}
+
 	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REV_DETAIl_TAIL_RESP, MsgBody: "ok"}, len(data)
 	// TODO: Implement function
 }

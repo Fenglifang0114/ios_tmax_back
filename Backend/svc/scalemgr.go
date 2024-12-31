@@ -2,15 +2,15 @@ package svc
 
 import (
 	"fmt"
+
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 	"tmaxsrv/comm"
 	"tmaxsrv/log"
 )
 
-var nextScaleId int64 = 1 // this scale id will be incremented as new scale is added, 0 is reserved for not used
+var nextScaleId int64 = 2 // this scale id will be incremented as new scale is added, 0 is reserved for not used
 type ScaleMgr struct {
 	mu                sync.Mutex
 	srvMgr            *SrvMgr
@@ -29,13 +29,16 @@ type ScaleMgr struct {
 func NewScaleMgr() *ScaleMgr {
 	connPb := NewScaleConnProvider()
 	recPb := NewScaleRecProvider()
+
 	infoPb := NewScaleInfosProvider()
 	pluFilePb := NewPluRecProvider()
 	recCheckWeigherPb := NewScaleRecCheckWeigherProvider()
 	recTakeInPb := NewScaleRecTakeInProvider()
 	recTakeOutPb := NewScaleRecTakeOutProvider()
 	scales := make(map[int64]*Scale)
+
 	detailPb := NewDetailRecProvider()
+
 	return &ScaleMgr{connPb: connPb, recPb: recPb, infoPb: infoPb, pluFilePb: pluFilePb, recCheckWeigherPb: recCheckWeigherPb, recTakeInPb: recTakeInPb, recTakeOutPb: recTakeOutPb, scales: scales, detailPb: detailPb}
 }
 
@@ -49,6 +52,9 @@ func init() {
 
 	createScaleListNotifier := scaleListedNotifier{}
 	scalesListed.Register(createScaleListNotifier)
+
+	createScaleListSrvNotifier := scaleListedNotifierSrv{}
+	scalesListedSrv.Register(createScaleListSrvNotifier)
 
 	createAddScaleNotifier := addScaleNotifier{}
 	scaleAdded.Register(createAddScaleNotifier)
@@ -71,6 +77,9 @@ func init() {
 	createDelProductNotifier := delProductNotifier{}
 	productDeleted.Register(createDelProductNotifier)
 
+	createDelAllProductNotifier := delAllProductNotifier{}
+	productDeletedAll.Register(createDelAllProductNotifier)
+
 	createModifyProductNotifier := modifyProductNotifier{}
 	productModified.Register(createModifyProductNotifier)
 
@@ -89,16 +98,38 @@ func init() {
 	createDetailListNotifier := detailListedNotifier{}
 	detailListed.Register(createDetailListNotifier)
 
+	createScaleSrvListNotifier := scaleSrvListNotifier{}
+	scaleSrvList.Register(createScaleSrvListNotifier)
+
+	createsetScaleSrvValNotifier := setScaleSrvValNotifier{}
+	setScaleSrvVal.Register(createsetScaleSrvValNotifier)
+
 	createWifiPwdListNotifier := wifiPwdListedNotifier{}
 	wifiListed.Register(createWifiPwdListNotifier)
 
 	createAddWifiPwdNotifier := addWifiPwdNotifier{}
 	wifiAdded.Register(createAddWifiPwdNotifier)
+
+	createsendToSrv1Notifier := sendToSrv1Notifier{}
+	sendToSrv1.Register(createsendToSrv1Notifier)
+
+	createsendToUiNotifier := sendToUiNotifier{}
+	sendToUi.Register(createsendToUiNotifier)
+
+	createdoServiceActionNotifier := doServiceActionNotifier{}
+	doServiceAction.Register(createdoServiceActionNotifier)
+
 }
 
 type portListedNotifier struct{}
 
 type scaleListedNotifier struct{}
+
+type scaleListedNotifierSrv struct{}
+
+type sendToSrv1Notifier struct{}
+
+type sendToUiNotifier struct{}
 
 type addScaleNotifier struct{}
 
@@ -113,6 +144,8 @@ type productListedNotifier struct{}
 type addProductNotifier struct{}
 
 type delProductNotifier struct{}
+
+type delAllProductNotifier struct{}
 
 type modifyProductNotifier struct{}
 
@@ -129,6 +162,12 @@ type wifiPwdListedNotifier struct{}
 type addWifiPwdNotifier struct{}
 
 type detailListedNotifier struct{}
+
+type scaleSrvListNotifier struct{}
+
+type setScaleSrvValNotifier struct{}
+
+type doServiceActionNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event
@@ -159,6 +198,43 @@ func (p scaleListedNotifier) Handle(scaleMgr *ScaleMgr) {
 	}
 	// send ports list back to requestee
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALES_LIST, MsgBody: scalesStr}
+}
+
+func (p scaleListedNotifierSrv) Handle(scaleMgr *ScaleMgr, scaleId int64) {
+	// Do something for this event
+	log.Log.Debug("Handle scaleListedNotifier called")
+	// Do something with this event
+	// scaleMedias, _ := NewScaleConnProvider().GetScaleConnsList()
+	scaleMedias := scaleMgr.medias
+	var scalesStr string
+	var err error
+	if scalesStr, err = json.MarshalToString(scaleMedias); err != nil {
+		log.Log.Errorf("%v\n", err)
+		// TODO: error handling
+	}
+	// send ports list back to requestee
+	mSrvMgr.recvScaleMgrMsgSrv <- &SrvMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALES_LIST, MsgBody: scalesStr, ScaleId: scaleId}
+}
+
+func (p sendToSrv1Notifier) Handle(mSrvMgr *SrvMgr, jsonStr string) {
+	// Do something for this event
+	log.Log.Debug("Handle sendToSrv1Notifier called")
+	// Do something with this event
+	mSrvMgr.recvScaleMgrMsgSrv <- &SrvMgrRespMsg{MsgType: ScaleMgrRespMsgType(REQ_SEND_TO_SRV1), MsgBody: jsonStr, ScaleId: 999999999}
+}
+
+func (p sendToUiNotifier) Handle(mSrvMgr *SrvMgr, jsonStr string) {
+	// Do something for this event
+	log.Log.Debug("Handle sendToUiNotifier called")
+	// Do something with this event
+
+	var msg ScaleMgrRespMsg
+
+	if err := json.UnmarshalFromString(jsonStr, &msg); err != nil {
+		log.Log.Error(err)
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &msg
 }
 
 func (p addScaleNotifier) Handle(payload ReqAddScale) {
@@ -198,6 +274,48 @@ func (p detailListedNotifier) Handle(scaleMgr *ScaleMgr) {
 	}
 	// send ports list back to requestee
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DETAIL_LIST, MsgBody: detailsStr}
+}
+
+func (p scaleSrvListNotifier) Handle(scaleMgr *ScaleMgr, srvIdStr string) {
+	// Do something for this event
+	log.Log.Debug("Handle scaleSrvListNotifier called")
+	// Do something with this event
+	srvScaleList, _ := scaleMgr.connPb.connPb.GetSrvScaleRelList()
+	srvId, _ := strconv.Atoi(srvIdStr)
+	var relsStr string
+	var sendRelList []*SrvScaleRel
+
+	if srvId < 999999900 {
+		var err error
+		if relsStr, err = json.MarshalToString(sendRelList); err != nil {
+			log.Log.Errorf("%v\n", err)
+		}
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_SCALE_SRV_LIST, MsgBody: relsStr}
+		return
+	}
+
+	for _, rel := range srvScaleList {
+		if rel.SrvId == int64(srvId) {
+			sendRelList = append(sendRelList, rel)
+		}
+	}
+	var err error
+	if relsStr, err = json.MarshalToString(srvScaleList); err != nil {
+		log.Log.Errorf("%v\n", err)
+	}
+	// send ports list back to requestee
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_SCALE_SRV_LIST, MsgBody: relsStr}
+}
+
+func (p setScaleSrvValNotifier) Handle(scaleMgr *ScaleMgr, rel SrvScaleRel) {
+	// Do something for this event
+	log.Log.Debug("Handle setScaleSrvValNotifier called")
+	// Do something with this event
+	if err := mSrvMgr.scaleMgr.UpdateSrvScaleVal(rel); err != nil {
+		log.Log.Errorf("%v\n", err)
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SET_SCALE_SRV_VAL, MsgBody: "ok"}
 }
 
 func (p delScaleNotifier) Handle(payload ReqDelScale) { //修改秤的属性
@@ -250,6 +368,34 @@ func (p modifyScaleNameNotifier) Handle(payload ReqModifyScaleName) { //修改�
 func (s *ScaleMgr) Run() {
 	// list serial from time to time to check if the port that connecting to scale is varied
 	s.medias, _ = s.connPb.GetScaleConnsList() // scaleId "0000" is for get all scale connections
+	//如果没有秤则新增一个串口
+	if len(s.medias) == 0 {
+		var comInfo ComInfo = ComInfo{DevPath: "COM3", Baud: 115200, DataBits: 8, Parity: 0, StopBits: 0}
+		var conf MediaConf = MediaConf{}
+		conf.Type = MEDIA_COM
+		conf.MediaInfoJson, _ = json.MarshalToString(comInfo)
+		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: comm.SCALE_TMAX, ScaleId: 1, ScaleModel: "T-Max", ScaleSn: "123456", TMedia: MEDIA_COM, MediaConf: conf, IsDefault: true, ScaleName: "ComScale"}
+		s.connPb.connPb.InsertScaleConn(*scaleConn)
+	}
+
+	s.medias, _ = s.connPb.GetScaleConnsList()
+	//将所有的秤都与服务建立对应关系
+	s.srvMgr.srvScaleRel, _ = s.connPb.GetScaleSrvRelList()
+
+	if len(s.srvMgr.srvScaleRel) == 0 {
+		for _, conn := range s.medias {
+			var srvScaleRel SrvScaleRel
+			for _, srvId := range SrvIdList {
+				srvScaleRel.ScaleId = conn.ScaleId
+				srvScaleRel.SrvId = srvId
+				srvScaleRel.IsUsed = true
+				s.srvMgr.srvScaleRel = append(s.srvMgr.srvScaleRel, &srvScaleRel)
+				s.connPb.InsertSrvScaleRel(srvScaleRel)
+			}
+		}
+
+	}
+
 	for {
 
 		// construct scale instance if it doesn't exist
@@ -364,9 +510,46 @@ func (s *ScaleMgr) DelMediaList(scaleId int64, conn ScaleConnMedia) error {
 
 }
 
-func sContainsConnMedia(conn *ScaleConnMedia) bool {
-	return conn.scale != nil
+func (s *ScaleMgr) DelSrvScaleList(scaleId int64) error {
+	result := []*SrvScaleRel{}
+	for _, rel := range s.srvMgr.srvScaleRel {
+		if rel.ScaleId != scaleId {
+			result = append(result, rel)
+		}
+	}
+	s.srvMgr.srvScaleRel = result
+	return nil
+
 }
+
+func (s *ScaleMgr) AddSrvScaleList(scaleId int64) error {
+	for _, rel := range SrvIdList {
+		relScale := SrvScaleRel{ScaleId: scaleId, SrvId: rel, IsUsed: true}
+		s.srvMgr.srvScaleRel = append(s.srvMgr.srvScaleRel, &relScale)
+		s.connPb.InsertSrvScaleRel(relScale)
+	}
+	return nil
+
+}
+
+func (s *ScaleMgr) UpdateSrvScaleVal(relInfo SrvScaleRel) error {
+
+	result := []*SrvScaleRel{}
+	for _, rel := range s.srvMgr.srvScaleRel {
+		if rel.ScaleId != relInfo.ScaleId && rel.SrvId != relInfo.SrvId {
+			result = append(result, rel)
+		}
+	}
+	result = append(result, &relInfo)
+	s.srvMgr.srvScaleRel = result
+	s.connPb.UpdateSrvScaleRel(relInfo)
+	return nil
+
+}
+
+// func sContainsConnMedia(conn *ScaleConnMedia) bool {
+// 	return conn.scale != nil
+// }
 
 func handlePortState(inPorts *[]string, conns *[]*ScaleConnMedia) (portsNotInUse []string) {
 	var comInfo ComInfo
@@ -533,6 +716,9 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 	nextScaleId++
 	s.connPb.connPb.InsertScaleConn(*conn)
 	s.AddMediaList(scale.Id, *conn)
+	//增加服务的对应关系
+
+	s.AddSrvScaleList(scale.Id)
 
 	return nil
 
@@ -570,7 +756,9 @@ func (s *ScaleMgr) DelScale(id int64) error {
 		s.scales[scale.Id] = nil
 	}
 	s.DelMediaList(scale.Id, *conn)
-
+	//删除连接关系
+	s.connPb.DeleteSrvScaleRelByScaleId(scale.Id)
+	s.DelSrvScaleList(scale.Id)
 	return nil
 
 }
@@ -583,27 +771,32 @@ func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 		return fmt.Errorf("can't find scale with id: %v", id)
 	}
 
-	if scale.Model != req.ScaleModel {
-		scale.Model = req.ScaleModel
-		if strings.Contains(strings.ToLower(scale.Model), "tmax") {
-			scale.ScaleCat = comm.SCALE_TMAX
-		} else {
-			scale.ScaleCat = comm.SCALE_T2200
-		}
-		composer := cmdComposerFuncMap[scale.ScaleCat]
-		scale.composer = &composer
-	}
+	// if scale.Model != req.ScaleModel {
+	// 	scale.Model = req.ScaleModel
+	// 	if strings.Contains(strings.ToLower(scale.Model), "tmax") {
+	// 		scale.ScaleCat = comm.SCALE_TMAX
+	// 	} else {
+	// 		scale.ScaleCat = comm.SCALE_T2200
+	// 	}
+
+	// }
+
+	composer := cmdComposerFuncMap[scale.ScaleCat]
+	scale.composer = &composer
 	conn := scale.Conn
 	if conn == nil {
 		return fmt.Errorf("can't find connection associated with the scale Id")
 	}
+	// if conn.MediaConf != req.MediaConf {
 	conn.MediaConf = req.MediaConf
-	// TODO: change scale's mediaConf
+
 	s.scales[id].ModifyMedia(req.MediaConf)
 	s.srvMgr.scaleMgr.ModifyMediaList(id, conn.MediaConf)
-	conn.ScaleCat = scale.ScaleCat
-	conn.ScaleModel = scale.Model
+	// conn.ScaleCat = scale.ScaleCat
+	// conn.ScaleModel = scale.Model
 	s.connPb.connPb.UpdateScaleConn(*conn)
+	// }
+
 	return nil
 }
 
@@ -625,7 +818,7 @@ func (s *ScaleMgr) UpdateScaleName(req ReqModifyScaleName) error {
 	conn.ScaleName = req.ScaleName
 
 	s.srvMgr.scaleMgr.ModifyScaleName(id, req.ScaleName)
-	s.connPb.connPb.UpdateScaleInfo(*conn)
+	s.connPb.connPb.UpdateScaleName(*conn)
 	return nil
 }
 
@@ -648,7 +841,7 @@ func (s *ScaleMgr) UpdateScaleSn(req ReqModifyScaleSn) error {
 	conn.ScaleModel = scale.Model
 	conn.ScaleSn = scale.Sn
 	s.srvMgr.scaleMgr.ModifyScaleInfo(id, req.ScaleModel, req.Sn)
-	s.connPb.connPb.UpdateScaleInfo(*conn)
+	s.connPb.connPb.UpdateScaleSn(*conn)
 	return nil
 }
 

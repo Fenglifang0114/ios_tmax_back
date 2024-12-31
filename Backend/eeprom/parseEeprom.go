@@ -2,9 +2,6 @@ package eeprom
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"tmaxsrv/comm"
@@ -34,11 +31,12 @@ const (
 
 func getExcelPath() string {
 
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	currentPath := path[:index]
-	currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	// file, _ := exec.LookPath(os.Args[0])
+	// path, _ := filepath.Abs(file)
+	// index := strings.LastIndex(path, string(os.PathSeparator))
+	// currentPath := path[:index]
+	// currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	currentPath := comm.GetSrvDataPath()                 //20241107
 	currentPath = currentPath + "\\" + TMAX_EEPROM_EXCEL // 获取EEprom值
 	fmt.Println(currentPath)
 	return currentPath

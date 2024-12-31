@@ -3,12 +3,14 @@ package svc
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"tmaxsrv/cmd"
 	mcmd "tmaxsrv/cmd"
+	"tmaxsrv/comm"
 	m "tmaxsrv/comm"
 	l "tmaxsrv/log"
 	"tmaxsrv/util"
@@ -39,7 +41,10 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 
 	output := make(chan string)
 	done := make(chan error)
-	go util.RunCommand(output, done, "./BootCommander.exe", "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
+	bootCommanderPath := comm.GetExePath()
+	print(bootCommanderPath)
+	bootCommanderPath = filepath.Join(bootCommanderPath, "BootCommander.exe")
+	go util.RunCommand(output, done, bootCommanderPath, "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
 	// var err error
 	isFinish := false
 	isStartUpdate := false

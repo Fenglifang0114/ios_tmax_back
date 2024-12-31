@@ -80,7 +80,6 @@ func (d *DbPluRec) GetPluRecs(md5Str string) ([]PluRec, error) {
 		panic("failed to migrate database of scale connection")
 	}
 
-	
 	// 读取内容
 	var recs []PluRec
 	db.Where("md5=?", md5Str).Order("created_at desc").First(&recs)

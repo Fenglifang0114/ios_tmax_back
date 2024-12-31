@@ -3,18 +3,15 @@ package main
 import (
 	"fmt"
 	"net"
-	_ "net/http/pprof"
 	"os"
-	"os/exec"
-	"os/signal"
 	"runtime/pprof"
 	"strings"
-	"syscall"
 	"time"
-	"tmaxsrv/build"
 	"tmaxsrv/log"
 	"tmaxsrv/svc"
 	"tmaxsrv/util"
+
+	"github.com/kardianos/service"
 )
 
 var Version = "1.0.0"
@@ -38,10 +35,15 @@ func killZombieApp() error {
 	return nil
 }
 
-func main() {
-	fmt.Println("Version:\t", Version)
-	fmt.Println("build.Time:\t", build.Time)
-	fmt.Println("build.User:\t", build.User)
+type program struct{}
+
+func (p *program) Start(s service.Service) error {
+	fmt.Println("服务运行...")
+	go p.run()
+	return nil
+}
+func (p *program) run() {
+	// 具体的服务实现
 
 	killZombieApp()
 
@@ -56,11 +58,6 @@ func main() {
 		}
 	}
 	defer listener.Close()
-
-	// Create a channel to receive the completion status of the application
-	doneChan := make(chan error, 1)
-	app := exec.Command("./ui/_ui.exe")
-	go app.Run()
 
 	runMode := os.Getenv("RUN_MODE")
 	if runMode == "DEV" {
@@ -84,44 +81,67 @@ func main() {
 	ws := svc.NewWsServer()
 	go ws.Start(&h)
 
-	// Create a channel to receive signals
-	sigChan := make(chan os.Signal, 10)
+	for {
+		fmt.Println("Service is running")
+		time.Sleep(5 * time.Second)
+	}
 
-	// Notify the signal channel for specific OS signals
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+}
+func (p *program) Stop(s service.Service) error {
+	return nil
+}
 
-	// Wait for the process to complete and send the completion status to the doneChan channel
-	go func() {
-		time.Sleep(10 * time.Second)
-		doneChan <- app.Wait()
-	}()
-
-	// Wait for either completion or a signal
-	select {
-	case <-sigChan:
-		// Signal received, handle it as needed
-		log.Log.Errorln("Received signal. Terminating...")
-		err := app.Process.Kill()
-		if err != nil {
-			fmt.Println("Failed to kill the application:", err)
+func main() {
+	srvConfig := &service.Config{
+		Name:        "TmaxService",
+		DisplayName: "TmaxService",
+		Description: "TmaxService",
+	}
+	prg := &program{}
+	s, err := service.New(prg, srvConfig)
+	if err != nil {
+		fmt.Println(err)
+	}
+	if len(os.Args) > 1 {
+		serviceAction := os.Args[1]
+		switch serviceAction {
+		case "install":
+			err := s.Install()
+			if err != nil {
+				fmt.Println("install fail: ", err.Error())
+			} else {
+				fmt.Println("install ok")
+			}
+			return
+		case "uninstall":
+			err := s.Uninstall()
+			if err != nil {
+				fmt.Println("uninstall fail: ", err.Error())
+			} else {
+				fmt.Println("uninstall ok")
+			}
+			return
+		case "start":
+			err := s.Start()
+			if err != nil {
+				fmt.Println("running fail: ", err.Error())
+			} else {
+				fmt.Println("running ok")
+			}
+			return
+		case "stop":
+			err := s.Stop()
+			if err != nil {
+				fmt.Println("stop fail: ", err.Error())
+			} else {
+				fmt.Println("stop ok")
+			}
 			return
 		}
-	case err := <-doneChan:
-		// Application completed, handle the completion status
-		if err != nil {
-			log.Log.Errorf("Application completed with an error: %v", err)
-		} else {
-			log.Log.Infoln("Application completed successfully.")
-		}
-	}
-	log.Log.Info("Process completed.")
-
-	if runMode == "DEV" {
-		memprof, _ := os.Create("mem.pprof")
-		pprof.WriteHeapProfile(memprof)
-		memprof.Close()
 	}
 
-	// Exit the program gracefully
-	os.Exit(0)
+	err = s.Run()
+	if err != nil {
+		fmt.Println(err)
+	}
 }

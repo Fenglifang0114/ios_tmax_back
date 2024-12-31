@@ -4,9 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -34,11 +31,12 @@ const (
 
 func ParseEplLines(buff string, dataBuffer *bytes.Buffer, lastvarPos int) *bytes.Buffer {
 	// 获取VarTable.json和barcode.xlsx文件路径
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	currentPath := path[:index]
-	currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	// file, _ := exec.LookPath(os.Args[0])
+	// path, _ := filepath.Abs(file)
+	// index := strings.LastIndex(path, string(os.PathSeparator))
+	// currentPath := path[:index]
+	// currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	currentPath := comm.GetSrvDataPath()                         //20241107
 	VarTable = ReadTableFromFile(currentPath + "/varTable.json") // 获取变量ID表
 
 	// 处理字符串并解析

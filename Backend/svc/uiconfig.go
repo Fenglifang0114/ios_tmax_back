@@ -2,9 +2,6 @@ package svc
 
 import (
 	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 
 	"tmaxsrv/comm"
 	"tmaxsrv/log"
@@ -38,11 +35,13 @@ type Config struct {
 }
 
 func NewUiConfig() *UiConfig {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	currentPath := path[:index]
-	currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	// file, _ := exec.LookPath(os.Args[0])
+	// path, _ := filepath.Abs(file)
+	// index := strings.LastIndex(path, string(os.PathSeparator))
+	// currentPath := path[:index]
+	// currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	currentPath := comm.GetSrvDataPath() //20241107
+
 	cnf := viper.New()
 	cnf.AddConfigPath(currentPath + "/")
 	cnf.SetConfigName(CFG_FILE_NAME)
@@ -71,11 +70,12 @@ func (c *UiConfig) GetConfig() (*Config, error) {
 }
 
 func (c *UiConfig) UpdateConfig(config *Config) error {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	currentPath := path[:index]
-	currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	// file, _ := exec.LookPath(os.Args[0])
+	// path, _ := filepath.Abs(file)
+	// index := strings.LastIndex(path, string(os.PathSeparator))
+	// currentPath := path[:index]
+	// currentPath = filepath.Join(currentPath, comm.SRV_DATA_PATH)
+	currentPath := comm.GetSrvDataPath() //20241107
 	cnf := viper.New()
 	cnf.AddConfigPath(currentPath + "/")
 	cnf.SetConfigName("config")

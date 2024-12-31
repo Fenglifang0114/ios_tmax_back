@@ -1,5 +1,13 @@
 package comm
 
+import (
+	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
 type ScaleCat int
 
 const (
@@ -96,12 +104,19 @@ type CmdData struct {
 	Data interface{}
 }
 
+var (
+	LICENSE_FILE   = "tmaxlic.txt"
+	SRV_DATA_PATH  = "srvdata"
+	COMM_DATA_BASE = "database"
+	COMM_SERVICE   = "service"
+)
+
+var LogFile *os.File
+
 const (
-	LICENSE_FILE  = "tmaxlic.txt"
-	SRV_DATA_PATH = "srvdata"
-	PLU_BACK_PATH = "plufiles"
 	AT_VERSION    = "ESP32C3"
 	IS_ESP32      = true
+	PLU_BACK_PATH = "plufiles"
 )
 
 type CmdComposer struct {
@@ -202,6 +217,76 @@ const (
 	REV_DETAIl_MID_RESP           RespMsgType = "resp_rev_detail_mid"
 	REV_DETAIl_TAIL_RESP          RespMsgType = "resp_rev_detail_tail"
 	OPEN_BILL_SEND_RESP           RespMsgType = "resp_open_bill_send"
+	CLOSE_SERIAL_PORT_RESP        RespMsgType = "resp_close_serial_port"
+	OPEN_SERIAL_PORT_RESP         RespMsgType = "resp_open_serial_port"
+	ANSWER_ALIVE_RESP             RespMsgType = "resp_answer_alive"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )
+
+func GetServicePath() string {
+	myPath := GetSrvDataPath()
+	return filepath.Join(myPath, COMM_SERVICE)
+}
+
+func GetSrvDataPath() string {
+	myPath := GetExePath()
+	return filepath.Join(myPath, SRV_DATA_PATH)
+}
+
+func GetExePath() string {
+	myPath, _ := getCurrentPath()
+	return myPath
+}
+
+func getParentPath() (string, error) {
+	file, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		return "", err
+	}
+	path, err := filepath.Abs(file)
+	if err != nil {
+		return "", err
+	}
+	i := strings.LastIndex(path, "/")
+	if i < 0 {
+		i = strings.LastIndex(path, "\\")
+	}
+	if i < 0 {
+		return "", errors.New(`error: Can't find "/" or "\".`)
+	}
+	parentPath := path[:i]
+	j := strings.LastIndex(parentPath, "/")
+	if j < 0 {
+		j = strings.LastIndex(parentPath, "\\")
+	}
+	if j < 0 {
+		return "", errors.New(`error: Can't find "/" or "\".`)
+	}
+	return parentPath[:j+1], nil
+}
+
+func GetCommDataBasePath() string {
+
+	myParentPath, _ := getParentPath()
+	return filepath.Join(myParentPath, COMM_DATA_BASE)
+}
+
+func getCurrentPath() (string, error) {
+	file, err := exec.LookPath(os.Args[0])
+	if err != nil {
+		return "", err
+	}
+	path, err := filepath.Abs(file)
+	if err != nil {
+		return "", err
+	}
+	i := strings.LastIndex(path, "/")
+	if i < 0 {
+		i = strings.LastIndex(path, "\\")
+	}
+	if i < 0 {
+		return "", errors.New(`error: Can't find "/" or "\".`)
+	}
+	return string(path[0 : i+1]), nil
+}

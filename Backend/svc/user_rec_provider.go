@@ -1,14 +1,17 @@
 package svc
 
-import "tmaxsrv/comm"
+import (
+	"path/filepath"
+	"tmaxsrv/comm"
+)
 
 type UserRecProvider struct {
 	myId  string
 	recPb *DbUserRec
 }
 
-const (
-	USER_REC_DB_FILE = comm.SRV_DATA_PATH + "/" + "userrec.db"
+var (
+	USER_REC_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "userrec.db")
 )
 
 func NewUserRecProvider() *UserRecProvider {

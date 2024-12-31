@@ -1,14 +1,17 @@
 package svc
 
-import "tmaxsrv/comm"
+import (
+	"path/filepath"
+	"tmaxsrv/comm"
+)
 
 type WifiRecProvider struct {
 	myId  string
 	recPb *DbWifiRec
 }
 
-const (
-	WIFI_REC_DB_FILE = comm.SRV_DATA_PATH + "/" + "wifirec.db"
+var (
+	WIFI_REC_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "wifirec.db")
 )
 
 func NewWifiRecProvider() *WifiRecProvider {

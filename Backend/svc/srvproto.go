@@ -28,9 +28,10 @@ const (
 	REQ_MODIFY_SCALE      ReqType = "modify_scale"      // with ReqModifyScale parameter
 	REQ_MODIFY_SCALE_NAME ReqType = "modify_scale_name" // with ReqModifyScale parameter
 
-	REQ_ADD_PRODUCT    ReqType = "add_product"    // with ReqAddScale parameter
-	REQ_DEL_PRODUCT    ReqType = "del_product"    // with ReqDelScale parameter
-	REQ_MODIFY_PRODUCT ReqType = "modify_product" // with ReqModifyScale parameter
+	REQ_ADD_PRODUCT     ReqType = "add_product"     // with ReqAddScale parameter
+	REQ_DEL_PRODUCT     ReqType = "del_product"     // with ReqDelScale parameter
+	REQ_DEL_ALL_PRODUCT ReqType = "del_all_product" // with ReqDelScale parameter
+	REQ_MODIFY_PRODUCT  ReqType = "modify_product"  // with ReqModifyScale parameter
 
 	REQ_ADD_USER    ReqType = "add_user"    // with ReqAddScale parameter
 	REQ_DEL_USER    ReqType = "del_user"    // with ReqDelScale parameter
@@ -46,7 +47,12 @@ const (
 	REQ_GET_DETAIL_LIST ReqType = "get_detail_list" // without parameter 20240903
 
 	REQ_WIFI_PWD ReqType = "add_wifi_pwd" // with ReqAddWifiPwd parameter
-
+	//下面添加给直接转给小服务的
+	REQ_SEND_TO_SRV1          ReqType = "send_to_srv1" // ui给服务1发送的数据
+	REQ_SEND_TO_UI            ReqType = "send_to_ui"
+	REQ_GET_SCALE_SRV_LIST    ReqType = "get_scale_srv_list"
+	REQ_SET_SCALE_SRV_VAL     ReqType = "set_scale_srv_val"
+	REQ_SET_DO_SERVICE_ACTION ReqType = "do_service_action"
 )
 
 type ReqAddScale struct {
@@ -78,12 +84,29 @@ type ReqModifyScaleSn struct {
 	ScaleModel string
 }
 
-type ReqAddProduct struct {
-	Id          string
-	Product     string
-	WithPretare bool
+// type ReqAddProduct struct {
+// 	Id          string
+// 	Product     string
+// 	WithPretare bool
+// 	Pretare     string
+// 	Remarks     string
+// }
+
+type ReqAddProductList []AddProduct
+
+type AddProduct struct {
+	Plu         string
+	ProductCode string
+	ItemCode    string
+	Category    string
+	ProductName string
+	GeneralUnit string
+	TaxType     string
+	Price       string
+	UnitWeight  string
 	Pretare     string
-	Remarks     string
+	LimitHigh   string
+	LimitLow    string
 }
 
 type ReqDelProduct struct {
@@ -112,6 +135,11 @@ type ReqAddWifi struct {
 	Pwd  string
 }
 
+type ReqDoServiceAction struct {
+	ServiceId int64
+	Action    string
+}
+
 type ReqDelUser struct {
 	RecId int64
 }
@@ -129,6 +157,13 @@ type ReqModifyUser struct {
 type ScaleMgrRespMsg struct {
 	MsgType ScaleMgrRespMsgType
 	MsgBody interface{} // MsgBody [T PortsListMsg|ScalesListMsg|MgrRespMsg|string] []T
+}
+
+// 小服务的数据格式
+type SrvMgrRespMsg struct {
+	MsgType ScaleMgrRespMsgType
+	MsgBody interface{} // MsgBody [T PortsListMsg|ScalesListMsg|MgrRespMsg|string] []T
+	ScaleId int64
 }
 
 type ScaleMgrRespMsgType string
@@ -157,6 +192,12 @@ const (
 	SCALE_MGR_RESP_DETAIL_LIST       ScaleMgrRespMsgType = "resp_detail_list"       // with response of ScalesListMsg
 	SCALE_MGR_RESP_WIFI_PWD_LIST     ScaleMgrRespMsgType = "resp_wifi_pwd_list"     // with response of ScalesListMsg
 	SCALE_MGR_RESP_WIFI_PWD_ADD      ScaleMgrRespMsgType = "resp_wifi_pwd_add"      // with response
+	SCALE_MGR_RESP_SCALE_ONLINE      ScaleMgrRespMsgType = "resp_scale_online"      //回复秤的状态
+	//下面是添加给小服务的
+	SCALE_MGR_RESP_SNED_TO_SRV1       ScaleMgrRespMsgType = "resp_send_to_srv1"       // with response
+	SCALE_MGR_RESP_GET_SCALE_SRV_LIST ScaleMgrRespMsgType = "resp_get_scale_srv_list" // with response
+	SCALE_MGR_RESP_SET_SCALE_SRV_VAL  ScaleMgrRespMsgType = "resp_set_scale_srv_val"  // with response
+	SCALE_MGR_RESP_DO_SERVICE_ACTION  ScaleMgrRespMsgType = "resp_do_service_action"  // with response
 
 )
 
@@ -187,6 +228,16 @@ type ScaleConnMedia struct { // connection information will be stored in databas
 	scale      *Scale    `gorm:"-"` // should not be stored in database
 	IsDefault  bool      //是否默认的连接方式   新增的秤连接方式都视为默认的，sn和model name 一样的连上后，将isdefault改为仅一个默认
 	ScaleName  string
+	// 为小服务新增字段
+	SendService bool // 是否发送数据给小服务
+
+}
+
+// 服务与秤的关系，哪些服务管理哪些秤
+type SrvScaleRel struct {
+	ScaleId int64
+	SrvId   int64
+	IsUsed  bool
 }
 
 type MediaConf struct {
@@ -289,6 +340,8 @@ const (
 	SREQ_SET_LIMIT_TO_SCALE       SReqType = "set_limit_to_scale" //20240829@FLF
 	SREQ_OPEN_BILL_SEND           SReqType = "open_bill_send"     //20240903@FLF
 	SREQ_DIS_PASSTH_MODE          SReqType = "dis_passth_mode"    //20240914@FLF
+	SREQ_CLOSE_SERIAL_PORT        SReqType = "close_serial_port"  //20241209@FLF  关闭串口
+	SREQ_OPEN_SERIAL_PORT         SReqType = "open_serial_port"   //20241209@FLF  打开串口
 
 )
 
@@ -339,6 +392,8 @@ type ReqPluData struct {
 
 type ReqFirmwareInfo struct {
 	ModelName string `json:"modelName"`
+	BinKey    string `json:"binKey"`
+	SrecKey   string `json:"srecKey"`
 	Version   string `json:"version"`
 }
 

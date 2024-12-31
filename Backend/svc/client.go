@@ -99,7 +99,7 @@ func (c *Client) readPump() {
 			"scaleId": big.NewInt(c.scaleId).Bytes(),
 		}
 		userMessage, _ := json.Marshal(data)
-		if c.scaleId == 0 { // for common wssocket to srvMgr
+		if c.scaleId == 0 || c.scaleId > 999999900 { // for common wssocket to srvMgr
 			c.srvMgr.recvWsClientMsg <- userMessage
 		} else { // for scale message
 			if len(c.recvCh) < CLIENT_RECV_CH_SIZE {

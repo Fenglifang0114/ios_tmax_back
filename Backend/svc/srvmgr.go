@@ -1,11 +1,17 @@
 package svc
 
 import (
+	"fmt"
+	"log"
 	"math/big"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/mgr"
 
 	"tmaxsrv/comm" // for the message types.  It is not a direct part of the code.  It is a "hel
 	"tmaxsrv/lic"
@@ -31,13 +37,16 @@ type SrvMgr struct {
 	// Inbound messages from the scales.
 	recvScaleMsg chan *ScaleRespMsg
 	// Inbound messages from the scale manager
-	recvScaleMgrMsg chan *ScaleMgrRespMsg
+	recvScaleMgrMsg    chan *ScaleMgrRespMsg
+	recvScaleMgrMsgSrv chan *SrvMgrRespMsg
 	// Inbound messages from the scale's notification
 	recvScaleNotifyMsg chan ScaleRespMsg
 	// ScaleId to Scale map, used to access the scale
 	scales map[int64]*Scale
 	// scale to client map, used to send message from scale to the associated client
 	clientOfScales map[*Scale]*Client
+	//连接的服务器
+	clientOfService map[int64]*Client
 	// quitch channel to close this application
 	quitch chan bool
 	// productPb
@@ -46,7 +55,17 @@ type SrvMgr struct {
 	wifiPd      *WifiRecProvider
 	uiConfig    *UiConfig
 	modeSetting *ModeSettingProvider
+	//服务与秤的关系
+	srvScaleRel []*SrvScaleRel
 }
+
+var SrvIdList []int64 = []int64{999999999}
+
+const (
+	SRV_STATUS_UNINSTALLED = "status1" //服务未安装
+	SRV_STATUS_INSTALLED   = "status2" //服务已安装  服务未启动
+	SRV_STATUS_STARTED     = "status3" //服务已安装 服务已启动
+)
 
 type LicenseInfo struct {
 	Id         string
@@ -73,7 +92,9 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	var licKeyList []string
 
-	licKey, _ = lic.ReadLicFile(comm.LICENSE_FILE)
+	licFilePath := filepath.Join(comm.GetExePath(), comm.LICENSE_FILE)
+
+	licKey, _ = lic.ReadLicFile(licFilePath)
 
 	licKeyList = strings.Split(licKey, "\r\n")
 	for _, item := range licKeyList {
@@ -97,6 +118,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		scaleMgr:           scaleMgr,
 		scales:             map[int64]*Scale{},
 		clientOfScales:     map[*Scale]*Client{},
+		clientOfService:    map[int64]*Client{},
 		recvWsClientMsg:    make(chan []byte),
 		register:           make(chan *Client),
 		unregister:         make(chan *Client),
@@ -104,6 +126,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		removeScale:        make(chan *Scale, 2),
 		recvScaleMsg:       make(chan *ScaleRespMsg, 2),
 		recvScaleMgrMsg:    make(chan *ScaleMgrRespMsg, 2),
+		recvScaleMgrMsgSrv: make(chan *SrvMgrRespMsg, 2),
 		recvScaleNotifyMsg: make(chan ScaleRespMsg, 2),
 		clients:            make(map[*Client]bool),
 		quitch:             quitch,
@@ -112,6 +135,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		wifiPd:             wifiPb,
 		uiConfig:           NewUiConfig(),
 		modeSetting:        modeSettingPb,
+		srvScaleRel:        make([]*SrvScaleRel, 0),
 	}
 }
 
@@ -120,7 +144,7 @@ func (h *SrvMgr) Run() {
 		select {
 		case client := <-h.register:
 			scaleId := client.scaleId
-			if scaleId > 0 { // scaleId 0 is for management
+			if scaleId > 0 && scaleId < 999999900 { // scaleId 0 is for management
 				scale := h.scales[scaleId]
 				if scale == nil {
 					l.Log.Errorf("The scale: %v is not existed", scaleId)
@@ -138,10 +162,18 @@ func (h *SrvMgr) Run() {
 			if !isRegisted {
 				h.clients[client] = true
 				// if scaleId != 0 { // 0 reserved for common information channel, 9999 reserved for legacy MCU scale, only support one scale with this ID
-				h.clientOfScales[h.scales[scaleId]] = client
-				if scaleId != 0 { // id 0 is reserved for common information channel
+				if scaleId < 999999900 {
+					h.clientOfScales[h.scales[scaleId]] = client
+				}
+				if scaleId != 0 && scaleId < 999999900 { // id 0 is reserved for common information channel
 					h.scales[scaleId].SetClient(client)
 				}
+
+				if scaleId > 999999900 { // id 0 is reserved for common information channel
+					h.clientOfService[scaleId] = client
+				}
+
+				// h.clientOfScales[h.scales[scaleId]] = client
 				//}
 			} else {
 				// close(client.send) // either other client is already registered the scale or the scale is not yet registered
@@ -155,10 +187,16 @@ func (h *SrvMgr) Run() {
 					}
 
 				}
+
 				client.Close()
 
 				delete(h.clients, client)
-				delete(h.clientOfScales, h.scales[client.scaleId])
+				if client.scaleId > 999999900 {
+					delete(h.clientOfService, client.scaleId)
+				} else {
+					delete(h.clientOfScales, h.scales[client.scaleId])
+				}
+
 				// close(client.send)
 			}
 		case scale := <-h.addScale: // from scale manager
@@ -188,6 +226,10 @@ func (h *SrvMgr) Run() {
 				//                   "create a new scale", delete a scale" or "close application"
 				l.Log.Infof("Got request from common channel %v\n", string(data["message"]))
 				parseMsgAndTrigEvt(h.scaleMgr, string(data["message"]))
+			} else if scaleId > 999999900 { // not for scale communication but for information purposes
+				//小服务的接口
+				l.Log.Infof("Got request from common channel %v\n", string(data["message"]))
+				parseMsgAndTrigEvtService(h.scaleMgr, string(data["message"]), scaleId)
 			} else {
 				scale := h.scales[scaleId]
 				if scale == nil { // something wrong about scale id
@@ -216,10 +258,36 @@ func (h *SrvMgr) Run() {
 		case scaleMgrMessage := <-h.recvScaleMgrMsg:
 			// handle the message from the scale
 			client := h.clientOfScales[h.scales[0]]
+			println(h.scales)
 			outData, _ := json.Marshal(scaleMgrMessage)
 			if client != nil {
 				client.sendCh <- outData
+				l.Log.Debugf("ClientSendch---------- %v\n", string(outData))
 			}
+		case recvScaleMgrMsgSrv := <-h.recvScaleMgrMsgSrv: //20241118 如何将数据传出去？9999999999  99999998
+			// handle the message from the scale
+			// 只要是服务，全送
+			outData, _ := json.Marshal(recvScaleMgrMsgSrv)
+			if recvScaleMgrMsgSrv.ScaleId > 999999900 {
+				client := h.clientOfService[recvScaleMgrMsgSrv.ScaleId]
+				if client != nil {
+					client.sendCh <- outData
+				}
+
+			} else {
+
+				for _, srvRel := range h.srvScaleRel {
+					if srvRel.ScaleId == recvScaleMgrMsgSrv.ScaleId && srvRel.IsUsed {
+						client := h.clientOfService[srvRel.SrvId]
+						if client != nil {
+							client.sendCh <- outData
+						}
+
+					}
+				}
+
+			}
+
 		case scaleMessage := <-h.recvScaleNotifyMsg:
 			// handle the message from the scale
 			client := h.clientOfScales[h.scales[scaleMessage.ScaleId]]
@@ -285,7 +353,7 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		productsListed.Trigger(scaleMgr.srvMgr)
 	case REQ_ADD_PRODUCT:
 		jsonStr := req.ReqData
-		var data ReqAddProduct
+		var data ReqAddProductList
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
 			l.Log.Error(err)
 		} else {
@@ -299,9 +367,11 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			ProductDeleted.Trigger(productDeleted, scaleMgr.srvMgr, data)
 		}
+	case REQ_DEL_ALL_PRODUCT:
+		productDeletedAll.Trigger(scaleMgr.srvMgr)
 	case REQ_MODIFY_PRODUCT:
 		jsonStr := req.ReqData
-		var data ReqModifyProduct
+		var data ReqAddProductList
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
 			l.Log.Error(err)
 		} else {
@@ -357,6 +427,7 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 	// 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: ""}
 	// 	}
 	case REQ_GET_LICENSE:
+		getLicenseList()
 		licListStr, _ := json.MarshalToString(gLicenseInfoList)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_LICENSE, MsgBody: licListStr}
 
@@ -372,13 +443,26 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_LICENSE_KEY, MsgBody: moduleName + "," + isValidStr + "," + machineId + "," + licValidDate}
 
 	case REQ_UPDATE_LICENSE:
-		if err := lic.SaveKey(comm.LICENSE_FILE, req.ReqData); err != nil {
+		licPath := filepath.Join(comm.GetExePath(), comm.LICENSE_FILE)
+		if err := lic.SaveKey(licPath, req.ReqData); err != nil {
 			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_LICENSE, MsgBody: "fail"}
 		}
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_LICENSE, MsgBody: "ok"}
 
 	case REQ_GET_DETAIL_LIST: // TODO: should we check the input parameters?
 		DetailListed.Trigger(detailListed, scaleMgr)
+	case REQ_GET_SCALE_SRV_LIST: // TODO: should we check the input parameters?
+		jsonStr := req.ReqData
+		scaleSrvList.Trigger(scaleMgr, jsonStr)
+	case REQ_SET_SCALE_SRV_VAL: // TODO: should we check the input parameters?
+		jsonStr := req.ReqData
+		var data SrvScaleRel
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			setScaleSrvVal.Trigger(scaleMgr, data)
+		}
+
 	case REQ_GET_WIFI_PWD_LIST:
 		wifiListed.Trigger(scaleMgr.srvMgr)
 	case REQ_WIFI_PWD:
@@ -389,6 +473,68 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			wifiAdded.Trigger(scaleMgr.srvMgr, data)
 		}
+	case REQ_SEND_TO_SRV1:
+		jsonStr := req.ReqData
+		sendToSrv1.Trigger(scaleMgr.srvMgr, jsonStr)
+
+	case REQ_SET_DO_SERVICE_ACTION:
+		jsonStr := req.ReqData
+		var data ReqDoServiceAction
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			doServiceAction.Trigger(scaleMgr.srvMgr, data)
+		}
+
+	}
+
+}
+
+func getLicenseList() {
+	var licKey string
+	var newLicList []LicenseInfo
+	var licKeyList []string
+
+	licFilePath := filepath.Join(comm.GetExePath(), comm.LICENSE_FILE)
+
+	licKey, _ = lic.ReadLicFile(licFilePath)
+
+	licKeyList = strings.Split(licKey, "\r\n")
+	for _, item := range licKeyList {
+		if len(item) == 74 || len(item) == 78 {
+			gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
+			if gIsKeyValid {
+				newLicList = append(newLicList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
+			}
+		}
+	}
+
+	if len(newLicList) == 0 {
+		var temp []string
+		licKeyList = temp
+		gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid("d7a0a41239d92ee1724cd1a311ffffff2023-05-2594df26ebd828dbff03ede5f76effffff")
+		newLicList = append(newLicList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
+
+	}
+	gLicenseInfoList = newLicList
+}
+
+func parseMsgAndTrigEvtService(scaleMgr *ScaleMgr, reqJson string, scaleId int64) {
+	var req Request
+	if err := json.UnmarshalFromString(reqJson, &req); err != nil {
+		l.Log.Error(err)
+		return
+	}
+
+	switch req.Req {
+	case REQ_GET_SCALE_LIST:
+		scalesListedSrv.Trigger(scaleMgr, scaleId)
+	case REQ_SEND_TO_UI:
+		jsonStr := req.ReqData
+		println(jsonStr)
+		println("--------------------")
+		sendToUi.Trigger(scaleMgr.srvMgr, jsonStr)
+
 	}
 }
 
@@ -396,26 +542,67 @@ func (p productListedNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
 	l.Log.Debug("Handle productListedNotifier called")
 	// Do something with this event
+
 	products, _ := mgr.productPd.GetRecsList()
-	var productsStr string
-	var err error
-	if productsStr, err = json.MarshalToString(products); err != nil {
-		l.Log.Error(err)
-		// TODO: error handling
+
+	batchSize := 100 //每次发送1000条
+	numBatches := (len(products) + batchSize - 1) / batchSize
+
+	for i := 0; i < numBatches; i++ {
+		startIndex := i * batchSize
+		endIndex := (i + 1) * batchSize
+		if endIndex > len(products) {
+			endIndex = len(products)
+		}
+		batchProducts := products[startIndex:endIndex]
+		var productsStr string
+		var err error
+		if productsStr, err = json.MarshalToString(batchProducts); err != nil {
+			l.Log.Error(err)
+			// TODO: error handling
+		}
+		// 发送每一批次的数据
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCTS_LIST, MsgBody: productsStr}
+		time.Sleep(100 * time.Millisecond)
 	}
-	// send products list back to requestee
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCTS_LIST, MsgBody: productsStr}
 }
 
-func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProduct) {
+func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
 	// Do something for this event
 	l.Log.Debug("Handle addProductNotifier called")
-	rec := ProductRec{Id: payload.Id, Product: payload.Product, WithPretare: payload.WithPretare, Pretare: payload.Pretare, Remarks: payload.Remarks}
-	if err := mgr.productPd.InsertRec(rec); err != nil {
+	// rec := ProductRec{Id: payload.Id, Product: payload.Product, WithPretare: payload.WithPretare, Pretare: payload.Pretare, Remarks: payload.Remarks}
+	// if err := mgr.productPd.InsertRec(rec); err != nil {
+	// 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: err.Error()}
+	// }
+	var recList []ProductRec
+	for _, product := range payload {
+		rec := ProductRec{
+			Plu:         product.Plu,
+			ProductCode: product.ProductCode,
+			ItemCode:    product.ItemCode,
+			Category:    product.Category,
+			ProductName: product.ProductName,
+			GeneralUnit: product.GeneralUnit,
+			TaxType:     product.TaxType,
+			Price:       product.Price,
+			UnitWeight:  product.UnitWeight,
+			Pretare:     product.Pretare,
+			LimitHigh:   product.LimitHigh,
+			LimitLow:    product.LimitLow,
+		}
+		recList = append(recList, rec)
+
+		// if err := mgr.productPd.InsertRec(rec); err != nil {
+		// 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: err.Error()}
+		// 	return
+		// }
+	}
+	if err := mgr.productPd.Insert100Rec(recList); err != nil {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: err.Error()}
+		return
 	}
 	// send result back to requestee
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: ""}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: "OK"}
 }
 
 func (p delProductNotifier) Handle(mgr *SrvMgr, payload ReqDelProduct) {
@@ -428,15 +615,45 @@ func (p delProductNotifier) Handle(mgr *SrvMgr, payload ReqDelProduct) {
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: ""}
 }
 
-func (p modifyProductNotifier) Handle(mgr *SrvMgr, payload ReqModifyProduct) {
-	rec := ProductRec{RecId: uint(payload.RecId), Id: payload.Id, Product: payload.Product, WithPretare: payload.WithPretare, Pretare: payload.Pretare, Remarks: payload.Remarks}
-	if err := NewProductRecProvider().ModifyRec(rec); err != nil {
-		// TODO: error handling
+func (p delAllProductNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	res := "OK"
+	l.Log.Debug("Handle delProductNotifier called")
+	if err := NewProductRecProvider().DeleteAllRec(); err != nil {
+		res = ""
 	}
-	resp := MgrRespMsg{IsAck: true, AckData: ""}
-	jsonStr, _ := json.MarshalToString(resp)
 	// send ports list back to requestee
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_MODIFY, MsgBody: jsonStr}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: res}
+}
+
+func (p modifyProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
+
+	var recList []ProductRec
+	for _, product := range payload {
+		rec := ProductRec{
+			Plu:         product.Plu,
+			ProductCode: product.ProductCode,
+			ItemCode:    product.ItemCode,
+			Category:    product.Category,
+			ProductName: product.ProductName,
+			GeneralUnit: product.GeneralUnit,
+			TaxType:     product.TaxType,
+			Price:       product.Price,
+			UnitWeight:  product.UnitWeight,
+			Pretare:     product.Pretare,
+			LimitHigh:   product.LimitHigh,
+			LimitLow:    product.LimitLow,
+		}
+		recList = append(recList, rec)
+	}
+
+	if err := mgr.productPd.BatchModifyRec(recList); err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_MODIFY, MsgBody: err.Error()}
+		return
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_MODIFY, MsgBody: "OK"}
+
 }
 
 func (p userListedNotifier) Handle(mgr *SrvMgr) {
@@ -512,4 +729,209 @@ func (p addWifiPwdNotifier) Handle(mgr *SrvMgr, payload ReqAddWifi) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_WIFI_PWD_ADD, MsgBody: err.Error()}
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_WIFI_PWD_ADD, MsgBody: "ok"}
+}
+
+func (p doServiceActionNotifier) Handle(mgr *SrvMgr, payload ReqDoServiceAction) {
+	// Do something for this event
+	l.Log.Debug("Handle addWifiNotifier called")
+	msgStr := ""
+	// if mgr.clientOfService[payload.ServiceId] != nil {
+	// 	msgStr = "Service Started"
+	// 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DO_SERVICE_ACTION, MsgBody: msgStr}
+	// 	return
+	// }
+
+	srvName, srvPath := getServiceNameAndPath(payload.ServiceId)
+	if srvPath == "" {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DO_SERVICE_ACTION, MsgBody: msgStr}
+		return
+	}
+
+	serviceName := srvName
+	servicePath := srvPath
+	serviceManager := ServiceManager{
+		ServiceName: serviceName,
+		ServicePath: servicePath,
+	}
+
+	switch payload.Action {
+	case "Install":
+		if err := serviceManager.Install(); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DO_SERVICE_ACTION, MsgBody: err.Error()}
+			return
+		}
+		msgStr = SRV_STATUS_INSTALLED
+
+	case "Start":
+		if err := serviceManager.Start(); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DO_SERVICE_ACTION, MsgBody: err.Error()}
+			return
+		}
+		msgStr = SRV_STATUS_STARTED
+	case "Stop":
+		if err := serviceManager.Stop(); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DO_SERVICE_ACTION, MsgBody: err.Error()}
+			return
+		}
+		msgStr = SRV_STATUS_INSTALLED
+	case "Uninstall":
+		if err := serviceManager.Uninstall(); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DO_SERVICE_ACTION, MsgBody: err.Error()}
+			return
+		}
+		msgStr = SRV_STATUS_UNINSTALLED
+
+	case "Status":
+		status := getServiceStatus(serviceName)
+		msgStr = "Status:" + status
+	default:
+		break
+
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DO_SERVICE_ACTION, MsgBody: msgStr}
+}
+
+func getServiceStatus(serviceName string) string {
+	res := IsServiceInstalled(serviceName)
+	if !res {
+		//服务没有安装
+		return SRV_STATUS_UNINSTALLED
+	} else if !IsServiceRunning(serviceName) {
+		return SRV_STATUS_INSTALLED
+	} else {
+		return SRV_STATUS_STARTED
+	}
+}
+
+func getServiceNameAndPath(srvId int64) (string, string) {
+	switch srvId {
+	case 999999999:
+		return "RetailDetailService", filepath.Join(comm.GetServicePath(), "detailservice.exe")
+	default:
+		return "", ""
+	}
+}
+
+// ServiceManager结构体用于管理服务的操作
+type ServiceManager struct {
+	ServiceName string
+	ServicePath string
+}
+
+// Install方法用于安装服务
+func (sm *ServiceManager) Install() error {
+	installCmd := fmt.Sprintf("sc create %s binPath= \"%s\"  start= auto", sm.ServiceName, sm.ServicePath)
+	// installCmd := "sc create RetailDetailService binpath=\"G:\\T-max\\wifi_tmax\\service\\TmaxService\\Backend\\srvdata\\service\\detailservice.exe\""
+
+	cmd := exec.Command("cmd", "/C", installCmd)
+
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("fail: %v", err)
+	}
+	fmt.Println("ok")
+	return nil
+}
+
+// Uninstall方法用于卸载服务
+func (sm *ServiceManager) Uninstall() error {
+	uninstallCmd := fmt.Sprintf("sc delete %s", sm.ServiceName)
+	cmd := exec.Command("cmd", "/C", uninstallCmd)
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("fail: %v", err)
+	}
+	fmt.Println("ok")
+	return nil
+}
+
+// Start方法用于启动服务
+func (sm *ServiceManager) Start() error {
+	startCmd := fmt.Sprintf("sc start %s", sm.ServiceName)
+	cmd := exec.Command("cmd", "/C", startCmd)
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("fail: %v", err)
+	}
+	fmt.Println("ok")
+	return nil
+}
+
+// Stop方法用于停止服务
+func (sm *ServiceManager) Stop() error {
+	stopCmd := fmt.Sprintf("sc stop %s", sm.ServiceName)
+	cmd := exec.Command("cmd", "/C", stopCmd)
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("fail: %v", err)
+	}
+	fmt.Println("ok")
+	return nil
+}
+
+func isServiceRunning(serviceName string) (bool, error) {
+	m, err := mgr.Connect()
+	if err != nil {
+		return false, err
+	}
+	defer m.Disconnect()
+
+	s, err := m.OpenService(serviceName)
+	if err != nil {
+		return false, err
+	}
+	defer s.Close()
+
+	status, err := s.Query()
+	if err != nil {
+		return false, err
+	}
+
+	return status.State == svc.Running, nil
+}
+
+func IsServiceInstalled(serviceName string) bool {
+	m, err := mgr.Connect()
+	if err != nil {
+		fmt.Errorf("%v", err)
+	}
+	defer m.Disconnect()
+
+	services, err := m.ListServices()
+	if err != nil {
+		fmt.Errorf("%v", err)
+	}
+
+	for _, s := range services {
+		if s == serviceName {
+			return true
+		}
+	}
+	return false
+}
+
+func IsServiceRunning(serviceName string) bool {
+	m, err := mgr.Connect()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer m.Disconnect()
+
+	s, err := m.OpenService(serviceName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer s.Close()
+
+	status, err := s.Query()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return status.State == svc.Running
 }

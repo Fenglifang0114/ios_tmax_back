@@ -139,7 +139,7 @@ func (tnet *TNet) read() {
 		if n, err := tnet.readScale(); err != nil { // data will be stored in the queue
 			log.Log.Errorf("@TNet read(), err: %v\n", err)
 			if !IsPacketChClosed(tnet.recvCh) {
-				tnet.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
+				// tnet.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
 			}
 			time.Sleep(10 * time.Second) // to avoid sending error too often to UI
 			continue
@@ -189,6 +189,10 @@ func (tnet *TNet) read() {
 // }
 
 func (tnet *TNet) readScale() (int, error) {
+	if tnet.isAlive == false {
+		time.Sleep(1 * time.Second)
+		return 0, nil //关闭了会报错
+	}
 
 	n, err := tnet.conn.Read(tnet.tmpbuf)
 	if err != nil {
@@ -203,8 +207,8 @@ func (tnet *TNet) readScale() (int, error) {
 
 	if n > 0 {
 		// log.Log.Debug(tnet.tmpbuf[0:n])
-		// fmt.Printf("data:%x\n", string(tnet.tmpbuf[0:n]))
-		// fmt.Printf("data:%s\n", string(tnet.tmpbuf[0:n]))
+		fmt.Printf("netrevdata:%x\n", string(tnet.tmpbuf[0:n]))
+		fmt.Printf("netrevdata:%s\n", string(tnet.tmpbuf[0:n]))
 		if err := tnet.queue.EnqueueN(tnet.tmpbuf[0:n], n); err != nil {
 			tnet.queue.Reset()
 		}
@@ -219,11 +223,13 @@ func (tnet *TNet) write() {
 		// send message to scale
 		if tnet.conn != nil {
 			n, err := tnet.conn.Write([]byte(message))
+
 			if err != nil || n != len(message) {
 				tnet.isAlive = false
 				log.Log.Error(fmt.Sprintf("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error()))
 
 			}
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 }
@@ -283,6 +289,7 @@ func (tnet *TNet) dialTCP() (*net.TCPConn, error) {
 		return nil, err
 	}
 	conn.SetKeepAlive(true)
+	conn.SetKeepAlivePeriod(1 * time.Second)
 
 	return conn, nil
 

@@ -148,6 +148,12 @@ func procGetBasicData(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 func procDisPassthMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDisWifiPassthrough(scale)
 }
+func procCloseSerialPort(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqCloseSerialPort(scale)
+}
+func procOpenSerialPort(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqOpenSerialPort(scale)
+}
 
 func procSetLimitToScale(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetLimitToScale(scale, req)
@@ -472,6 +478,8 @@ func init() {
 		SREQ_SET_LIMIT_TO_SCALE:       procSetLimitToScale,
 		SREQ_OPEN_BILL_SEND:           procOpenBillSend,
 		SREQ_DIS_PASSTH_MODE:          procDisPassthMode,
+		SREQ_CLOSE_SERIAL_PORT:        procCloseSerialPort,
+		SREQ_OPEN_SERIAL_PORT:         procOpenSerialPort,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -528,5 +536,7 @@ func init() {
 		SREQ_GET_BASIC_DATA:           m.GET_BASIC_DATA_RESP,
 		SREQ_SET_LIMIT_TO_SCALE:       m.SET_LIMIT_TO_SCALE_RESP,
 		SREQ_OPEN_BILL_SEND:           m.OPEN_BILL_SEND_RESP,
+		SREQ_CLOSE_SERIAL_PORT:        m.CLOSE_SERIAL_PORT_RESP,
+		SREQ_OPEN_SERIAL_PORT:         m.OPEN_SERIAL_PORT_RESP,
 	}
 }

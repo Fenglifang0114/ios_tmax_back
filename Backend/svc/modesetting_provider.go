@@ -1,14 +1,17 @@
 package svc
 
-import "tmaxsrv/comm"
+import (
+	"path/filepath"
+	"tmaxsrv/comm"
+)
 
 type ModeSettingProvider struct {
 	myId      string
 	settingPb *DbModeSetting
 }
 
-const (
-	MODE_SETTING_DB_FILE = comm.SRV_DATA_PATH + "/" + "modesetting.db"
+var (
+	MODE_SETTING_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "modesetting.db")
 )
 
 func NewModeSettingProvider() *ModeSettingProvider {

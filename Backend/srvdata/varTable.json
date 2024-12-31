@@ -151,15 +151,10 @@
             "comment": "Weight_Pcs_P"
         },
         {
-            "valuename": "PreTare_P",
-            "id": 44,
-            "comment": "PreTare_P"
-        },
-        {
             "valuename": "Tare_P",
-            "id": 45,
+            "id": 44,
             "comment": "Tare_P"
-        },      
+        },              
         {
             "valuename": "TaxType1_P",
             "id": 46,
@@ -244,7 +239,7 @@
             "valuename": "CopyTimes_P",
             "id": 62,
             "comment": "CopyTimes_P"
-        },		
+        },
 		{
             "valuename": "ModelName_P",
             "id": 63,

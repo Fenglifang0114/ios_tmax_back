@@ -42,8 +42,8 @@ func TestDbScaleRec_InsertScaleRec(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{name: "InsertScaleRec", d: db, args: args{rec: ScaleRec{ScaleModel: "QTP", ScaleSn: "1234", Product: "Apple", Weight: "1.230", Price: "3.25"}}, wantErr: false},
-		{name: "InsertScaleRec", d: db, args: args{rec: ScaleRec{ScaleModel: "QTP", ScaleSn: "1234", Product: "Banana", Weight: "1.230", Price: "3.25"}}, wantErr: false},
+		{name: "InsertScaleRec", d: db, args: args{rec: ScaleRec{ScaleModel: "QTP", ScaleSn: "1234", ProductName: "Apple", Weight: "1.230", Price: "3.25"}}, wantErr: false},
+		{name: "InsertScaleRec", d: db, args: args{rec: ScaleRec{ScaleModel: "QTP", ScaleSn: "1234", ProductName: "Banana", Weight: "1.230", Price: "3.25"}}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -65,7 +65,7 @@ func TestDbScaleRec_UpdateScaleRec(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		{name: "UpdateScaleRec", d: db, args: args{rec: ScaleRec{RecId: 1, ScaleModel: "QTP", ScaleSn: "1234", Product: "Banana"}}, wantErr: false},
+		{name: "UpdateScaleRec", d: db, args: args{rec: ScaleRec{RecId: 1, ScaleModel: "QTP", ScaleSn: "1234", ProductName: "Banana"}}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -144,9 +144,9 @@ func TestDbScaleRec_GetScaleRecsList(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "GetScaleRecsList", d: db, args: args{model: "QTP", sn: "1234"}, want: []ScaleRec{
-			{RecId: 1, ScaleModel: "QTP", ScaleSn: "1234", Product: "Banana", Weight: "1.230", Price: "3.25"},
-			{RecId: 2, ScaleModel: "QTP", ScaleSn: "1234", Product: "Apple", Weight: "1.230", Price: "3.25"},
-			{RecId: 3, ScaleModel: "QTP", ScaleSn: "1234", Product: "Banana", Weight: "1.230", Price: "3.25"},
+			{RecId: 1, ScaleModel: "QTP", ScaleSn: "1234", ProductName: "Banana", Weight: "1.230", Price: "3.25"},
+			{RecId: 2, ScaleModel: "QTP", ScaleSn: "1234", ProductName: "Apple", Weight: "1.230", Price: "3.25"},
+			{RecId: 3, ScaleModel: "QTP", ScaleSn: "1234", ProductName: "Banana", Weight: "1.230", Price: "3.25"},
 		}, wantErr: false},
 	}
 	for _, tt := range tests {

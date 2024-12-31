@@ -272,7 +272,7 @@ func procJsonDataFunction(jsonDataStruct JSONData) []FunctionMap {
 	return functionMapList
 }
 
-func WriteDataToBin(sendArray bytes.Buffer) {
+func WriteDataToBin(sendArray bytes.Buffer) (path string) {
 	// 将 sendArray 中的数据写入到 bin 文件中
 	bufferData := sendArray.Bytes()
 	// hexString := fmt.Sprintf("% X", bufferData)
@@ -304,6 +304,7 @@ func WriteDataToBin(sendArray bytes.Buffer) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	return binPath
 }
 func writeToByteArray(functions []FunctionMap) ([]byte, map[int]int) {
 	// 根据ID对FunctionMap进行排序

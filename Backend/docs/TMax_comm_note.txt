@@ -72,6 +72,18 @@ ws://127.0.0.1:7878/tmax?scaleid=0
 
 19. add wifi record => {"Req": "add_wifi_pwd","ReqData": "{\"Ssid\":\"wifiname\",\"Pwd\":\"TED9856545\"}"}
 
+20. send status to ui => 
+response: 	{"MsgType":"resp_scale_online","MsgBody":"{\"ScaleId\":1,\"IsOnline\":true"}}
+
+21. get scale and service relationship  => {"Req": "get_scale_srv_list", "ReqData": ""}
+    response: {"MsgType":"resp_get_scale_srv_list","MsgBody":[{"ScaleId":5,"SrvId":999999999,"IsUsed":true},{"ScaleId":6,"SrvId":999999999,"IsUsed":true},{"ScaleId":7,"SrvId":999999999,"IsUsed":true},{"ScaleId":8,"SrvId":999999999,"IsUsed":true},{"ScaleId":9,"SrvId":999999999,"IsUsed":true}]}
+
+21. do service action  => {"Req": "do_service_action", "ReqData": "{"ServiceId":5,"Action":"Install"}"}
+    response: {"MsgType":"resp_do_service_action","MsgBody":""}
+
+
+
+
 To connect to TMax scale with scaleId websocket
 ws://127.0.0.1:7878/tmax?scaleid=1
 
@@ -423,6 +435,28 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"MsgType":"resp_set_eeprom_from_bin","MsgBody":"ok","ScaleId":1
 }
 
+44. open serial port =>{
+	"Req": "open_serial_port",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_open_serial_port","MsgBody":"ok","ScaleId":1
+}
+ {
+	"MsgType":"resp_open_serial_port","MsgBody":"fail","ScaleId":1
+}
+
+
+45. close serial port =>{
+	"Req": "close_serial_port",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_close_serial_port","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_close_serial_port","MsgBody":"fail","ScaleId":1
+}
 
 	
 
@@ -514,3 +548,26 @@ ws://127.0.0.1:7878/tmax?scaleid=1
    {"Req":"send_data_to_bt", "ReqData":"cmd"}
     response:
     	{ "ScaleId":1, "MsgType":"resp_send_data_to_bt", "MsgBody":"response from BT"}
+
+交易数据服务接口：999999900-999999999  预留的服务
+ws://127.0.0.1:7878/tmax?scaleid=999999999
+小服务公用接口
+1. get_scale_list => {"Req": "get_scale_list", "ReqData": ""}
+    response: {"MsgType":"resp_scales_list","MsgBody":"[{\"IsOnline\":false,\"ScaleModel\":\"TScale\",\"ScaleSn\":\"123456\",
+	\"ScaleId\":1,\"TMedia\":0,\"MediaConf\":{\"Type\":0,\"MediaInfoJson\":\"{\\\"DevPath\\\":\\\"COM6\\\",\\\"Baud\\\":9600,\\\"DataBits\\\":8,
+	\\\"StopBits\\\":0,\\\"Parity\\\":0}\"}}]","ScaleId":999999999}
+	将设备是否纳入管理
+2. set_scale_used => {"Req": "set_scale_used", "ReqData": "{\"ScaleId\":5,\"SrvId\":999999999,\"IsUsed\":true}"}
+    response: {"MsgType":"resp_set_scale_used","MsgBody":"ok","ScaleId":999999999}		
+
+交易数据接口：
+没有请求，直接主动发送交易数据
+
+3. resp_detail_list =>{"MsgType":"resp_detail_list","MsgBody":"{\"Total\":{\"RecId\":0,\"ScaleModel\":\"T-Max\",\"ScaleSn\":\"FLF654321\",
+\"SettleAccountTimes\":\"43\",\"TotalCount\":\"1\",\"PayPrice\":\"555.00\",\"TotalPrice\":\"368.81\",\"TaxKind\":\"1\",
+\"CreatedAt\":\"0001-01-01T00:00:00Z\"},
+\"Details\":[{\"RecId\":0,\"ScaleModel\":\"T-Max\",\"ScaleSn\":\"FLF654321\",\"SettleAccountTimes\":\"43\",
+\"PluIndex\":\"1\",\"PluNum\":\"555\",\"PluTotalPrice\":\"368.81\",\"PluUnitPrice\":\"1002.20\",
+\"PluTotalWeight\":\"0.368\",\"PluTare\":\"0.000\",\"PluQuantity\":\"0\",\"PluUnit\":\"0\",\"PluTaxType\":\"0\",
+\"PluReturnFlag\":\"0\",\"PluYear\":\"0\",\"PluMonth\":\"1\",\"PluDay\":\"1\",\"PluTaxPrice\":\"77.45\",
+\"PluChangeType\":\"0\",\"PluName\":\"A00552\",\"CreatedAt\":\"0001-01-01T00:00:00Z\"}]}","ScaleId":4}

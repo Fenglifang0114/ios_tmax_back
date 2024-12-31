@@ -1,14 +1,17 @@
 package svc
 
-import "tmaxsrv/comm"
+import (
+	"path/filepath"
+	"tmaxsrv/comm"
+)
 
 type ProductRecProvider struct {
 	myId  string
 	recPb *DbProductRec
 }
 
-const (
-	PRODUCT_REC_DB_FILE = comm.SRV_DATA_PATH + "/" + "productrec.db"
+var (
+	PRODUCT_REC_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "productrec.db")
 )
 
 func NewProductRecProvider() *ProductRecProvider {
@@ -29,6 +32,18 @@ func (p *ProductRecProvider) DeleteRec(recId uint) error {
 	return p.recPb.DeleteProductRec(recId)
 }
 
+func (p *ProductRecProvider) DeleteAllRec() error {
+	return p.recPb.DeleteAllProductRecs()
+}
+
 func (p *ProductRecProvider) ModifyRec(rec ProductRec) error {
 	return p.recPb.UpdateProductRec(rec)
+}
+
+func (p *ProductRecProvider) Insert100Rec(rec []ProductRec) error {
+	return p.recPb.Insert100ProductsWithGorm(rec)
+}
+
+func (p *ProductRecProvider) BatchModifyRec(rec []ProductRec) error {
+	return p.recPb.BatchUpdateProductRec(rec)
 }

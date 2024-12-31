@@ -13,19 +13,26 @@ type DbScaleRec struct {
 }
 
 type ScaleRec struct {
-	RecId       uint `gorm:"primaryKey;autoincrement;not null"`
+	RecId       uint   `gorm:"primaryKey;autoincrement;not null"`
+	Id          string //秤记录的序号
 	ScaleModel  string
 	ScaleSn     string
-	Product     string
-	Weight      string
+	Plu         string
+	ProductCode string
+	ItemCode    string
+	Category    string
+	ProductName string
+	GeneralUnit string
+	TaxType     string
 	Price       string
-	PluNo       string
-	PluRemarks  string
-	WeightUnit  string
+	UnitWeight  string
 	Pretare     string
+	LimitHigh   string
+	LimitLow    string
+	Weight      string
+	WeightUnit  string
 	UserNo      string
 	UserName    string
-	UserRemarks string
 	ScaleMode   string //0 =DC500 1=check Weigher 2=take in  3=take out
 	ScaleName   string
 

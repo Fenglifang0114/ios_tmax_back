@@ -18,6 +18,28 @@ func (u PortsListed) Trigger() {
 	}
 }
 
+var scalesListedSrv ScaleListedSrv
+
+type ScaleListedSrv struct {
+	handlers []interface {
+		Handle(scaleMgr *ScaleMgr, scaleId int64)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ScaleListedSrv) Register(handler interface {
+	Handle(payload *ScaleMgr, scaleId int64)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ScaleListedSrv) Trigger(scaleMgr *ScaleMgr, scaleId int64) {
+	for _, handler := range u.handlers {
+		go handler.Handle(scaleMgr, scaleId)
+	}
+}
+
 var scalesListed ScaleListed
 
 type ScaleListed struct {
@@ -134,17 +156,19 @@ var productAdded ProductAdded
 
 type ProductAdded struct {
 	handlers []interface {
-		Handle(mgr *SrvMgr, payload ReqAddProduct)
+		Handle(mgr *SrvMgr, payload ReqAddProductList)
 	}
 }
 
 // Register adds an event handler for this event
-func (u *ProductAdded) Register(handler interface{ Handle(*SrvMgr, ReqAddProduct) }) {
+func (u *ProductAdded) Register(handler interface {
+	Handle(*SrvMgr, ReqAddProductList)
+}) {
 	u.handlers = append(u.handlers, handler)
 }
 
 // Trigger sends out an event with the payload
-func (u ProductAdded) Trigger(mgr *SrvMgr, payload ReqAddProduct) {
+func (u ProductAdded) Trigger(mgr *SrvMgr, payload ReqAddProductList) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
 	}
@@ -154,20 +178,20 @@ var productModified ProductModified
 
 type ProductModified struct {
 	handlers []interface {
-		Handle(mgr *SrvMgr, payload ReqModifyProduct)
+		Handle(mgr *SrvMgr, payload ReqAddProductList)
 	}
 }
 
 // Register adds an event handler for this event
 func (u *ProductModified) Register(handler interface {
-	Handle(mgr *SrvMgr, payload ReqModifyProduct)
+	Handle(mgr *SrvMgr, payload ReqAddProductList)
 },
 ) {
 	u.handlers = append(u.handlers, handler)
 }
 
 // Trigger sends out an event with the payload
-func (u ProductModified) Trigger(mgr *SrvMgr, payload ReqModifyProduct) {
+func (u ProductModified) Trigger(mgr *SrvMgr, payload ReqAddProductList) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
 	}
@@ -193,6 +217,30 @@ func (u *ProductDeleted) Register(handler interface {
 func (u ProductDeleted) Trigger(mgr *SrvMgr, payload ReqDelProduct) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
+	}
+}
+
+var productDeletedAll ProductDeletedAll
+
+type ProductDeletedAll struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+
+func (u *ProductDeletedAll) Register(handler interface {
+	Handle(mgr *SrvMgr)
+},
+) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ProductDeletedAll) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
 	}
 }
 
@@ -298,6 +346,50 @@ func (u DetailListed) Trigger(payload *ScaleMgr) {
 	}
 }
 
+var scaleSrvList ScaleSrvList
+
+type ScaleSrvList struct {
+	handlers []interface {
+		Handle(scaleMgr *ScaleMgr, scaleIdStr string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ScaleSrvList) Register(handler interface {
+	Handle(payload *ScaleMgr, scaleIdStr string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ScaleSrvList) Trigger(payload *ScaleMgr, scaleIdStr string) {
+	for _, handler := range u.handlers {
+		go handler.Handle(payload, scaleIdStr)
+	}
+}
+
+var setScaleSrvVal SetScaleSrvVal
+
+type SetScaleSrvVal struct {
+	handlers []interface {
+		Handle(scaleMgr *ScaleMgr, relInfo SrvScaleRel)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *SetScaleSrvVal) Register(handler interface {
+	Handle(payload *ScaleMgr, relInfo SrvScaleRel)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u SetScaleSrvVal) Trigger(payload *ScaleMgr, relInfo SrvScaleRel) {
+	for _, handler := range u.handlers {
+		go handler.Handle(payload, relInfo)
+	}
+}
+
 var wifiListed WifiListed
 
 type WifiListed struct {
@@ -331,6 +423,72 @@ func (u *WifiAdded) Register(handler interface{ Handle(*SrvMgr, ReqAddWifi) }) {
 
 // Trigger sends out an event with the payload
 func (u WifiAdded) Trigger(mgr *SrvMgr, payload ReqAddWifi) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+var sendToSrv1 SendToSrv1
+
+type SendToSrv1 struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, jsonStr string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *SendToSrv1) Register(handler interface {
+	Handle(payload *SrvMgr, jsonStr string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u SendToSrv1) Trigger(mgr *SrvMgr, jsonStr string) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, jsonStr)
+	}
+}
+
+var sendToUi SendToUi
+
+type SendToUi struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, jsonStr string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *SendToUi) Register(handler interface {
+	Handle(payload *SrvMgr, jsonStr string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u SendToUi) Trigger(mgr *SrvMgr, jsonStr string) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, jsonStr)
+	}
+}
+
+var doServiceAction DoServiceAction
+
+type DoServiceAction struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDoServiceAction)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *DoServiceAction) Register(handler interface {
+	Handle(*SrvMgr, ReqDoServiceAction)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u DoServiceAction) Trigger(mgr *SrvMgr, payload ReqDoServiceAction) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
 	}

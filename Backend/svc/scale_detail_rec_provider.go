@@ -1,8 +1,8 @@
 package svc
 
 import (
+	"path/filepath"
 	"sync"
-
 	"tmaxsrv/comm"
 )
 
@@ -12,8 +12,8 @@ type DetailRecProvider struct {
 	detailPb *DbDetailRec
 }
 
-const (
-	DETAIL_REC_DB_FILE = comm.SRV_DATA_PATH + "/" + "detailrec.db"
+var (
+	DETAIL_REC_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "detailrec.db")
 )
 
 func NewDetailRecProvider() *DetailRecProvider {

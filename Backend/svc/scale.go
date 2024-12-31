@@ -13,7 +13,6 @@ import (
 	"math/big"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -131,6 +130,11 @@ type NetworkConfig struct {
 	MAC       string     `json:"mac"`
 }
 
+type ScaleIsOnlineInfo struct {
+	ScaleId  int64 `json:"scaleId"`
+	IsOnline bool  `json:"isOnline"`
+}
+
 type Scale struct {
 	scaleMgr *ScaleMgr
 	// connectivity Media interface
@@ -158,6 +162,7 @@ type Scale struct {
 	// added time
 	EnterAt      time.Time
 	respChansMap map[m.RespMsgType][]chan *ScaleRespMsg
+
 	// recvMsgBufsMap   map[RespMsgType][]MsgBuf // should be removed
 	bufs utils.RingBuffers
 	//isOldC51Scale bool
@@ -181,6 +186,7 @@ type Scale struct {
 	isScalePassth    bool
 	IsScalePassthHex bool
 	detailInfo       DetailList
+	packDetailMid    []PackDetailMidData
 }
 
 // NewScale creates a new scale
@@ -191,6 +197,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 	var ncnf NetInfo
 	var scale *Scale
 	var detailInfo DetailList
+	var packDetailMid []PackDetailMidData
 	if conn.TMedia == MEDIA_COM {
 		// open COM connection
 		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &pcnf); err != nil {
@@ -204,7 +211,8 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 			scaleMgr: scaleMgr, Conn: conn, ScaleCat: scaleCat, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
 			fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MySerial: sport, Pcnf: pcnf,
 			quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
-			detailInfo: detailInfo,
+			detailInfo:    detailInfo,
+			packDetailMid: packDetailMid,
 		}
 
 	} else if conn.TMedia == MEDIA_NET {
@@ -219,7 +227,8 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 			scaleMgr: scaleMgr, Conn: conn, ScaleCat: scaleCat, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
 			fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MyNet: net, Ncnf: ncnf,
 			quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
-			detailInfo: detailInfo,
+			detailInfo:    detailInfo,
+			packDetailMid: packDetailMid,
 		}
 	}
 
@@ -282,9 +291,10 @@ func (s *Scale) keepSerialPortState() {
 			continue
 		}
 		if !s.Conn.IsOnline {
+
 			if !isReconnecting {
 				cont = 0
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(1000 * time.Millisecond)
 
 			} else {
 				// 正在重连过程中，跳过本次循环
@@ -303,7 +313,7 @@ func (s *Scale) keepSerialPortState() {
 		}
 		if s.Conn.IsOnline {
 			cont = 1
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			continue
 		}
 	}
@@ -321,51 +331,77 @@ func (s *Scale) keepNetState() {
 			}
 			break
 		}
-		if s.MyNet.conn != nil && s.MyNet.isAlive {
 
-			time.Sleep(10 * time.Second)
+		if s.MyNet.conn != nil && s.MyNet.isAlive {
+			sendRespMsgScale(s)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		var err error
 		if s.MyNet != nil {
+			sendScaleOnlineToUi(s, false)
 			println(s.MyNet.ip)
 			s.MyNet.conn, err = s.MyNet.reconnect()
 			if err == nil {
 				s.MyNet.isAlive = true
-				s.keepNetOnline()
-				time.Sleep(10 * time.Second) // 明确等待 10 秒
+				go s.keepNetOnline()
+				time.Sleep(5 * time.Second) // 明确等待 10 秒
 				continue
 			}
 			s.MyNet.isAlive = false
 
 		}
 
-		time.Sleep(10 * time.Second) // 连不上等待 10 秒
+		time.Sleep(5 * time.Second) // 连不上等待 10 秒
 	}
 }
 
 func (s *Scale) keepNetOnline() {
-	// for {
-	if s.MyNet == nil {
-		time.Sleep(10 * time.Millisecond)
-		// break
-		return
-	}
-	if s.MyNet.toQuit {
-		// break
-		return
-	}
-	if s.MyNet.conn != nil && s.MyNet.isAlive {
-		err, scaleModel, sn := getModelNameSn(s)
-		if err == nil {
-			req := ReqModifyScaleSn{
-				ScaleId:    s.Id,
-				ScaleModel: scaleModel,
-				Sn:         sn,
-			}
-			s.scaleMgr.UpdateScaleSn(req)
+	var hasUpdated bool
+	for {
+		if s.MyNet == nil {
+			time.Sleep(10 * time.Millisecond)
+			return
 		}
+		if s.MyNet.toQuit {
+			return
+		}
+
+		if !s.MyNet.isAlive {
+			return
+		}
+
+		if s.MyNet.conn != nil && s.MyNet.isAlive {
+			if !hasUpdated {
+				err, scaleModel, sn := getModelNameSn(s)
+				if err == nil {
+					req := ReqModifyScaleSn{
+						ScaleId:    s.Id,
+						ScaleModel: scaleModel,
+						Sn:         sn,
+					}
+					sendScaleOnlineToUi(s, true)
+					err := s.scaleMgr.UpdateScaleSn(req)
+					if err == nil {
+						hasUpdated = true
+					} else {
+						time.Sleep(5 * time.Second)
+						continue
+					}
+				}
+			}
+		} else {
+			hasUpdated = false
+		}
+
+		time.Sleep(1 * time.Second) // 根据需要可调整检测状态的间隔时间
 	}
+}
+
+func sendScaleOnlineToUi(s *Scale, isOnline bool) {
+	sta := &ScaleIsOnlineInfo{ScaleId: s.Conn.ScaleId, IsOnline: isOnline}
+	recsStr, _ := json.MarshalToString(sta)
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_ONLINE, MsgBody: recsStr}
 }
 
 func (s *Scale) Close() error {
@@ -389,6 +425,7 @@ func (s *Scale) SetClient(client *Client) error {
 func (s *Scale) HandleClientDisconnect() error {
 	l.Log.Warn("Client disconnected, HandleClientDisconnect called")
 	s.client = nil
+
 	return nil
 }
 
@@ -677,6 +714,12 @@ func enablePassthrough(s *Scale, respType m.RespMsgType) (*ScaleRespMsg, error) 
 }
 
 func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
+	reg, err, res1 := openFactory(s)
+	if err != nil || !res1 {
+		reg.MsgType = m.MODIFY_BT_NAME_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.MODIFY_BT_NAME_RESP)
 	if msg.MsgBody != "ok" {
@@ -687,6 +730,12 @@ func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
 }
 
 func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
+	reg, err, res1 := openFactory(s)
+	if err != nil || !res1 {
+		reg.MsgType = m.SEND_DATA_TO_BT_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SEND_DATA_TO_BT_RESP)
 	if msg.MsgBody != "ok" {
@@ -698,6 +747,12 @@ func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
 }
 
 func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
+	reg, err, res1 := openFactory(s)
+	if err != nil || !res1 {
+		reg.MsgType = m.SEND_DATA_TO_WIFI_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SEND_DATA_TO_WIFI_RESP)
 	if msg.MsgBody != "ok" {
@@ -709,6 +764,12 @@ func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
 }
 
 func ReqGetWifiApInfo(s *Scale) (*ScaleRespMsg, error) {
+	reg, err, res1 := openFactory(s)
+	if err != nil || !res1 {
+		reg.MsgType = m.GET_WIFI_AP_INFO_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_WIFI_AP_INFO_RESP)
 	if msg.MsgBody != "ok" {
@@ -726,6 +787,12 @@ func ReqGetWifiApInfo(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func ReqGetApList(s *Scale) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(s)
+	if err != nil || !res {
+		reg.MsgType = m.GET_AP_LIST_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_AP_LIST_RESP)
 	if msg.MsgBody != "ok" {
@@ -742,6 +809,12 @@ func getAtVersion(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func ReqConnectAp(s *Scale, ssid string, bssid string, password string) (*ScaleRespMsg, error) {
+	reg, err, res1 := openFactory(s)
+	if err != nil || !res1 {
+		reg.MsgType = m.CONNECT_AP_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
 	if msg.MsgBody != "ok" {
@@ -760,6 +833,12 @@ func ReqConnectAp(s *Scale, ssid string, bssid string, password string) (*ScaleR
 }
 
 func ReqConnectApOneKey(s *Scale, ssid string, password string, bssid string) (*ScaleRespMsg, error) {
+	reg, err, res1 := openFactory(s)
+	if err != nil || !res1 {
+		reg.MsgType = m.CONNECT_AP_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.CONNECT_AP_RESP)
 	if msg.MsgBody != "ok" {
@@ -772,6 +851,12 @@ func ReqConnectApOneKey(s *Scale, ssid string, password string, bssid string) (*
 }
 
 func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(s)
+	if err != nil || !res {
+		reg.MsgType = m.SET_WIFI_DYNAMIC_IP_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 
 	msg, err := enablePassthrough(s, m.SET_WIFI_DYNAMIC_IP_RESP)
@@ -789,6 +874,12 @@ func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(s)
+	if err != nil || !res {
+		reg.MsgType = m.SET_WIFI_STATIC_IP_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
 	if msg.MsgBody != "ok" {
@@ -804,6 +895,12 @@ func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*S
 }
 
 func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
+	reg, err, res := openFactory(s)
+	if err != nil || !res {
+		reg.MsgType = m.SET_WIFI_STATIC_IP_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.SET_WIFI_STATIC_IP_RESP)
 	if msg.MsgBody != "ok" {
@@ -853,6 +950,12 @@ func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
+	reg, err, res1 := openFactory(s)
+	if err != nil || !res1 {
+		reg.MsgType = m.GET_IP_MODE_RESP
+		return reg, err
+
+	}
 	defer DisPassthrough(s)
 	msg, err := enablePassthrough(s, m.GET_IP_MODE_RESP)
 
@@ -2647,7 +2750,7 @@ func unzipAndReadFilesSrec(zipPath string) ([]byte, []byte) {
 	res1 := false
 	res2 := false
 
-	if len(r.File) != 2 {
+	if len(r.File) != 3 {
 		return nil, nil
 	}
 
@@ -2669,7 +2772,7 @@ func unzipAndReadFilesSrec(zipPath string) ([]byte, []byte) {
 		if strings.Contains(f.Name, ".srec") {
 			binData = buf
 			res1 = true
-		} else if strings.Contains(f.Name, ".txt") {
+		} else if strings.Contains(f.Name, ".json") {
 			infoData = buf
 			res2 = true
 		}
@@ -2693,7 +2796,7 @@ func unzipAndReadFiles(zipPath string) ([]byte, []byte) {
 	res1 := false
 	res2 := false
 
-	if len(r.File) != 2 {
+	if len(r.File) != 3 {
 		return nil, nil
 	}
 
@@ -2715,7 +2818,7 @@ func unzipAndReadFiles(zipPath string) ([]byte, []byte) {
 		if strings.Contains(f.Name, ".bin") {
 			binData = buf
 			res1 = true
-		} else if strings.Contains(f.Name, ".txt") {
+		} else if strings.Contains(f.Name, ".json") {
 			infoData = buf
 			res2 = true
 		}
@@ -2772,65 +2875,52 @@ func getModelNameSn(c *Scale) (error, string, string) {
 }
 
 // 从zip中获取bin和机种名
-func getZipInfo(fileName string) (error, []byte, string) {
+func getZipInfo(fileName string) ([]byte, string, error) {
 	readBinData, txtData := unzipAndReadFiles(fileName)
 	if readBinData == nil || txtData == nil {
-		return fmt.Errorf("file error"), nil, ""
+		return nil, "", fmt.Errorf("file error")
 	}
 
-	parts := strings.Split(string(txtData), "\n")
-	if len(parts) != 2 {
-		return fmt.Errorf("file error"), nil, ""
-
+	var firmwareInfo ReqFirmwareInfo
+	if err := json.UnmarshalFromString(string(txtData), &firmwareInfo); err != nil {
+		return nil, "", fmt.Errorf("file error")
 	}
-	readMd5 := parts[0]
-	infoJosnStr := parts[1]
-	tempByte := mergeByteSlices(readBinData, []byte(infoJosnStr))
-	tempByte = mergeByteSlices(tempByte, []byte(MD5SEED))
+	readMd5 := firmwareInfo.BinKey
+	tempByte := mergeByteSlices(readBinData, []byte(MD5SEED))
 	calMd5Str := bytesToMd5(tempByte)
 	if strings.Trim(readMd5, " ") != calMd5Str {
-		return fmt.Errorf("file error"), nil, ""
+		return nil, "", fmt.Errorf("file error")
 	}
-	var reqInfo ReqFirmwareInfo
-	if err := json.UnmarshalFromString(infoJosnStr, &reqInfo); err != nil {
-		return fmt.Errorf("file error"), nil, ""
-	}
-	modelName := reqInfo.ModelName
-	return nil, readBinData, modelName
+
+	modelName := firmwareInfo.ModelName
+	return readBinData, modelName, nil
 }
 
 // 从zip中获取srec 和机种
-func getZipInfoSrec(fileName string) (error, []byte, string) {
-	readBinData, txtData := unzipAndReadFilesSrec(fileName)
-	if readBinData == nil || txtData == nil {
-		return fmt.Errorf("file error"), nil, ""
+func getZipInfoSrec(fileName string) ([]byte, string, error) {
+	readSrecData, txtData := unzipAndReadFilesSrec(fileName)
+	if readSrecData == nil || txtData == nil {
+		return nil, "", fmt.Errorf("file error")
 	}
-
-	parts := strings.Split(string(txtData), "\n")
-	if len(parts) != 2 {
-		return fmt.Errorf("file error"), nil, ""
-
+	var firmwareInfo ReqFirmwareInfo
+	if err := json.UnmarshalFromString(string(txtData), &firmwareInfo); err != nil {
+		return nil, "", fmt.Errorf("file error")
 	}
-	readMd5 := parts[0]
-	infoJosnStr := parts[1]
-	tempByte := mergeByteSlices(readBinData, []byte(infoJosnStr))
-	tempByte = mergeByteSlices(tempByte, []byte(MD5SEED))
+	readMd5 := firmwareInfo.SrecKey
+
+	tempByte := mergeByteSlices(readSrecData, []byte(MD5SEED))
 	calMd5Str := bytesToMd5(tempByte)
 	if strings.Trim(readMd5, " ") != calMd5Str {
-		return fmt.Errorf("file error"), nil, ""
+		return nil, "", fmt.Errorf("file error")
 	}
-	var reqInfo ReqFirmwareInfo
-	if err := json.UnmarshalFromString(infoJosnStr, &reqInfo); err != nil {
-		return fmt.Errorf("file error"), nil, ""
-	}
-	modelName := reqInfo.ModelName
-	return nil, readBinData, modelName
+	modelName := firmwareInfo.ModelName
+	return readSrecData, modelName, nil
 }
 
 // 更新srec之前要先验证 机种是否匹配
 func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
-	err, readBinData, modelName := getZipInfoSrec(req.ReqData)
-	if err != nil || len(readBinData) == 0 {
+	readSrecData, modelName, err := getZipInfoSrec(req.ReqData)
+	if err != nil || len(readSrecData) == 0 {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
 	}
 	err, scaleName, _ := getModelNameSn(c)
@@ -2838,9 +2928,9 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,check connection.", c.Id}, nil
 	}
 	if scaleName != modelName {
-		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,the model does not match.", c.Id}, nil
+		// return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,the model does not match.", c.Id}, nil
 	}
-	binData := decryptByte(readBinData)
+	binData := decryptByte(readSrecData)
 	tmpFile, err := os.CreateTemp("", "update_*.srec")
 	if err != nil {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,write file error.", c.Id}, nil
@@ -2864,11 +2954,39 @@ func writeStringToFile(str string, filePath string) {
 	}
 }
 
-//关闭wifi 蓝牙的透传
-
+// 关闭wifi 蓝牙的透传
 func ReqDisWifiPassthrough(c *Scale) (*ScaleRespMsg, error) {
 
 	return excuteSimpCmd(c, m.CMD_DIS_PASSTH, m.DIS_PASSTH_MODE_RESP)
+}
+
+// 关闭串口
+func ReqCloseSerialPort(c *Scale) (*ScaleRespMsg, error) {
+	if c.MySerial == nil {
+
+		return &ScaleRespMsg{m.CLOSE_SERIAL_PORT_RESP, "fail", c.Id}, nil
+	}
+	c.MySerial.Close()
+	c.MySerial = nil
+
+	return &ScaleRespMsg{m.CLOSE_SERIAL_PORT_RESP, "ok", c.Id}, nil
+
+}
+
+// 打开串口
+func ReqOpenSerialPort(c *Scale) (*ScaleRespMsg, error) {
+	var err error
+	if c.MySerial != nil {
+		return &ScaleRespMsg{m.OPEN_SERIAL_PORT_RESP, "fail", c.Id}, nil
+	}
+	picker := picker.GetPickerFn(5)
+
+	if c.MySerial, err = NewSerial(c.Pcnf, picker, true); err != nil {
+		l.Log.Error(err.Error())
+		return &ScaleRespMsg{m.OPEN_SERIAL_PORT_RESP, "fail", c.Id}, nil
+	}
+
+	return &ScaleRespMsg{m.OPEN_SERIAL_PORT_RESP, "ok", c.Id}, nil
 }
 
 // 获取基础数据 OL UL 开关机次数等
@@ -2938,7 +3056,7 @@ func ReqOpenBillSend(c *Scale) (*ScaleRespMsg, error) {
 
 // 在线升级bin
 func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
-	err, readBinData, modelName := getZipInfo(req.ReqData)
+	readBinData, modelName, err := getZipInfo(req.ReqData)
 	if err != nil {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
 	}
@@ -2952,12 +3070,18 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,check connection")
 	}
 
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{}, fmt.Errorf("fail,check connection")
+	}
+
 	if scaleName != modelName {
 		//如果modelname 不一样，不能升级
+		// return &ScaleRespMsg{m.DOWN_FIRMWARE_WIFI_RESP, "fail,the model does not match.", c.Id}, nil
 	}
 
 	binData := decryptByte(readBinData)
-	if len(binData) == 0 || len(binData) > 1024*128 {
+	if len(binData) == 0 || len(binData) > 1024*200 {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
 	}
 
@@ -3223,11 +3347,13 @@ func getPluFilePath(currPath string) string {
 }
 
 func getCurrPath() string {
-	file, _ := exec.LookPath(os.Args[0])
-	path, _ := filepath.Abs(file)
-	index := strings.LastIndex(path, string(os.PathSeparator))
-	currentPath := path[:index]
-	currentPath = filepath.Join(currentPath, m.SRV_DATA_PATH)
+	// file, _ := exec.LookPath(os.Args[0])
+	// path, _ := filepath.Abs(file)
+	// index := strings.LastIndex(path, string(os.PathSeparator))
+	// currentPath := path[:index]
+	// currentPath = filepath.Join(currentPath, m.SRV_DATA_PATH)
+	currentPath :=
+		m.GetSrvDataPath()
 	pluBackPath := filepath.Join(currentPath, m.PLU_BACK_PATH)
 	if _, err := os.Stat(pluBackPath); os.IsNotExist(err) {
 		os.MkdirAll(pluBackPath, os.ModePerm)
@@ -3864,10 +3990,10 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 		}
 	}
-	//3 删除当前程序下的output.bin
-	if err := deleteFile("output.bin"); err != nil {
-		return &ScaleRespMsg{}, err
-	}
+	//3 删除当前程序下的output.bin  先屏蔽
+	// if err := deleteFile("output.bin"); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// }
 	//4 将所有的格式合并为一个bin
 	var totalOutputBuffer bytes.Buffer
 	outputAddr := 0
@@ -3889,11 +4015,11 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			totalOutputBuffer.Write(fileDataInfoList[i].Data)
 		}
 	}
-	WriteDataToBin(totalOutputBuffer)
+	binPath := WriteDataToBin(totalOutputBuffer)
 
 	if true { //TODO:
 		// 读取bin文件
-		data, err := os.ReadFile("output.bin")
+		data, err := os.ReadFile(binPath)
 		if err != nil {
 			l.Log.Fatal(err)
 		}
@@ -3983,8 +4109,11 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		l.Log.Errorf("extractMsgTmaxScale error")
 		return
 	}
+	mu.Lock()
+	defer mu.Unlock()
 
 	chs := s.respChansMap[msg.MsgType]
+
 	for _, ch := range chs {
 		if len(ch) == 0 { // to avoid blocking, this kind of channel should only be used once
 			ch <- msg
@@ -4007,6 +4136,15 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		sendRespMsgClient(s, msg) //此处单独来了明细数据
 		return
 	}
+	if msg.MsgType == m.ANSWER_ALIVE_RESP {
+		sendRespMsgScale(s)
+		return
+	}
+
+}
+
+func sendRespMsgScale(s *Scale) {
+	perfCmdNwaitResult(s, cmd.ANSWER_ALIVE_CMD_TMAX, m.ANSWER_ALIVE_RESP, -1, 1)
 
 }
 

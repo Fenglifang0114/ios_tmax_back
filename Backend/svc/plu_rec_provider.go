@@ -1,18 +1,18 @@
 package svc
 
-import "tmaxsrv/comm"
+import (
+	"path/filepath"
+	"tmaxsrv/comm"
+)
 
 type PluRecProvider struct {
 	myId  string
 	recPb *DbPluRec
 }
 
-const (
-	PLU_REC_DB_FILE = comm.SRV_DATA_PATH + "/" + "pluinfo.db"
-)
-
 func NewPluRecProvider() *PluRecProvider {
-	recPb, _ := NewDbPluRec(PLU_REC_DB_FILE)
+	database := filepath.Join(comm.GetSrvDataPath(), "pluinfo.db")
+	recPb, _ := NewDbPluRec(database)
 	return &PluRecProvider{myId: "PluRecProvider", recPb: recPb}
 }
 
@@ -25,8 +25,6 @@ func (p *PluRecProvider) GetPluPath(md5Str string) ([]PluRec, error) {
 	recs, err := p.recPb.GetPluRecs(md5Str)
 	return recs, err
 }
-
-
 
 func (p *PluRecProvider) InsertRec(rec PluRec) error {
 	return p.recPb.InsertPluRec(rec)

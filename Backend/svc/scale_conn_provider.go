@@ -1,18 +1,19 @@
 package svc
 
-import "tmaxsrv/comm"
+import (
+	"path/filepath"
+	"tmaxsrv/comm"
+)
 
 type ScaleConnProvider struct {
 	myId   string
 	connPb *DbScaleConn
 }
 
-const (
-	SCALE_CONN_DB_FILE = comm.SRV_DATA_PATH + "/" + "scaleconn.db"
-)
-
 func NewScaleConnProvider() *ScaleConnProvider {
-	connPb, _ := NewDbScaleConn(SCALE_CONN_DB_FILE)
+	database := filepath.Join(comm.GetSrvDataPath(), "scaleconn.db")
+
+	connPb, _ := NewDbScaleConn(database)
 	// // add a default scale for old C51 scale, we only support one scale a time
 	// var comInfo ComInfo = ComInfo{DevPath: "COM3", Baud: 115200, DataBits: 8, Parity: 0, StopBits: 0}
 	// var conf MediaConf = MediaConf{}
@@ -26,4 +27,24 @@ func NewScaleConnProvider() *ScaleConnProvider {
 
 func (p *ScaleConnProvider) GetScaleConnsList() ([]*ScaleConnMedia, error) {
 	return p.connPb.GetScaleConnList()
+}
+
+func (p *ScaleConnProvider) GetScaleSrvRelList() ([]*SrvScaleRel, error) {
+	return p.connPb.GetSrvScaleRelList()
+}
+
+func (p *ScaleConnProvider) UpdateSrvScaleRel(rel SrvScaleRel) error {
+	return p.connPb.UpdateSrvScaleRel(rel)
+}
+
+func (p *ScaleConnProvider) DeleteSrvScaleRel(rel SrvScaleRel) error {
+	return p.connPb.DeleteSrvScaleRel(rel)
+}
+
+func (p *ScaleConnProvider) DeleteSrvScaleRelByScaleId(scaleId int64) error {
+	return p.connPb.DeleteSrvScaleRelByScaleId(scaleId)
+}
+
+func (p *ScaleConnProvider) InsertSrvScaleRel(rel SrvScaleRel) error {
+	return p.connPb.InsertSrvScaleRel(rel)
 }

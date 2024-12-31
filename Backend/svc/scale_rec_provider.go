@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"path/filepath"
 	"sync"
 
 	"tmaxsrv/comm"
@@ -30,11 +31,11 @@ type ScaleRecTakeOutProvider struct {
 	recPb *DbScaleRec
 }
 
-const (
-	SCALE_REC_DB_FILE          = comm.SRV_DATA_PATH + "/" + "scalerec.db"
-	SCALE_REC_DB_CHECK_FILE    = comm.SRV_DATA_PATH + "/" + "scalereccheck.db"
-	SCALE_REC_DB_TAKE_IN_FILE  = comm.SRV_DATA_PATH + "/" + "scalerectakein.db"
-	SCALE_REC_DB_TAKE_OUT_FILE = comm.SRV_DATA_PATH + "/" + "scalerectakeout.db"
+var (
+	SCALE_REC_DB_FILE          = filepath.Join(comm.GetSrvDataPath(), "scalerec.db")
+	SCALE_REC_DB_CHECK_FILE    = filepath.Join(comm.GetSrvDataPath(), "scalereccheck.db")
+	SCALE_REC_DB_TAKE_IN_FILE  = filepath.Join(comm.GetSrvDataPath(), "scalerectakein.db")
+	SCALE_REC_DB_TAKE_OUT_FILE = filepath.Join(comm.GetSrvDataPath(), "scalerectakeout.db")
 )
 
 func NewScaleRecProvider() *ScaleRecProvider {

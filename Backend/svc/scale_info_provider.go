@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"path/filepath"
 	"sync"
 
 	"tmaxsrv/comm"
@@ -12,8 +13,8 @@ type ScaleInfosProvider struct {
 	infoPb *DbScaleInfos
 }
 
-const (
-	SCALE_INFO_DB_FILE = comm.SRV_DATA_PATH + "/" + "scaleinfo.db"
+var (
+	SCALE_INFO_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "scaleinfo.db")
 )
 
 func NewScaleInfosProvider() *ScaleInfosProvider {
