@@ -220,6 +220,7 @@ const (
 	CLOSE_SERIAL_PORT_RESP        RespMsgType = "resp_close_serial_port"
 	OPEN_SERIAL_PORT_RESP         RespMsgType = "resp_open_serial_port"
 	ANSWER_ALIVE_RESP             RespMsgType = "resp_answer_alive"
+	EXPORT_RECS_RESP              RespMsgType = "resp_export_recs"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

@@ -571,3 +571,13 @@ ws://127.0.0.1:7878/tmax?scaleid=999999999
 \"PluTotalWeight\":\"0.368\",\"PluTare\":\"0.000\",\"PluQuantity\":\"0\",\"PluUnit\":\"0\",\"PluTaxType\":\"0\",
 \"PluReturnFlag\":\"0\",\"PluYear\":\"0\",\"PluMonth\":\"1\",\"PluDay\":\"1\",\"PluTaxPrice\":\"77.45\",
 \"PluChangeType\":\"0\",\"PluName\":\"A00552\",\"CreatedAt\":\"0001-01-01T00:00:00Z\"}]}","ScaleId":4}
+
+//获取一条最新的交易数据
+4. resp_new_datail_data=>{"MsgType":"resp_detail_list","MsgBody":"{\"Total\":{\"RecId\":0,\"ScaleModel\":\"T-Max\",\"ScaleSn\":\"FLF654321\",
+\"SettleAccountTimes\":\"43\",\"TotalCount\":\"1\",\"PayPrice\":\"555.00\",\"TotalPrice\":\"368.81\",\"TaxKind\":\"1\",
+\"CreatedAt\":\"0001-01-01T00:00:00Z\"},
+\"Details\":[{\"RecId\":0,\"ScaleModel\":\"T-Max\",\"ScaleSn\":\"FLF654321\",\"SettleAccountTimes\":\"43\",
+\"PluIndex\":\"1\",\"PluNum\":\"555\",\"PluTotalPrice\":\"368.81\",\"PluUnitPrice\":\"1002.20\",
+\"PluTotalWeight\":\"0.368\",\"PluTare\":\"0.000\",\"PluQuantity\":\"0\",\"PluUnit\":\"0\",\"PluTaxType\":\"0\",
+\"PluReturnFlag\":\"0\",\"PluYear\":\"0\",\"PluMonth\":\"1\",\"PluDay\":\"1\",\"PluTaxPrice\":\"77.45\",
+\"PluChangeType\":\"0\",\"PluName\":\"A00552\",\"CreatedAt\":\"0001-01-01T00:00:00Z\"}]}","ScaleId":4}

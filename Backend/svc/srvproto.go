@@ -342,6 +342,7 @@ const (
 	SREQ_DIS_PASSTH_MODE          SReqType = "dis_passth_mode"    //20240914@FLF
 	SREQ_CLOSE_SERIAL_PORT        SReqType = "close_serial_port"  //20241209@FLF  关闭串口
 	SREQ_OPEN_SERIAL_PORT         SReqType = "open_serial_port"   //20241209@FLF  打开串口
+	SREQ_EXPORT_RECS              SReqType = "export_recs"        //20250218        // with parameter ReqScaleRec
 
 )
 

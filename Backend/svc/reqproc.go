@@ -1,7 +1,9 @@
 package svc
 
 import (
+	"encoding/csv"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -57,13 +59,167 @@ func procToScaleReq(s *Scale, req SRequest) {
 
 var conversionMap map[SReqType]m.RespMsgType
 
+// func procGetRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+// 	recs, _ := scale.GetRecs(req.ReqData)
+// 	recsStr, _ := json.MarshalToString(recs)
+// 	resp := &ScaleRespMsg{MsgType: m.GET_RECS_RESP, MsgBody: recsStr, ScaleId: scale.Id}
+// 	result, _ := json.Marshal(resp)
+// 	scale.client.sendCh <- result
+// 	return nil, nil
+// }
+
 func procGetRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	recs, _ := scale.GetRecs(req.ReqData)
-	recsStr, _ := json.MarshalToString(recs)
-	resp := &ScaleRespMsg{MsgType: m.GET_RECS_RESP, MsgBody: recsStr, ScaleId: scale.Id}
-	result, _ := json.Marshal(resp)
-	scale.client.sendCh <- result
+	// 获取记录
+	recs, err := scale.GetRecs(req.ReqData)
+	if err != nil {
+		return nil,
+			err
+	}
+
+	// 检查记录数量，如果为 0 则返回包含空列表的响应
+	if len(recs) == 0 {
+		emptyRecsStr, err := json.MarshalToString([]interface{}{})
+		if err != nil {
+			return nil, err
+		}
+		resp := &ScaleRespMsg{
+			MsgType: m.GET_RECS_RESP,
+			MsgBody: emptyRecsStr,
+			ScaleId: scale.Id,
+		}
+		return resp, nil
+	}
+
+	batchSize := 1000
+	// 计算记录的总数
+	recsCount := len(recs)
+	// 逐批处理记录
+	for i := 0; i < recsCount; i += batchSize {
+		end := i + batchSize
+		if end > recsCount {
+			end = recsCount
+		}
+		// 获取当前批次的记录
+		batch := recs[i:end]
+		// 将当前批次的记录序列化为 JSON 字符串
+		recsStr, err := json.MarshalToString(batch)
+		if err != nil {
+			return nil, err
+		}
+		// 创建响应消息
+		resp := &ScaleRespMsg{
+			MsgType: m.GET_RECS_RESP,
+			MsgBody: recsStr,
+			ScaleId: scale.Id,
+		}
+		result, err := json.Marshal(resp)
+		if err != nil {
+			return nil, err
+		}
+		scale.client.sendCh <- result
+	}
+
 	return nil, nil
+}
+
+//导出csv时用来写表头
+
+func procExportRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	// 获取记录
+
+	dataReq := strings.Split(req.ReqData, ",")
+	path := ""
+
+	if len(dataReq) == 5 {
+
+		path = dataReq[4]
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return &ScaleRespMsg{m.EXPORT_RECS_RESP, "Can not creat file! error!", scale.Id}, nil
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// 获取结构体字段名并反向转换为原始字段作为表头
+	headers := []string{
+		"Id", "ScaleModel",
+		"ScaleSn",
+		"PLU",
+		"Product Code",
+		"Item Code",
+		"Category",
+		"PLU Name",
+		"GeneralUnit",
+		"TaxType",
+		"Price",
+		"UnitWeight",
+		"Pretare",
+		"LimitHigh",
+		"LimitLow",
+		"Weight",
+		"Weight Unit",
+		"User NO.",
+		"User Name",
+		"Scale Name",
+		"Date Time",
+	}
+
+	if err := writer.Write(headers); err != nil {
+		return &ScaleRespMsg{m.EXPORT_RECS_RESP, "Failed to wirte headers!", scale.Id}, err
+	}
+
+	// 写入数据行
+	// 分批写入数据
+	limit := 100000 // 每批获取的记录数量
+	offset := 0
+	for {
+		recs, err := scale.GetWgtRecs(req.ReqData, offset, limit)
+		if err != nil {
+			return &ScaleRespMsg{m.EXPORT_RECS_RESP, "get data error!", scale.Id}, err
+		}
+
+		if len(recs) == 0 {
+			break // 没有更多记录，退出循环
+		}
+
+		// 写入当前批次的数据行
+		for _, rec := range recs {
+			record := []string{
+				rec.Id,
+				rec.ScaleModel,
+				rec.ScaleSn,
+				rec.Plu,
+				rec.ProductCode,
+				rec.ItemCode,
+				rec.Category,
+				rec.ProductName,
+				rec.GeneralUnit,
+				rec.TaxType,
+				rec.Price,
+				rec.UnitWeight,
+				rec.Pretare,
+				rec.LimitHigh,
+				rec.LimitLow,
+				rec.Weight,
+				rec.WeightUnit,
+				rec.UserNo,
+				rec.UserName,
+				rec.ScaleName,
+				rec.CreatedAt.Format("2006-01-02 15:04:05"),
+			}
+			if err := writer.Write(record); err != nil {
+				return &ScaleRespMsg{m.EXPORT_RECS_RESP, "Write to file failed!", scale.Id}, err
+			}
+		}
+
+		offset += limit // 移动到下一批记录
+	}
+
+	return &ScaleRespMsg{m.EXPORT_RECS_RESP, path + "  Export ok !", scale.Id}, nil
+
 }
 
 func procAddRec(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -480,6 +636,7 @@ func init() {
 		SREQ_DIS_PASSTH_MODE:          procDisPassthMode,
 		SREQ_CLOSE_SERIAL_PORT:        procCloseSerialPort,
 		SREQ_OPEN_SERIAL_PORT:         procOpenSerialPort,
+		SREQ_EXPORT_RECS:              procExportRecs,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -538,5 +695,6 @@ func init() {
 		SREQ_OPEN_BILL_SEND:           m.OPEN_BILL_SEND_RESP,
 		SREQ_CLOSE_SERIAL_PORT:        m.CLOSE_SERIAL_PORT_RESP,
 		SREQ_OPEN_SERIAL_PORT:         m.OPEN_SERIAL_PORT_RESP,
+		SREQ_EXPORT_RECS:              m.EXPORT_RECS_RESP,
 	}
 }

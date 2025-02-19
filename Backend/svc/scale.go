@@ -333,7 +333,7 @@ func (s *Scale) keepNetState() {
 		}
 
 		if s.MyNet.conn != nil && s.MyNet.isAlive {
-			sendRespMsgScale(s)
+			// sendRespMsgScale(s)//网口不能接收，因此心跳包停止发送，改为问答形式。
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -1508,6 +1508,11 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, err
 	}
 	modifyData := eepromData.EepromData
+	l.Log.Debug("send enable factory mode cmd to scale")
+	reg, err, res := openFactory(s)
+	if err != nil || !res {
+		return reg, err
+	}
 
 	print(len(modifyData))
 	composer := s.composer
@@ -2593,6 +2598,11 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
 		return &ScaleRespMsg{}, err
 	}
+	l.Log.Debug("send enable factory mode cmd to scale")
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
 	var file = reqData.FilePath
 	var nameMaxLen = reqData.NameMaxLen
 	var headBytes []byte
@@ -2930,6 +2940,7 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if scaleName != modelName {
 		// return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,the model does not match.", c.Id}, nil
 	}
+
 	binData := decryptByte(readSrecData)
 	tmpFile, err := os.CreateTemp("", "update_*.srec")
 	if err != nil {

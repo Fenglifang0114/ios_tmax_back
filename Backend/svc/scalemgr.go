@@ -845,14 +845,14 @@ func (s *ScaleMgr) UpdateScaleSn(req ReqModifyScaleSn) error {
 	return nil
 }
 
-func (s *ScaleMgr) GetScaleRecs(scale *Scale) ([]ScaleRec, error) {
-	var recs []ScaleRec
-	var err error
-	if recs, err = s.recPb.GetRecsList(*scale, "", "", ""); err != nil {
-		return recs, err
-	}
-	return recs, nil
-}
+// func (s *ScaleMgr) GetScaleRecs(scale *Scale) ([]ScaleRec, error) {
+// 	var recs []ScaleRec
+// 	var err error
+// 	if recs, err = s.recPb.GetRecsList(*scale, "", "", ""); err != nil {
+// 		return recs, err
+// 	}
+// 	return recs, nil
+// }
 
 func (s *ScaleMgr) InsertScaleRec(rec ScaleRec) error {
 	return s.recPb.InsertRec(rec)
