@@ -229,9 +229,11 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 	l.Log.Debug("register weight data")
 	c.isSendUnolicitedData = true
 	c.isScalePassth = false //TODO:
-	_, err, res := openFactory(c)
+	msg, err, res := openFactory(c)
 	if err != nil || !res {
 		l.Log.Debug(err)
+		msg.MsgType = m.REG_WEIGHT_RESP
+		return msg, err
 	}
 	// DisFacMode(c) // TODO: check return value
 	// enable scale sending weighing info continually
@@ -250,12 +252,18 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	c.isSendUnolicitedData = false
 	c.isScalePassth = false
-	_, err, res := openFactory(c)
+	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
+
+	if str, ok := msg.MsgBody.(string); ok && strings.Contains(str, "ok") {
+		return msg, err
+	}
+	msg, err, res := openFactory(c)
 	if err != nil || !res {
 		l.Log.Debug(err)
+		msg.MsgType = m.UNREG_WEIGHT_RESP
+		return msg, err
 	}
-
-	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
+	msg, err = perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)
 	return msg, err

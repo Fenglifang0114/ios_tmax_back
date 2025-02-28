@@ -283,22 +283,22 @@ func (s *Scale) keepSerialPortState() {
 
 	for {
 		if s.MySerial == nil {
-			time.Sleep(1 * time.Second)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		if s.MySerial.toQuit {
-			time.Sleep(1 * time.Second)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		if !s.Conn.IsOnline {
 
 			if !isReconnecting {
 				cont = 0
-				time.Sleep(1000 * time.Millisecond)
+				time.Sleep(5000 * time.Millisecond)
 
 			} else {
 				// 正在重连过程中，跳过本次循环
-				time.Sleep(1 * time.Second)
+				time.Sleep(5 * time.Second)
 				continue
 			}
 		}
@@ -313,7 +313,7 @@ func (s *Scale) keepSerialPortState() {
 		}
 		if s.Conn.IsOnline {
 			cont = 1
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(5000 * time.Millisecond)
 			continue
 		}
 	}
@@ -4132,6 +4132,10 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 	}
 	if msg.MsgType == m.WEIGHT_DATA && s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
 		sendRespMsgClient(s, msg)
+		return
+	}
+	if msg.MsgType == m.WEIGHT_DATA && !s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
+		writeScale(s, cmd.DIS_CONT_MODE_CMD_TMAX)
 		return
 	}
 	if msg.MsgType == m.SCALE_PASSTH_DATA && s.isScalePassth { // skip sending weight data to client if it doesn't not register this message

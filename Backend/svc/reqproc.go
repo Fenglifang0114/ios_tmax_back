@@ -122,8 +122,13 @@ func procGetRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return nil, nil
 }
 
-//导出csv时用来写表头
+func procSendScaleAlive(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	sendRespMsgScale(scale)
+	fmt.Println("-================--------------------================--=-=-=-=-=-=-=")
+	return &ScaleRespMsg{}, nil
+}
 
+// 导出csv时用来写表头
 func procExportRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// 获取记录
 
@@ -637,6 +642,7 @@ func init() {
 		SREQ_CLOSE_SERIAL_PORT:        procCloseSerialPort,
 		SREQ_OPEN_SERIAL_PORT:         procOpenSerialPort,
 		SREQ_EXPORT_RECS:              procExportRecs,
+		SREQ_SEND_SCALE_ALIVE:         procSendScaleAlive,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

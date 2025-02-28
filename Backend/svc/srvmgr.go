@@ -181,7 +181,8 @@ func (h *SrvMgr) Run() {
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
 				// TODO: handle client disconnect
-				if client.scaleId != 0 {
+				//0 通道也断了，如何处理，先将下面的程序改为0的话断掉也直接断开。
+				if client.scaleId != -1 { //20250220    -1 原来是 0
 					if h.scales[client.scaleId] != nil {
 						h.scales[client.scaleId].HandleClientDisconnect()
 					}
