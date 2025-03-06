@@ -188,9 +188,7 @@ func (h *SrvMgr) Run() {
 					}
 
 				}
-
-				client.Close()
-
+				// client.Close()
 				delete(h.clients, client)
 				if client.scaleId > 999999900 {
 					delete(h.clientOfService, client.scaleId)
@@ -227,6 +225,7 @@ func (h *SrvMgr) Run() {
 				//                   "create a new scale", delete a scale" or "close application"
 				l.Log.Infof("Got request from common channel %v\n", string(data["message"]))
 				parseMsgAndTrigEvt(h.scaleMgr, string(data["message"]))
+
 			} else if scaleId > 999999900 { // not for scale communication but for information purposes
 				//小服务的接口
 				l.Log.Infof("Got request from common channel %v\n", string(data["message"]))
@@ -242,10 +241,12 @@ func (h *SrvMgr) Run() {
 					// if req, err := parseToScaleReq(string(data["message"])); err == nil {
 					// 	go procToScaleReq(req, scaleId, h, scale) // TODO: handle error
 					// }
+
 				}
 			}
 		case scaleMessage := <-h.recvScaleMsg:
 			// handle the message from the scale
+
 			if h.scales[scaleMessage.ScaleId] != nil {
 				client := h.clientOfScales[h.scales[scaleMessage.ScaleId]]
 				if client != nil {
@@ -253,11 +254,19 @@ func (h *SrvMgr) Run() {
 					client.sendCh <- outData
 				}
 			}
+
 			// default:
 			// 	fmt.Println("    .")
 			// 	time.Sleep(1 * time.Millisecond)
 		case scaleMgrMessage := <-h.recvScaleMgrMsg:
 			// handle the message from the scale
+			if len(h.clientOfScales) == 0 {
+				break
+			}
+			if h.clientOfScales[h.scales[0]] == nil {
+				break
+			}
+
 			client := h.clientOfScales[h.scales[0]]
 			println(h.scales)
 			outData, _ := json.Marshal(scaleMgrMessage)
@@ -291,6 +300,14 @@ func (h *SrvMgr) Run() {
 
 		case scaleMessage := <-h.recvScaleNotifyMsg:
 			// handle the message from the scale
+			if len(h.clientOfScales) == 0 {
+				break
+			}
+
+			if h.clientOfScales[h.scales[scaleMessage.ScaleId]] == nil {
+				break
+			}
+
 			client := h.clientOfScales[h.scales[scaleMessage.ScaleId]]
 			if client != nil { // handle the transient situation
 				outData, _ := json.Marshal(scaleMessage)

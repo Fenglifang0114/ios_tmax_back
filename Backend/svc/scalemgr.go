@@ -11,6 +11,7 @@ import (
 )
 
 var nextScaleId int64 = 2 // this scale id will be incremented as new scale is added, 0 is reserved for not used
+
 type ScaleMgr struct {
 	mu                sync.Mutex
 	srvMgr            *SrvMgr

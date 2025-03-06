@@ -74,7 +74,7 @@ func (c *Client) readPump() {
 	c.wgRecvCh.Add(1)
 	defer func() {
 		c.srvMgr.unregister <- c
-		//	c.sendCh = nil
+		// c.sendCh = nil
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)

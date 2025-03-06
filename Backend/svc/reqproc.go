@@ -124,8 +124,7 @@ func procGetRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func procSendScaleAlive(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	sendRespMsgScale(scale)
-	fmt.Println("-================--------------------================--=-=-=-=-=-=-=")
-	return &ScaleRespMsg{}, nil
+	return &ScaleRespMsg{m.ANSWER_ALIVE_RESP, "ok", scale.Id}, nil
 }
 
 // 导出csv时用来写表头

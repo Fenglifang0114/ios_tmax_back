@@ -40,6 +40,7 @@ type program struct{}
 func (p *program) Start(s service.Service) error {
 	fmt.Println("服务运行...")
 	go p.run()
+
 	return nil
 }
 func (p *program) run() {

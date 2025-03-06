@@ -424,6 +424,7 @@ func (s *Scale) SetClient(client *Client) error {
 
 func (s *Scale) HandleClientDisconnect() error {
 	l.Log.Warn("Client disconnected, HandleClientDisconnect called")
+
 	s.client = nil
 
 	return nil
@@ -2929,18 +2930,27 @@ func getZipInfoSrec(fileName string) ([]byte, string, error) {
 
 // 更新srec之前要先验证 机种是否匹配
 func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
-	readSrecData, modelName, err := getZipInfoSrec(req.ReqData)
+	if req.ReqData == "" {
+		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
+	}
+	parts := strings.Split(req.ReqData, ",")
+	if len(parts) != 2 {
+		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
+	}
+
+	readSrecData, modelName, err := getZipInfoSrec(parts[0])
 	if err != nil || len(readSrecData) == 0 {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
 	}
-	err, scaleName, _ := getModelNameSn(c)
-	if err != nil {
-		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,check connection.", c.Id}, nil
+	if parts[1] == "0" {
+		err, scaleName, _ := getModelNameSn(c)
+		if err != nil {
+			return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,check connection.", c.Id}, nil
+		}
+		if scaleName != modelName {
+			return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,the model does not match.", c.Id}, nil
+		}
 	}
-	if scaleName != modelName {
-		// return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,the model does not match.", c.Id}, nil
-	}
-
 	binData := decryptByte(readSrecData)
 	tmpFile, err := os.CreateTemp("", "update_*.srec")
 	if err != nil {
@@ -2951,6 +2961,7 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return c.UpdateFirmware(tmpFile.Name())
 
 }
+
 func writeStringToFile(str string, filePath string) {
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -4130,24 +4141,25 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 			ch <- msg
 		}
 	}
-	if msg.MsgType == m.WEIGHT_DATA && s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
+	if msg.MsgType == m.WEIGHT_DATA && s.isSendUnolicitedData && s.client != nil { // skip sending weight data to client if it doesn't not register this message
 		sendRespMsgClient(s, msg)
 		return
 	}
 	if msg.MsgType == m.WEIGHT_DATA && !s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
-		writeScale(s, cmd.DIS_CONT_MODE_CMD_TMAX)
+		// writeScale(s, cmd.DIS_CONT_MODE_CMD_TMAX)
+		perfCmdNwaitResult(s, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, -1, 1)
 		return
 	}
-	if msg.MsgType == m.SCALE_PASSTH_DATA && s.isScalePassth { // skip sending weight data to client if it doesn't not register this message
+	if msg.MsgType == m.SCALE_PASSTH_DATA && s.isScalePassth && s.client != nil { // skip sending weight data to client if it doesn't not register this message
 		sendRespMsgClient(s, msg)
 		return
 	}
-	if msg.MsgType == m.ERR_SERIAL_RESP {
+	if msg.MsgType == m.ERR_SERIAL_RESP && s.client != nil {
 
 		sendRespMsgClient(s, msg) //此处单独来了串口错误功能，直接送出去
 		return
 	}
-	if msg.MsgType == m.REV_DETAIl_TAIL_RESP {
+	if msg.MsgType == m.REV_DETAIl_TAIL_RESP && s.client != nil {
 		sendRespMsgClient(s, msg) //此处单独来了明细数据
 		return
 	}

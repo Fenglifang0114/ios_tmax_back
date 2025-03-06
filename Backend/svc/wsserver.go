@@ -92,6 +92,7 @@ func (s *WsServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.ID = GenUserId()
 	c.Addr = wsconn.RemoteAddr().String()
 	c.EnterAt = time.Now()
+
 	mSrvMgr.register <- c
 	// defer func() { mHub.unregister <- c }()
 	go c.writePump()
