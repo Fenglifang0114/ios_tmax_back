@@ -3131,7 +3131,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	//开辟4K的空间来存储校验和尾巴，尾巴为8个字节，前四个字节为bin长度，后四个字节为固定的 5a a5 a5 5a
 	loopDataLen := 4096
 	last4kByte := make([]byte, loopDataLen)
-
+	// 	// 填充数据不够4096的部分
 	binDataAdd := padOrReturnBytes(binData)
 
 	crcLoop := len(binDataAdd) / loopDataLen
@@ -3216,6 +3216,7 @@ func padOrReturnBytes(data []byte) []byte {
 	if remainder == 0 {
 		return data
 	}
+	//补上最后一个不够4096的数据
 	paddedData := make([]byte, len(data)+(4096-remainder))
 	copy(paddedData, data)
 	for i := len(data); i < len(paddedData); i++ {

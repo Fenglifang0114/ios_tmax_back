@@ -32,7 +32,7 @@ func NewDbPluRec(dbName string) (*DbPluRec, error) {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
-	if err = db.AutoMigrate(&UserRec{}); err != nil {
+	if err = db.AutoMigrate(&PluRec{}); err != nil {
 		panic("failed to migrate database of scale connection")
 	}
 	return &DbPluRec{dbName: dbName}, nil

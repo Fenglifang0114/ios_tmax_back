@@ -25,6 +25,7 @@ type ScaleMgr struct {
 	recTakeOutPb      *ScaleRecTakeOutProvider
 	medias            []*ScaleConnMedia // scale connections meida
 	detailPb          *DetailRecProvider
+	formulaPb         *FormulaRecProvider
 }
 
 func NewScaleMgr() *ScaleMgr {
@@ -120,6 +121,52 @@ func init() {
 	createdoServiceActionNotifier := doServiceActionNotifier{}
 	doServiceAction.Register(createdoServiceActionNotifier)
 
+	//配方秤
+	createAddRewTypeNotifier := addRawTypeNotifier{}
+	rawTypeAdded.Register(createAddRewTypeNotifier)
+
+	createAddFormulaTypeNotifier := addFormulaTypeNotifier{}
+	formulaTypeAdded.Register(createAddFormulaTypeNotifier)
+
+	createGetRawTypeListNotifier := getRawTypeListNotifier{}
+	rawTypeListed.Register(createGetRawTypeListNotifier)
+
+	creategetFormulaTypeListNotifier := getFormulaTypeListNotifier{}
+	formulaTypeListed.Register(creategetFormulaTypeListNotifier)
+
+	creategetAddRawDataNotifier := rawDataAddedNotifier{}
+	rawDataAdded.Register(creategetAddRawDataNotifier)
+
+	createGetrawDataListedNotifier := rawDataListedNotifier{}
+	rawDataListed.Register(createGetrawDataListedNotifier)
+
+	createRawDataEditedNotifier := rawDataEditedNotifier{}
+	rawDataEdited.Register(createRawDataEditedNotifier)
+
+	createRawDataDeletedNotifier := rawDataDeletedNotifier{}
+	rawDataDeleted.Register(createRawDataDeletedNotifier)
+
+	createFormulaRecAddedNotifier := addFormulaRecNotifier{}
+	formulaDataAdded.Register(createFormulaRecAddedNotifier)
+
+	createFormulaRecListNotifier := getFormulaListNotifier{}
+	formulaRecList.Register(createFormulaRecListNotifier)
+
+	createFormulaWgtRecAddedNotifier := addFormulaWgtRecNotifier{}
+	formulaWgtRecAdded.Register(createFormulaWgtRecAddedNotifier)
+
+	createFormulaWgtRecListNotifier := getFormulaWgtRecListNotifier{}
+	formulaWgtRecList.Register(createFormulaWgtRecListNotifier)
+
+	createFmaDelNotifier := delFormulaNotifier{}
+	formulaDeleted.Register(createFmaDelNotifier)
+
+	addFlowRateNotifier := addFlowRateNotifier{}
+	flowRateAdded.Register(addFlowRateNotifier)
+
+	createFlowRateListNotifier := getFlowRateListNotifier{}
+	flowRateList.Register(createFlowRateListNotifier)
+
 }
 
 type portListedNotifier struct{}
@@ -169,6 +216,36 @@ type scaleSrvListNotifier struct{}
 type setScaleSrvValNotifier struct{}
 
 type doServiceActionNotifier struct{}
+
+type addRawTypeNotifier struct{}
+
+type addFormulaTypeNotifier struct{}
+
+type getFormulaTypeListNotifier struct{}
+
+type getRawTypeListNotifier struct{}
+
+type rawDataAddedNotifier struct{}
+
+type rawDataListedNotifier struct{}
+
+type rawDataEditedNotifier struct{}
+
+type rawDataDeletedNotifier struct{}
+
+type addFormulaRecNotifier struct{}
+
+type getFormulaListNotifier struct{}
+
+type addFormulaWgtRecNotifier struct{}
+
+type getFormulaWgtRecListNotifier struct{}
+
+type delFormulaNotifier struct{}
+
+type addFlowRateNotifier struct{}
+
+type getFlowRateListNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event

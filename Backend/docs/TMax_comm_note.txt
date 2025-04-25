@@ -78,8 +78,50 @@ response: 	{"MsgType":"resp_scale_online","MsgBody":"{\"ScaleId\":1,\"IsOnline\"
 21. get scale and service relationship  => {"Req": "get_scale_srv_list", "ReqData": ""}
     response: {"MsgType":"resp_get_scale_srv_list","MsgBody":[{"ScaleId":5,"SrvId":999999999,"IsUsed":true},{"ScaleId":6,"SrvId":999999999,"IsUsed":true},{"ScaleId":7,"SrvId":999999999,"IsUsed":true},{"ScaleId":8,"SrvId":999999999,"IsUsed":true},{"ScaleId":9,"SrvId":999999999,"IsUsed":true}]}
 
-21. do service action  => {"Req": "do_service_action", "ReqData": "{"ServiceId":5,"Action":"Install"}"}
+22. do service action  => {"Req": "do_service_action", "ReqData": "{"ServiceId":5,"Action":"Install"}"}
     response: {"MsgType":"resp_do_service_action","MsgBody":""}
+以下是配方秤
+23. add raw type => {"Req": "add_raw_type",	"ReqData": "{\"Name\": \"type1\"}"}
+
+24. add formula type => {"Req": "add_formula_type",	"ReqData": "{\"Name\": \"type1\"}"}
+
+25. get raw type list  => {"Req": "get_raw_type_list",	"ReqData": ""}
+    response: {"MsgType":"resp_raw_type_list","MsgBody":"[{\"CategoryID\":1,\"CategoryName\":\"液体\"},{\"CategoryID\":2,\"CategoryName\":\"固体\"}]"}
+
+26. get raw type list  => {"Req": "get_formula_type_list",	"ReqData": ""}
+response:{"MsgType":"resp_formula_type_list","MsgBody":"[{\"CategoryID\":1,\"CategoryName\":\"饮料\"},{\"CategoryID\":2,\"CategoryName\":\"酱料\"},{\"CategoryID\":3,\"CategoryName\":\"调味品\"}]"}
+ 
+27. add raw data  => {"Req": "add_raw_data",	"ReqData": ""} 
+
+28. get formula list  => {"Req": "add_formula_data",	"ReqData": ""} 
+
+29. get raw data list => {"Req": "get_raw_data_list",	"ReqData": ""} 
+
+30. edit raw data => {"Req": "edit_raw_data",	"ReqData": ""} 
+
+31. delete raw data => {"Req": "delete_raw_data",	"ReqData": "1"} 
+
+32. get formula list => {"Req": "get_formula_list",	"ReqData": ""}
+
+33. add formula data => {"Req": "add_formula_data",	"ReqData": ""}. 
+
+34. delete raw data => {"Req": "delete_raw_data",	"ReqData": "1"} 
+
+35. get formula data list => {"Req": "get_formula_data_list",	"ReqData": ""}
+
+35. delete formula data   => {"Req": "delete_formula_data",	"ReqData": ""}
+
+35. add formula rec   => {"Req": "add_formula_rec",	"ReqData": ""}
+
+35. get formula rec list => {"Req": "get_formula_rec_list",	"ReqData": ""}
+
+35. add  flow data   => {"Req": "add_flow_rate",	"ReqData": ""}
+
+35. get flow data list => {"Req": "get_flow_rate_list",	"ReqData": ""}
+
+ 
+
+
 
 
 

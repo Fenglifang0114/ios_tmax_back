@@ -3,6 +3,7 @@ package svc
 import (
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"os/exec"
 	"path/filepath"
@@ -50,9 +51,12 @@ type SrvMgr struct {
 	// quitch channel to close this application
 	quitch chan bool
 	// productPb
-	productPd   *ProductRecProvider
-	userPd      *UserRecProvider
-	wifiPd      *WifiRecProvider
+	productPd *ProductRecProvider
+	userPd    *UserRecProvider
+	wifiPd    *WifiRecProvider
+	// formulaPd
+	formulaPd   *FormulaRecProvider
+	flowRatePd  *FlowRateProvider
 	uiConfig    *UiConfig
 	modeSetting *ModeSettingProvider
 	//服务与秤的关系
@@ -87,6 +91,8 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	userPb := NewUserRecProvider()
 	modeSettingPb := NewModeSettingProvider()
 	wifiPb := NewWifiRecProvider()
+	formulaPb := NewFormulaRecProvider()
+	flowRatePb := NewFlowRateProvider()
 
 	var licKey string
 
@@ -133,6 +139,8 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		productPd:          productPb,
 		userPd:             userPb,
 		wifiPd:             wifiPb,
+		formulaPd:          formulaPb,
+		flowRatePd:         flowRatePb,
 		uiConfig:           NewUiConfig(),
 		modeSetting:        modeSettingPb,
 		srvScaleRel:        make([]*SrvScaleRel, 0),
@@ -503,6 +511,102 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			doServiceAction.Trigger(scaleMgr.srvMgr, data)
 		}
+		//新增原料类型
+	case REQ_ADD_RAW_TYPE:
+		jsonStr := req.ReqData
+		var data ReqAddRawType
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			RawTypeAdded.Trigger(rawTypeAdded, scaleMgr.srvMgr, data)
+		}
+
+		//新增配方类型
+	case REQ_ADD_FORMULA_TYPE:
+		jsonStr := req.ReqData
+		var data ReqAddFormulaType
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			FormulaTypeAdded.Trigger(formulaTypeAdded, scaleMgr.srvMgr, data)
+		}
+	case REQ_GET_FORMULA_TYPE_LIST:
+		formulaTypeListed.Trigger(scaleMgr.srvMgr)
+		//获取原料类型表
+	case REQ_GET_RAW_TYPE_LIST:
+		rawTypeListed.Trigger(scaleMgr.srvMgr)
+		//新增原料数据
+	case REQ_ADD_RAW_DATA:
+		jsonStr := req.ReqData
+		var data ReqAddRawData
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			RawDataAdded.Trigger(rawDataAdded, scaleMgr.srvMgr, data)
+		}
+	case REQ_GET_RAW_DATA_LIST:
+		rawDataListed.Trigger(scaleMgr.srvMgr)
+	case REQ_EDIT_RAW_DATA:
+		jsonStr := req.ReqData
+		var data ReqEditRawData
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			RawDataEdited.Trigger(rawDataEdited, scaleMgr.srvMgr, data)
+		}
+	case REQ_DELETE_RAW_DATA:
+		jsonStr := req.ReqData
+		var data ReqDelRawData
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		}
+		rawDataDeleted.Trigger(scaleMgr.srvMgr, data)
+
+	//新增配方
+	case REQ_ADD_FORMULA_DATA:
+		jsonStr := req.ReqData
+		var data ReqAddFormulaData
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			FormulaDataAdded.Trigger(formulaDataAdded, scaleMgr.srvMgr, data)
+		}
+	case REQ_GET_FORMULA_LIST:
+		formulaRecList.Trigger(scaleMgr.srvMgr)
+
+		//新增配方称重记录
+	case REQ_ADD_FORMULA_REC:
+		jsonStr := req.ReqData
+		var data ReqFormulaWgtRec
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			FormulaWgtRecAdded.Trigger(formulaWgtRecAdded, scaleMgr.srvMgr, data)
+		}
+		//获取配方称重记录
+	case REQ_GET_FORMULA_REC_LIST:
+		formulaWgtRecList.Trigger(scaleMgr.srvMgr)
+		//删除配方
+	case REQ_DELETE_FORMULA_DATA:
+		jsonStr := req.ReqData
+		var data ReqDelFmaData
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			FormulaDeleted.Trigger(formulaDeleted, scaleMgr.srvMgr, data)
+		}
+		//新增流速
+	case REQ_ADD_FLOW_RATE:
+		jsonStr := req.ReqData
+		var data ReqFlowRateRec
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			FlowRateAdded.Trigger(flowRateAdded, scaleMgr.srvMgr, data)
+		}
+		//获取流速
+	case REQ_GET_FLOW_RATE_LIST:
+		flowRateList.Trigger(scaleMgr.srvMgr)
 
 	}
 
@@ -952,4 +1056,419 @@ func IsServiceRunning(serviceName string) bool {
 	}
 
 	return status.State == svc.Running
+}
+
+//配方秤
+
+func (p addRawTypeNotifier) Handle(mgr *SrvMgr, payload ReqAddRawType) {
+	// Do something for this event
+	l.Log.Debug("Handle addRawTypeNotifier called")
+	var rec RawMaterialCategory = RawMaterialCategory{CategoryName: payload.Name}
+	if err := NewFormulaRecProvider().InsertRawType(rec); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_ADD, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_ADD, MsgBody: ""}
+}
+
+func (p addFormulaTypeNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaType) {
+	// Do something for this event
+	l.Log.Debug("Handle addFormulaTypeNotifier called")
+	var rec FormulaCategory = FormulaCategory{CategoryName: payload.Name}
+	if err := NewFormulaRecProvider().InsertFormulaType(rec); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_ADD, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_ADD, MsgBody: ""}
+}
+
+func (p getRawTypeListNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getRawTypeListNotifier called")
+	types, _ := NewFormulaRecProvider().GetRawTypeList()
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(types); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_LIST, MsgBody: typesStr}
+}
+
+func (p getFormulaTypeListNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getFormulaTypeListNotifier called")
+	types, _ := NewFormulaRecProvider().GetFormulaTypeList()
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(types); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_LIST, MsgBody: typesStr}
+}
+
+func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
+	// Do something for this event
+	l.Log.Debug("Handle addRawTypeNotifier called")
+	var rec RawMaterial = RawMaterial{
+		MaterialID:   payload.MaterialID,
+		MaterialName: payload.MaterialName,
+		CategoryID:   payload.CategoryID,
+		Ingredient:   payload.Ingredient,
+		Remark:       payload.Remark,
+		Remark1:      payload.Remark1,
+		CreatedBy:    payload.CreatedBy,
+		UpdatedBy:    payload.UpdatedBy,
+	}
+	if err := NewFormulaRecProvider().InsertRawInfo(rec); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: "ok"}
+}
+
+func (p rawDataListedNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle rawDataListedNotifier called")
+	recs, _ := NewFormulaRecProvider().GetRawDataList()
+
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(recs); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_LIST, MsgBody: typesStr}
+}
+
+func (p rawDataEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawData) {
+	// Do something for this event
+	l.Log.Debug("Handle rawDataEditedNotifier called")
+
+	var rec RawMaterial = RawMaterial{
+		RecId:        payload.RecId,
+		MaterialID:   payload.MaterialID,
+		MaterialName: payload.MaterialName,
+		CategoryID:   payload.CategoryID,
+		Ingredient:   payload.Ingredient,
+		Remark:       payload.Remark,
+		Remark1:      payload.Remark1,
+		CreatedBy:    payload.CreatedBy,
+		UpdatedBy:    payload.UpdatedBy,
+	}
+
+	if err := NewFormulaRecProvider().UpdateRawInfo(rec); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_EDIT, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_EDIT, MsgBody: "ok"}
+}
+
+func (p rawDataDeletedNotifier) Handle(mgr *SrvMgr, payload ReqDelRawData) {
+	// Do something for this event
+	l.Log.Debug("Handle rawDataDeletedNotifier called")
+	rec := payload.RecId
+	if err := NewFormulaRecProvider().DeleteRawInfo(rec); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_DELETE, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_DELETE, MsgBody: "ok"}
+}
+
+// 增加配方
+func (p addFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
+	// Do something for this event
+	l.Log.Debug("Handle addFormulaRecNotifier called")
+
+	var header FormulaHeader = FormulaHeader{
+		FormulaID:     payload.Header.FormulaID,
+		FormulaName:   payload.Header.FormulaName,
+		CategoryID:    payload.Header.CategoryID,
+		Remark:        payload.Header.Remark,
+		CreatedBy:     payload.Header.CreatedBy,
+		UpdatedBy:     payload.Header.UpdatedBy,
+		FormulaMode:   payload.Header.FormulaMode,
+		FormulaUnit:   payload.Header.FormulaUnit,
+		TotalWeight:   payload.Header.TotalWeight,
+		MaterialCount: payload.Header.MaterialCount,
+		IsEncrypted:   payload.Header.IsEncrypted,
+		NeedContainer: payload.Header.NeedContainer,
+	}
+
+	if err := NewFormulaRecProvider().InsertFormulaHeader(header); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_ADD, MsgBody: err.Error()}
+	}
+
+	for _, detail := range payload.Detail {
+		tempRec := FormulaDetail{
+			FormulaID:          detail.FormulaID,
+			MaterialID:         detail.MaterialID,
+			MaterialWeight:     detail.MaterialWeight,
+			MaterialPercentage: detail.MaterialPercentage,
+			Sequence:           detail.Sequence,
+			AllowableError:     detail.AllowableError,
+			Remark:             detail.Remark,
+		}
+		if err := NewFormulaRecProvider().InsertFormulaBody(tempRec); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_ADD, MsgBody: err.Error()}
+		}
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_ADD, MsgBody: "ok"}
+
+}
+
+// 获取配方
+func (p getFormulaListNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getFormulaListNotifier called")
+	recs, _ := NewFormulaRecProvider().GetFormulaDataList()
+
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(recs); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_LIST, MsgBody: typesStr}
+
+}
+
+// 传入原来的序号从payload中找出对应的ReqFormulaWgtRecDetail
+
+func getDetailRecFromPayload(payload ReqFormulaWgtRec, seq int) ReqFormulaWgtRecDetail {
+	for _, detail := range payload.RecDetail {
+		if detail.Sequence == seq {
+			return detail
+		}
+	}
+	return ReqFormulaWgtRecDetail{}
+}
+
+// 新增配方称重记录
+func (p addFormulaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqFormulaWgtRec) {
+	// Do something for this event
+	l.Log.Debug("Handle addFormulaWgtRecNotifier called")
+	//先找出配方信息 写记录的时候，将原来的配方信息也写进去
+	fmaId := payload.RecHeader.FormulaID
+	fmaInfo, err := NewFormulaRecProvider().GetFormulaListByFormulaID(fmaId)
+
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_REC_ADD, MsgBody: "Formula not found"}
+		return
+	}
+
+	newFmaHeader := FormulaWgtRecHeader{
+		RecordID:          payload.RecHeader.RecordID,
+		RecordSaveTime:    time.Now(),
+		Operator:          payload.RecHeader.Operator,
+		FormulaID:         fmaId,
+		FormulaName:       fmaInfo.Header.FormulaHeader.FormulaName,
+		FormulaMode:       fmaInfo.Header.FormulaHeader.FormulaMode,
+		FormulaTypeId:     fmaInfo.Header.FormulaHeader.CategoryID,
+		FormulaTypeName:   fmaInfo.Header.FormulaCategoryName,
+		TotalWeight:       payload.RecHeader.TotalWeight,
+		ActualTotalWeight: payload.RecHeader.ActualTotalWeight,
+		TotalWeightUnit:   payload.RecHeader.TotalWeightUnit,
+		MaterialCount:     fmaInfo.Header.FormulaHeader.MaterialCount,
+		Error:             0.0,
+		IsQualified:       payload.RecHeader.IsQualified,
+		ActualFmaTotalWgt: payload.RecHeader.ActualFmaTotalWgt, //实际配方总重量,包括修正后需要的重量
+		IsEncrypted:       fmaInfo.Header.FormulaHeader.IsEncrypted,
+		NeedContainer:     fmaInfo.Header.FormulaHeader.NeedContainer,
+		FormulaCreatedAt:  fmaInfo.Header.FormulaHeader.CreatedAt,
+		FormulaUpdatedAt:  fmaInfo.Header.FormulaHeader.UpdatedAt,
+		FormulaCreatedBy:  fmaInfo.Header.FormulaHeader.CreatedBy,
+		FormulaUpdatedBy:  fmaInfo.Header.FormulaHeader.UpdatedBy,
+		FormulaRemark:     fmaInfo.Header.FormulaHeader.Remark,
+		FormulaRemark1:    fmaInfo.Header.FormulaHeader.Remark1,
+		ScaleId:           payload.RecHeader.ScaleId,
+		ScaleName:         payload.RecHeader.ScaleName,
+		ScaleModel:        payload.RecHeader.ScaleModel,
+		ScaleSn:           payload.RecHeader.ScaleSn,
+	}
+
+	//插入头
+	if err := NewFormulaRecProvider().InsertFormulaWgtHeader(newFmaHeader); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_REC_ADD, MsgBody: err.Error()}
+		return
+	}
+	//如果有容器
+	if fmaInfo.Header.FormulaHeader.NeedContainer {
+		detailRec := getDetailRecFromPayload(payload, 0)
+		newFmaDetail := FormulaWgtRecDetail{
+			RecordID:           payload.RecHeader.RecordID,
+			MaterialID:         "-",
+			MaterialName:       "-",
+			MaterialTypeID:     0,
+			MaterialTypeName:   "-",
+			Ingredient:         "-",
+			MaterialCreatedAt:  time.Now(),
+			MaterialUpdatedAt:  time.Now(),
+			MaterialCreatedBy:  "-",
+			MaterialUpdatedBy:  "-",
+			MaterialRemark:     "-",
+			MaterialRemark1:    "-",
+			TargetWgt:          0,
+			MaterialWeight:     0,
+			MaterialPercentage: 0,
+			Sequence:           0,
+			AllowableError:     0,
+			ActualWeight:       detailRec.ActualWeight,
+			ActualPercentage:   0,
+			ActualErrorWgt:     0,
+			ActualErrorPct:     0,
+			IsQualified:        detailRec.IsQualified,
+			LastWeighingTime:   time.Now(),
+		}
+		//插入容器
+		if err := NewFormulaRecProvider().InsertFormulaWgtBody(newFmaDetail); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_REC_ADD, MsgBody: err.Error()}
+			return
+		}
+	}
+
+	//插入体
+	for _, detail := range fmaInfo.Details {
+		//先找到payload中对应的detail
+		newFmaDetail := FormulaWgtRecDetail{}
+		//先找出是不是容器
+
+		//不是容器
+		//计算出配方的单重
+		var rawWgt float64 = 0.0
+		if fmaInfo.Header.FormulaHeader.FormulaMode == "pct" {
+			rawWgt = math.Round(payload.RecHeader.ActualFmaTotalWgt*detail.FormulaDetail.MaterialPercentage/100*1000) / 1000
+		} else {
+			rawWgt = detail.FormulaDetail.MaterialWeight
+		}
+		detailRec := getDetailRecFromPayload(payload, detail.FormulaDetail.Sequence)
+		newFmaDetail = FormulaWgtRecDetail{
+			RecordID:           payload.RecHeader.RecordID,
+			MaterialID:         detailRec.MaterialID,
+			MaterialName:       detail.RawMaterialTypeName.RawMaterial.MaterialName,
+			MaterialTypeID:     detail.RawMaterialTypeName.RawMaterial.CategoryID,
+			MaterialTypeName:   detail.RawMaterialTypeName.RawCategoryName,
+			Ingredient:         detail.RawMaterialTypeName.RawMaterial.Ingredient,
+			MaterialCreatedAt:  detail.RawMaterialTypeName.RawMaterial.CreatedAt,
+			MaterialUpdatedAt:  detail.RawMaterialTypeName.RawMaterial.UpdatedAt,
+			MaterialCreatedBy:  detail.RawMaterialTypeName.RawMaterial.CreatedBy,
+			MaterialUpdatedBy:  detail.RawMaterialTypeName.RawMaterial.UpdatedBy,
+			MaterialRemark:     detail.RawMaterialTypeName.RawMaterial.Remark,
+			MaterialRemark1:    detail.RawMaterialTypeName.RawMaterial.Remark1,
+			TargetWgt:          detailRec.TargetWgt,
+			MaterialWeight:     rawWgt,
+			MaterialPercentage: detail.FormulaDetail.MaterialPercentage,
+			Sequence:           detail.FormulaDetail.Sequence,
+			AllowableError:     detail.FormulaDetail.AllowableError,
+			ActualWeight:       detailRec.ActualWeight,
+			ActualPercentage:   detailRec.ActualPercentage,
+			ActualErrorWgt:     detailRec.ActualErrorWgt,
+			ActualErrorPct:     detailRec.ActualErrorPct,
+			IsQualified:        detailRec.IsQualified,
+			LastWeighingTime:   time.Now(),
+		}
+
+		//插入详细
+		if err := NewFormulaRecProvider().InsertFormulaWgtBody(newFmaDetail); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_REC_ADD, MsgBody: err.Error()}
+			return
+		}
+
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_REC_ADD, MsgBody: "ok"}
+
+}
+
+// 获取配方称重记录
+func (p getFormulaWgtRecListNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getFormulaWgtRecListNotifier called")
+	recs, _ := NewFormulaRecProvider().GetFormulaWgtRecList()
+
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(recs); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_REC_LIST, MsgBody: typesStr}
+
+}
+
+// 删除配方
+func (p delFormulaNotifier) Handle(mgr *SrvMgr, payload ReqDelFmaData) {
+	// Do something for this event
+	l.Log.Debug("Handle delFormulaNotifier called")
+	rec := payload.RecId
+	if err := NewFormulaRecProvider().DeleteFormula(rec); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_DELETE, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_DELETE, MsgBody: "ok"}
+
+}
+
+// 增加流速
+func (p addFlowRateNotifier) Handle(mgr *SrvMgr, payload ReqFlowRateRec) {
+	// Do something for this event
+	l.Log.Debug("Handle addFlowRateNotifier called")
+	var header FlowRateHeader = FlowRateHeader{
+		TotalWeight:     payload.RecHeader.TotalWeight,
+		TotalTime:       payload.RecHeader.TotalTime,
+		AverageFlowRate: payload.RecHeader.AverageFlowRate,
+		MinFlowRate:     payload.RecHeader.MinFlowRate,
+		MaxFlowRate:     payload.RecHeader.MaxFlowRate,
+		WgtUnit:         payload.RecHeader.WgtUnit,
+	}
+	if err := NewFlowRateProvider().infoPb.AddFlowRateHeader(&header); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FLOW_RATE_ADD, MsgBody: err.Error()}
+	}
+
+	//找出头表中最大的recid
+	recId, err := NewFlowRateProvider().infoPb.FindMaxRecId()
+	if err != nil {
+		// TODO: error handling
+		recId = 0
+	}
+	for _, detail := range payload.RecDetail {
+		tempRec := FlowRateDetail{
+			HeaderId: recId,
+			Id:       detail.Id,
+			Rate:     detail.Rate,
+			Time:     detail.Time,
+		}
+		//插入详细
+		if err := NewFlowRateProvider().infoPb.AddFlowRateDetail(&tempRec); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FLOW_RATE_ADD, MsgBody: err.Error()}
+		}
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FLOW_RATE_ADD, MsgBody: "ok"}
+
+}
+
+// 获取流速
+func (p getFlowRateListNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getFlowRateNotifier called")
+	recs, _ := NewFlowRateProvider().GetFlowRateList()
+
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(recs); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FLOW_RATE_LIST, MsgBody: typesStr}
+
 }

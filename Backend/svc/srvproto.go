@@ -53,6 +53,27 @@ const (
 	REQ_GET_SCALE_SRV_LIST    ReqType = "get_scale_srv_list"
 	REQ_SET_SCALE_SRV_VAL     ReqType = "set_scale_srv_val"
 	REQ_SET_DO_SERVICE_ACTION ReqType = "do_service_action"
+	REQ_ADD_RAW_TYPE          ReqType = "add_raw_type"          //添加原始类型
+	REQ_DEL_RAW_TYPE          ReqType = "del_raw_type"          //删除原始类型
+	REQ_MODIFY_RAW_TYPE       ReqType = "modify_raw_type"       //修改原始类型
+	REQ_GET_RAW_TYPE_LIST     ReqType = "get_raw_type_list"     //获取原始类型列表
+	REQ_ADD_FORMULA_TYPE      ReqType = "add_formula_type"      //添加配方类型
+	REQ_DEL_FORMULA_TYPE      ReqType = "del_formula_type"      //删除配方类型
+	REQ_MODIFY_FORMULA_TYPE   ReqType = "modify_formula_type"   //修改配方类型
+	REQ_GET_FORMULA_TYPE_LIST ReqType = "get_formula_type_list" //获取配方类型列表
+	REQ_ADD_RAW_DATA          ReqType = "add_raw_data"          //添加原始数据
+	REQ_DEL_RAW_DATA          ReqType = "del_raw_data"          //删除原始数据
+	REQ_EDIT_RAW_DATA         ReqType = "edit_raw_data"         //修改原始数据
+	REQ_GET_RAW_DATA_LIST     ReqType = "get_raw_data_list"     //获取原始数据列表
+	REQ_DELETE_RAW_DATA       ReqType = "delete_raw_data"       //删除原料数据
+	REQ_ADD_FORMULA_DATA      ReqType = "add_formula_data"      //新增配方信息
+	REQ_GET_FORMULA_LIST      ReqType = "get_formula_list"      //获取配方信息列表
+	REQ_DELETE_FORMULA_DATA   ReqType = "delete_formula_data"   //删除配方信息
+	REQ_ADD_FORMULA_REC       ReqType = "add_formula_rec"       //新增配方称重记录
+	REQ_GET_FORMULA_REC_LIST  ReqType = "get_formula_rec_list"  //获取配方称重记录列表
+	REQ_ADD_FLOW_RATE         ReqType = "add_flow_rate"         //新增流速
+	REQ_GET_FLOW_RATE_LIST    ReqType = "get_flow_rate_list"    //获取流速列表
+
 )
 
 type ReqAddScale struct {
@@ -153,6 +174,184 @@ type ReqModifyUser struct {
 	Remarks  string
 }
 
+type ReqAddRawType struct {
+	Name string
+}
+
+type ReqAddFormulaType struct {
+	Name string
+}
+
+type ReqAddRawData struct {
+	MaterialID   string
+	MaterialName string
+	CategoryID   int
+	Ingredient   string
+	CreatedBy    string
+	UpdatedBy    string
+	Remark       string
+	Remark1      string
+}
+
+type ReqEditRawData struct {
+	RecId        int
+	MaterialID   string
+	MaterialName string
+	CategoryID   int
+	Ingredient   string
+	CreatedBy    string
+	UpdatedBy    string
+	Remark       string
+	Remark1      string
+}
+type ReqDelRawData struct {
+	RecId int
+}
+
+type ReqDelFmaData struct {
+	RecId int
+}
+
+type ReqAddFormulaData struct {
+	Header ReqAddFormulaHeader
+	Detail []ReqAddFormulaDetail
+}
+
+// 配方头表
+type ReqAddFormulaHeader struct {
+	// 配方编号（主键）
+	FormulaID string `gorm:"not null"`
+	// 配方名称
+	FormulaName string `gorm:"not null"`
+	// 配方类别
+	CategoryID int `gorm:"not null"`
+	// 配方模式
+	FormulaMode string
+	// 配方单位
+	FormulaUnit string
+	// 配方总重量
+	TotalWeight float64
+	// 原料数量
+	MaterialCount int
+	// 是否加密
+	IsEncrypted bool
+	//是否需要容器
+	NeedContainer bool
+	// 配方创建人
+	CreatedBy string
+	// 配方修改人
+	UpdatedBy string
+	// 备注
+	Remark string
+}
+
+// 配方明细表
+type ReqAddFormulaDetail struct {
+	// 配方编号（主键）
+	FormulaID string `gorm:"not null"`
+	// 原料编号（主键）
+	MaterialID string `gorm:"not null"`
+	// 原料重量
+	MaterialWeight float64
+	// 原料百分比
+	MaterialPercentage float64
+	// 序号
+	Sequence int
+	// 允许误差
+	AllowableError float64
+	// 备注
+	Remark string
+}
+
+// 配方称重记录
+type ReqFormulaWgtRec struct {
+	RecHeader ReqFormulaWgtRecHeader
+	RecDetail []ReqFormulaWgtRecDetail
+}
+
+// FormulaWgtRecHeader 配方称重记录头表
+type ReqFormulaWgtRecHeader struct {
+	// 记录编号（主键）
+	RecordID string `gorm:"not null"`
+	// 记录操作员
+	Operator string
+	// 配方编号
+	FormulaID string
+	// 配方类别名称
+	FormulaTypeName string
+	// 配方总重量
+	TotalWeight float64
+	//实际总重量
+	ActualTotalWeight float64
+	// 总重量单位
+	TotalWeightUnit string
+	// 原料总重量
+	TotalMaterialWeight float64
+	// 原料总重量单位
+	TotalMaterialWeightUnit string
+	// 是否达标
+	IsQualified string
+	//配方实际需要的重量
+	ActualFmaTotalWgt float64
+
+	ScaleId    int
+	ScaleName  string
+	ScaleModel string
+	ScaleSn    string
+}
+
+// FormulaWgtRecDetail 配方称重记录详情表
+type ReqFormulaWgtRecDetail struct {
+	RecId int `gorm:"primaryKey;autoincrement;not null"`
+	// 记录编号（主键）
+	RecordID string `gorm:"not null"`
+	// 原料编号（主键）
+	MaterialID     string `gorm:"not null"`
+	MaterialTypeId string
+	// 原料类别名称
+	MaterialTypeName string
+	// 序号
+	Sequence int
+	//目标重量
+	TargetWgt float64
+	// 允许误差
+	AllowableError float64
+	// 实际重量
+	ActualWeight float64
+	// 实际重量单位
+	ActualWeightUnit string
+	// 实际百分比
+	ActualPercentage float64
+	// 实际误差重量
+	ActualErrorWgt float64
+	// 实际误差百分比
+	ActualErrorPct float64
+	// 达标情况
+	IsQualified string
+}
+
+type ReqFlowRateRec struct {
+	RecHeader ReqFlowRateHeader
+	RecDetail []ReqFlowRateDetail
+}
+
+// FlowRateHeader 流速头表格
+type ReqFlowRateHeader struct {
+	TotalWeight     float64
+	TotalTime       float64
+	AverageFlowRate float64
+	MinFlowRate     float64
+	MaxFlowRate     float64
+	WgtUnit         string
+}
+
+// FlowRateDetail 流速明细表
+type ReqFlowRateDetail struct {
+	Id   int
+	Rate float64
+	Time float64
+}
+
 // ********** Response of scale manager **********
 type ScaleMgrRespMsg struct {
 	MsgType ScaleMgrRespMsgType
@@ -199,6 +398,22 @@ const (
 	SCALE_MGR_RESP_SET_SCALE_SRV_VAL  ScaleMgrRespMsgType = "resp_set_scale_srv_val"  // with response
 	SCALE_MGR_RESP_DO_SERVICE_ACTION  ScaleMgrRespMsgType = "resp_do_service_action"  // with response
 
+	//配方秤
+	SCALE_MGR_RESP_RAW_TYPE_ADD      ScaleMgrRespMsgType = "resp_raw_type_add"
+	SCALE_MGR_RESP_FORMULA_TYPE_ADD  ScaleMgrRespMsgType = "resp_formula_type_add"
+	SCALE_MGR_RESP_FORMULA_TYPE_LIST ScaleMgrRespMsgType = "resp_formula_type_list"
+	SCALE_MGR_RESP_RAW_TYPE_LIST     ScaleMgrRespMsgType = "resp_raw_type_list"
+	SCALE_MGR_RESP_RAW_LIST          ScaleMgrRespMsgType = "resp_raw_list"
+	SCALE_MGR_RESP_RAW_DATA_EDIT     ScaleMgrRespMsgType = "resp_raw_data_edit"
+	SCALE_MGR_RESP_RAW_DATA_DELETE   ScaleMgrRespMsgType = "resp_raw_data_delete"
+	SCALE_MGR_RESP_RAW_DATA_ADD      ScaleMgrRespMsgType = "resp_raw_data_add"
+	SCALE_MGR_RESP_FORMULA_ADD       ScaleMgrRespMsgType = "resp_formula_add"
+	SCALE_MGR_RESP_FORMULA_LIST      ScaleMgrRespMsgType = "resp_formula_list"
+	SCALE_MGR_RESP_FORMULA_REC_ADD   ScaleMgrRespMsgType = "resp_formula_rec_add"
+	SCALE_MGR_RESP_FORMULA_REC_LIST  ScaleMgrRespMsgType = "resp_formula_rec_list"
+	SCALE_MGR_RESP_FORMULA_DELETE    ScaleMgrRespMsgType = "resp_formula_delete"
+	SCALE_MGR_RESP_FLOW_RATE_ADD     ScaleMgrRespMsgType = "resp_flow_rate_add"
+	SCALE_MGR_RESP_FLOW_RATE_LIST    ScaleMgrRespMsgType = "resp_flow_rate_list"
 )
 
 type PortsListMsg struct {
