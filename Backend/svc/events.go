@@ -683,6 +683,28 @@ func (u FormulaDataAdded) Trigger(mgr *SrvMgr, payload ReqAddFormulaData) {
 	}
 }
 
+var formulaDataEdited FormulaDataEdited
+
+type FormulaDataEdited struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqAddFormulaData)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *FormulaDataEdited) Register(handler interface {
+	Handle(*SrvMgr, ReqAddFormulaData)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u FormulaDataEdited) Trigger(mgr *SrvMgr, payload ReqAddFormulaData) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
 var formulaRecList FormulaRecListed
 
 type FormulaRecListed struct {

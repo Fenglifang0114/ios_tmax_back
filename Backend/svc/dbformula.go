@@ -95,6 +95,13 @@ type FormulaHeader struct {
 	Remark2 string
 	// 备注3
 	Remark3 string
+
+	//是否删除
+	IsUsed bool `gorm:"default:true"` // 默认值为 true，表示未删除
+
+	//是否最新的
+	IsLatest bool `gorm:"default:true"` // 默认值为 true，表示未修改
+
 }
 
 // 配方头表包含类别名称
@@ -107,7 +114,7 @@ type FormulaHeaderWithType struct {
 type FormulaDetail struct {
 	RecId int `gorm:"primaryKey;autoincrement;not null"`
 	// 配方编号（主键）
-	FormulaID string `gorm:"not null"`
+	FormulaRecID int `gorm:"not null"` //改为配方的RecId
 	// 原料编号（主键）
 	MaterialID string `gorm:"not null"`
 	// 原料重量
@@ -608,7 +615,7 @@ func (d *DbFormulaInfo) GetFormulaListByFormulaID(formulaID string) (FormulaList
 
 	// 查询配方明细信息
 	var formulaDetails []FormulaDetail
-	err = db.Where("formula_id = ?", formulaID).Find(&formulaDetails).Error
+	err = db.Where("formula_rec_id = ?", header.RecId).Find(&formulaDetails).Error
 	if err != nil {
 		return list, err
 	}
@@ -690,7 +697,7 @@ func (d *DbFormulaInfo) GetAllFormulaLists() ([]FormulaList, error) {
 	}
 
 	var headers []FormulaHeader
-	err = db.Find(&headers).Error
+	err = db.Where("is_used = ? AND is_latest = ?", true, true).Find(&headers).Error
 	if err != nil {
 		return nil, err
 	}
@@ -699,7 +706,7 @@ func (d *DbFormulaInfo) GetAllFormulaLists() ([]FormulaList, error) {
 		var details []FormulaDetailWithRaw
 		// 查询配方明细
 		var formulaDetails []FormulaDetail
-		err = db.Where("formula_id = ?", header.FormulaID).Find(&formulaDetails).Error
+		err = db.Where("formula_rec_id = ?", header.RecId).Find(&formulaDetails).Error
 		if err != nil {
 			return nil, err
 		}
@@ -824,6 +831,30 @@ func (d *DbFormulaInfo) CreateFormulaWgtRecDetail(detail FormulaWgtRecDetail) er
 	return db.Create(&detail).Error
 }
 
+// 查询配方头中的最大的recId
+func (d *DbFormulaInfo) GetMaxFormulaRecId() (int, error) {
+	var maxRecId int
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return 0, err
+
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return 0, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	err = db.Model(&FormulaHeader{}).Select("MAX(rec_id)").Row().Scan(&maxRecId)
+	if err != nil {
+		return 0, err
+	}
+
+	return maxRecId, nil
+}
+
 // 新增配方头
 func (d *DbFormulaInfo) CreateFormulaHeader(header FormulaHeader) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -878,16 +909,28 @@ func (d *DbFormulaInfo) UpdateFormula(header FormulaHeader, details []FormulaDet
 		return tx.Error
 	}
 
-	// 更新配方头
-	if err := tx.Save(&header).Error; err != nil {
+	// 查询旧的配方头
+	var oldHeader FormulaHeader
+	if err := tx.Where("formula_id = ?", header.FormulaID).First(&oldHeader).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// 删除旧的配方明细
-	if err := tx.Where("formula_id = ?", header.FormulaID).Delete(&FormulaDetail{}).Error; err != nil {
+	// 将旧配方头中的isLatest改为false
+	if err := tx.Model(&FormulaHeader{}).Where("rec_id = ?", oldHeader.RecId).Update("is_latest", false).Error; err != nil {
 		tx.Rollback()
 		return err
+	}
+
+	// 插入新的配方头
+	if err := tx.Create(&header).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 使用新插入配方头的 RecId 更新配方明细的 formulaRecId
+	for i := range details {
+		details[i].FormulaRecID = header.RecId
 	}
 
 	// 插入新的配方明细
@@ -901,6 +944,50 @@ func (d *DbFormulaInfo) UpdateFormula(header FormulaHeader, details []FormulaDet
 	// 提交事务
 	return tx.Commit().Error
 }
+
+// // 修改配方，包含配方头和明细
+// func (d *DbFormulaInfo) UpdateFormula(header FormulaHeader, details []FormulaDetail) error {
+// 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+// 	if err != nil {
+// 		return err
+// 	}
+// 	sqlDB, err := db.DB()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if sqlDB != nil {
+// 		defer sqlDB.Close()
+// 	}
+
+// 	// 开启事务
+// 	tx := db.Begin()
+// 	if tx.Error != nil {
+// 		return tx.Error
+// 	}
+
+// 	// 更新配方头
+// 	if err := tx.Save(&header).Error; err != nil {
+// 		tx.Rollback()
+// 		return err
+// 	}
+
+// 	// 删除旧的配方明细
+// 	if err := tx.Where("formula_id = ?", header.FormulaID).Delete(&FormulaDetail{}).Error; err != nil {
+// 		tx.Rollback()
+// 		return err
+// 	}
+
+// 	// 插入新的配方明细
+// 	for _, detail := range details {
+// 		if err := tx.Create(&detail).Error; err != nil {
+// 			tx.Rollback()
+// 			return err
+// 		}
+// 	}
+
+// 	// 提交事务
+// 	return tx.Commit().Error
+// }
 
 // 新增配方称重记录，包含记录头和详情
 func (d *DbFormulaInfo) CreateFormulaWgtRec(header FormulaWgtRecHeader, details []FormulaWgtRecDetail) error {
@@ -1002,7 +1089,7 @@ func (d *DbFormulaInfo) GetAllRawMaterialsWithTypeName() ([]RawMaterialWithTypeN
 	return rawMaterialsWithTypeName, nil
 }
 
-// 根据recId删除配方和配方明细
+// 根据recId将配方标记为未使用，并删除配方明细
 func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1029,14 +1116,8 @@ func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
 		return err
 	}
 
-	// 删除配方明细
-	if err := tx.Where("formula_id = ?", header.FormulaID).Delete(&FormulaDetail{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// 删除配方头
-	if err := tx.Where("rec_id = ?", recId).Delete(&FormulaHeader{}).Error; err != nil {
+	// 将配方头中的isUsed设置为false
+	if err := tx.Model(&FormulaHeader{}).Where("rec_id = ?", recId).Update("is_used", false).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -1044,3 +1125,46 @@ func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
 	// 提交事务
 	return tx.Commit().Error
 }
+
+// // 根据recId删除配方和配方明细
+// func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
+// 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+// 	if err != nil {
+// 		return err
+// 	}
+// 	sqlDB, err := db.DB()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if sqlDB != nil {
+// 		defer sqlDB.Close()
+// 	}
+
+// 	// 开启事务
+// 	tx := db.Begin()
+// 	if tx.Error != nil {
+// 		return tx.Error
+// 	}
+
+// 	// 查询配方ID
+// 	var header FormulaHeader
+// 	if err := tx.Where("rec_id = ?", recId).First(&header).Error; err != nil {
+// 		tx.Rollback()
+// 		return err
+// 	}
+
+// 	// 删除配方明细
+// 	if err := tx.Where("formula_id = ?", header.FormulaID).Delete(&FormulaDetail{}).Error; err != nil {
+// 		tx.Rollback()
+// 		return err
+// 	}
+
+// 	// 删除配方头
+// 	if err := tx.Where("rec_id = ?", recId).Delete(&FormulaHeader{}).Error; err != nil {
+// 		tx.Rollback()
+// 		return err
+// 	}
+
+// 	// 提交事务
+// 	return tx.Commit().Error
+// }

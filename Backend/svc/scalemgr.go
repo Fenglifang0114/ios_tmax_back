@@ -149,6 +149,9 @@ func init() {
 	createFormulaRecAddedNotifier := addFormulaRecNotifier{}
 	formulaDataAdded.Register(createFormulaRecAddedNotifier)
 
+	createFormulaRecUpdateNotifier := editFormulaRecNotifier{}
+	formulaDataEdited.Register(createFormulaRecUpdateNotifier)
+
 	createFormulaRecListNotifier := getFormulaListNotifier{}
 	formulaRecList.Register(createFormulaRecListNotifier)
 
@@ -234,6 +237,8 @@ type rawDataEditedNotifier struct{}
 type rawDataDeletedNotifier struct{}
 
 type addFormulaRecNotifier struct{}
+
+type editFormulaRecNotifier struct{}
 
 type getFormulaListNotifier struct{}
 
@@ -768,7 +773,7 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 			if err := json.UnmarshalFromString(conn.MediaConf.MediaInfoJson, &netInfo); err != nil {
 				return err
 			}
-			if reqNetInfo.Ip == netInfo.Ip {
+			if reqNetInfo.Ip == netInfo.Ip && reqNetInfo.Port == netInfo.Port {
 				return fmt.Errorf("This IP address already exists")
 			}
 		}

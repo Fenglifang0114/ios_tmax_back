@@ -67,6 +67,7 @@ const (
 	REQ_GET_RAW_DATA_LIST     ReqType = "get_raw_data_list"     //获取原始数据列表
 	REQ_DELETE_RAW_DATA       ReqType = "delete_raw_data"       //删除原料数据
 	REQ_ADD_FORMULA_DATA      ReqType = "add_formula_data"      //新增配方信息
+	REQ_EDIT_FORMULA_DATA     ReqType = "edit_formula_data"     //修改配方信息
 	REQ_GET_FORMULA_LIST      ReqType = "get_formula_list"      //获取配方信息列表
 	REQ_DELETE_FORMULA_DATA   ReqType = "delete_formula_data"   //删除配方信息
 	REQ_ADD_FORMULA_REC       ReqType = "add_formula_rec"       //新增配方称重记录
@@ -248,7 +249,7 @@ type ReqAddFormulaHeader struct {
 // 配方明细表
 type ReqAddFormulaDetail struct {
 	// 配方编号（主键）
-	FormulaID string `gorm:"not null"`
+	FormulaRecID int `gorm:"not null"`
 	// 原料编号（主键）
 	MaterialID string `gorm:"not null"`
 	// 原料重量
@@ -408,6 +409,7 @@ const (
 	SCALE_MGR_RESP_RAW_DATA_DELETE   ScaleMgrRespMsgType = "resp_raw_data_delete"
 	SCALE_MGR_RESP_RAW_DATA_ADD      ScaleMgrRespMsgType = "resp_raw_data_add"
 	SCALE_MGR_RESP_FORMULA_ADD       ScaleMgrRespMsgType = "resp_formula_add"
+	SCALE_MGR_RESP_FORMULA_UPDATE    ScaleMgrRespMsgType = "resp_formula_update"
 	SCALE_MGR_RESP_FORMULA_LIST      ScaleMgrRespMsgType = "resp_formula_list"
 	SCALE_MGR_RESP_FORMULA_REC_ADD   ScaleMgrRespMsgType = "resp_formula_rec_add"
 	SCALE_MGR_RESP_FORMULA_REC_LIST  ScaleMgrRespMsgType = "resp_formula_rec_list"
@@ -551,14 +553,20 @@ const (
 	SREQ_GET_EEPROM_TO_BIN        SReqType = "get_eeprom_to_bin"
 	SREQ_SET_EEPROM_FROM_BIN      SReqType = "set_eeprom_from_bin"
 	SREQ_SET_EEPROM_FROM_BIN_FC   SReqType = "set_eeprom_from_bin_fc"
-	SREQ_GET_BASIC_DATA           SReqType = "get_basic_data"     //20240820@FLF
-	SREQ_SET_LIMIT_TO_SCALE       SReqType = "set_limit_to_scale" //20240829@FLF
-	SREQ_OPEN_BILL_SEND           SReqType = "open_bill_send"     //20240903@FLF
-	SREQ_DIS_PASSTH_MODE          SReqType = "dis_passth_mode"    //20240914@FLF
-	SREQ_CLOSE_SERIAL_PORT        SReqType = "close_serial_port"  //20241209@FLF  关闭串口
-	SREQ_OPEN_SERIAL_PORT         SReqType = "open_serial_port"   //20241209@FLF  打开串口
-	SREQ_EXPORT_RECS              SReqType = "export_recs"        //20250218        // with parameter ReqScaleRec
-	SREQ_SEND_SCALE_ALIVE         SReqType = "send_scale_alive"   //20250227
+	SREQ_GET_BASIC_DATA           SReqType = "get_basic_data"      //20240820@FLF
+	SREQ_SET_LIMIT_TO_SCALE       SReqType = "set_limit_to_scale"  //20240829@FLF
+	SREQ_OPEN_BILL_SEND           SReqType = "open_bill_send"      //20240903@FLF
+	SREQ_DIS_PASSTH_MODE          SReqType = "dis_passth_mode"     //20240914@FLF
+	SREQ_CLOSE_SERIAL_PORT        SReqType = "close_serial_port"   //20241209@FLF  关闭串口
+	SREQ_OPEN_SERIAL_PORT         SReqType = "open_serial_port"    //20241209@FLF  打开串口
+	SREQ_EXPORT_RECS              SReqType = "export_recs"         //20250218        // with parameter ReqScaleRec
+	SREQ_SEND_SCALE_ALIVE         SReqType = "send_scale_alive"    //20250227
+	SREQ_SET_MAX_RANGE            SReqType = "set_max_range"       //20250529
+	SREQ_CAL_ZERO_RANGE           SReqType = "cal_zero_range"      //20250529
+	SREQ_CAL_MAX_RANGE            SReqType = "cal_max_range"       //20250529
+	SREQ_SEND_CAL_HEART_BEAT      SReqType = "send_cal_heart_beat" //20250529
+	SREQ_SET_DECIMAL_VALUE        SReqType = "set_decimal_value"   //20250529
+	SREQ_SET_GADUATION_VALUE      SReqType = "set_gaduation_value" //20250529
 
 )
 

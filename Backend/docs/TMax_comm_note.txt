@@ -500,6 +500,61 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"MsgType":"resp_close_serial_port","MsgBody":"fail","ScaleId":1
 }
 
+46. set max range =>{
+	"Req": "set_max_range",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_max_range","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_max_range","MsgBody":"fail","ScaleId":1
+}
+
+47. 设置标定点内码 =>{
+	"Req": "cal_zero_range",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_cal_zero_range","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_cal_zero_range","MsgBody":"fail","ScaleId":1
+}
+
+48. 设置满量程内码 =>{
+	"Req": "cal_max_range",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_cal_max_range","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_cal_max_range","MsgBody":"fail","ScaleId":1
+}
+
+49. 设置小数点 =>{
+	"Req": "set_decimal_value",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_decimal_value","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_decimal_value","MsgBody":"fail","ScaleId":1
+}
+
+50. 设置分度值 =>{
+	"Req": "set_gaduation_value",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_gaduation_value","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_gaduation_value","MsgBody":"fail","ScaleId":1
+}
+
 	
 
 To configure scale's wifi to connect to specific AP

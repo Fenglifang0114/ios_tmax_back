@@ -571,6 +571,15 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			FormulaDataAdded.Trigger(formulaDataAdded, scaleMgr.srvMgr, data)
 		}
+	//修改配方
+	case REQ_EDIT_FORMULA_DATA:
+		jsonStr := req.ReqData
+		var data ReqAddFormulaData
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			formulaDataEdited.Trigger(scaleMgr.srvMgr, data)
+		}
 	case REQ_GET_FORMULA_LIST:
 		formulaRecList.Trigger(scaleMgr.srvMgr)
 
@@ -1201,9 +1210,11 @@ func (p addFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_ADD, MsgBody: err.Error()}
 	}
 
+	headerId, _ := NewFormulaRecProvider().GetMaxFormulaRecId() //获取最新的配方ID
+
 	for _, detail := range payload.Detail {
 		tempRec := FormulaDetail{
-			FormulaID:          detail.FormulaID,
+			FormulaRecID:       headerId,
 			MaterialID:         detail.MaterialID,
 			MaterialWeight:     detail.MaterialWeight,
 			MaterialPercentage: detail.MaterialPercentage,
@@ -1218,6 +1229,49 @@ func (p addFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 	}
 
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_ADD, MsgBody: "ok"}
+
+}
+
+// 修改配方
+func (p editFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
+	// Do something for this event
+	l.Log.Debug("Handle editFormulaRecNotifier called")
+
+	var header FormulaHeader = FormulaHeader{
+		FormulaID:     payload.Header.FormulaID,
+		FormulaName:   payload.Header.FormulaName,
+		CategoryID:    payload.Header.CategoryID,
+		Remark:        payload.Header.Remark,
+		CreatedBy:     payload.Header.CreatedBy,
+		UpdatedBy:     payload.Header.UpdatedBy,
+		FormulaMode:   payload.Header.FormulaMode,
+		FormulaUnit:   payload.Header.FormulaUnit,
+		TotalWeight:   payload.Header.TotalWeight,
+		MaterialCount: payload.Header.MaterialCount,
+		IsEncrypted:   payload.Header.IsEncrypted,
+		NeedContainer: payload.Header.NeedContainer,
+	}
+
+	details := []FormulaDetail{}
+	for _, detail := range payload.Detail {
+		tempRec := FormulaDetail{
+			FormulaRecID:       0,
+			MaterialID:         detail.MaterialID,
+			MaterialWeight:     detail.MaterialWeight,
+			MaterialPercentage: detail.MaterialPercentage,
+			Sequence:           detail.Sequence,
+			AllowableError:     detail.AllowableError,
+			Remark:             detail.Remark,
+		}
+		details = append(details, tempRec)
+	}
+
+	if err := NewFormulaRecProvider().UpdateFormula(header, details); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_UPDATE, MsgBody: err.Error()}
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_UPDATE, MsgBody: "ok"}
 
 }
 

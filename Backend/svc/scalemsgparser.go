@@ -103,6 +103,10 @@ func init() {
 		cmd.CMDID_ERASE_INSERT_PLU_TMAX:  m.ERASE_INSERT_PLU_RESP,
 		cmd.CMDID_MODIFY_VAR_TMAX:        m.MODIFY_VAR_RESP,
 		cmd.CMDID_EN_FACTORY_MODE:        m.EN_FACTORY_MODE_RESP,
+		cmd.CMDID_SET_MAX_RANGE_TMAX:     m.SET_MAX_RANGE_RESP,
+		cmd.CMDID_CAL_VALUE_TMAX:         m.CAL_VALUE_RESP,
+		cmd.CMDID_SET_DECIMAL_VALUE:      m.SET_DECIMAL_VALUE_RESP,
+		cmd.CMDID_SET_GADUATION_VALUE:    m.SET_GADUATION_VALUE_RESP,
 
 		0xff25: m.UNKNOWN_DATA,
 	}
@@ -162,6 +166,10 @@ func init() {
 		m.REV_DETAIl_TAIL_RESP:      handleRevDetailTailResp,
 		m.OPEN_BILL_SEND_RESP:       handleOpenBillSendResp,
 		m.ANSWER_ALIVE_RESP:         handleAnswerAliveResp,
+		m.SET_MAX_RANGE_RESP:        handleSetMaxRangeResp,
+		m.CAL_VALUE_RESP:            handleCalValueResp,
+		m.SET_DECIMAL_VALUE_RESP:    handleSetDecimalValueResp,
+		m.SET_GADUATION_VALUE_RESP:  handleSetGaduationValueResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -496,6 +504,36 @@ func handleAnswerAliveResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.ANSWER_ALIVE_RESP, MsgBody: "ok"}, len(data)
 	} else {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.ANSWER_ALIVE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleSetMaxRangeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MAX_RANGE_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MAX_RANGE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+func handleSetDecimalValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_DECIMAL_VALUE_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_DECIMAL_VALUE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+func handleSetGaduationValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GADUATION_VALUE_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GADUATION_VALUE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleCalValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CAL_VALUE_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CAL_VALUE_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 

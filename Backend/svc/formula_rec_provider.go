@@ -71,6 +71,11 @@ func (p *FormulaRecProvider) DeleteRawInfo(recId int) error {
 	return p.infoPb.DeleteRawMaterial(recId)
 }
 
+// 获取配方信息头ID
+func (p *FormulaRecProvider) GetMaxFormulaRecId() (int, error) {
+	return p.infoPb.GetMaxFormulaRecId()
+}
+
 // 新增配方信息头
 func (p *FormulaRecProvider) InsertFormulaHeader(rec FormulaHeader) error {
 	return p.infoPb.CreateFormulaHeader(rec)
@@ -112,4 +117,10 @@ func (p *FormulaRecProvider) GetFormulaWgtRecList() ([]FormulaWgtRecList, error)
 // 删除配方
 func (p *FormulaRecProvider) DeleteFormula(rec_id int) error {
 	return p.infoPb.DeleteFormulaByRecId(rec_id)
+}
+
+// 修改配方
+func (p *FormulaRecProvider) UpdateFormula(header FormulaHeader, details []FormulaDetail) error {
+	return p.infoPb.UpdateFormula(header, details)
+
 }

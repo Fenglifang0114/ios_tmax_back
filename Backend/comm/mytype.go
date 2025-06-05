@@ -72,6 +72,7 @@ const (
 	CMD_WRITE_EEPROM
 	CMD_ERASE_FLASH
 	CMD_ERASE_FLASH_512
+	CMD_SET_MAX_RANGE
 	CMD_READ_FLASH
 	CMD_WRITE_FLASH_8
 	CMD_WRITE_FLASH_256
@@ -89,6 +90,11 @@ const (
 	CMD_GET_BASIC_DATA
 	CMD_SET_LIMIT_TO_SCALE
 	CMD_OPEN_BILL_SEND
+	CMD_CAl_ZERO_RANGE
+	CMD_CAl_MAX_RANGE
+	CMD_SEND_CAL_HEART_BEAT
+	CMD_SET_DECIMAl_VALUE
+	CMD_SET_GADUATION_VALUE
 )
 
 type DataType int
@@ -209,6 +215,7 @@ const (
 	DOWN_DEFAULT_PRN_FMT_RESP     RespMsgType = "resp_down_def_prn_fmt"
 	BACKUP_DEF_SETTING_RESP       RespMsgType = "resp_backup_def_setting"
 	GET_EEPROM_TO_BIN_RESP        RespMsgType = "resp_get_eeprom_to_bin"
+	GET_EEPROM_BIN_DATA_RESP      RespMsgType = "resp_get_eeprom_bin_data"
 	SET_EEPROM_FROM_BIN_RESP      RespMsgType = "resp_set_eeprom_from_bin"
 	GET_BASIC_DATA_RESP           RespMsgType = "resp_get_basic_data"
 	SET_LIMIT_TO_SCALE_RESP       RespMsgType = "resp_set_limit_to_scale"
@@ -221,6 +228,10 @@ const (
 	OPEN_SERIAL_PORT_RESP         RespMsgType = "resp_open_serial_port"
 	ANSWER_ALIVE_RESP             RespMsgType = "resp_answer_alive"
 	EXPORT_RECS_RESP              RespMsgType = "resp_export_recs"
+	SET_MAX_RANGE_RESP            RespMsgType = "resp_set_max_range"
+	CAL_VALUE_RESP                RespMsgType = "resp_cal_value"
+	SET_DECIMAL_VALUE_RESP        RespMsgType = "resp_set_decimal_value"
+	SET_GADUATION_VALUE_RESP      RespMsgType = "resp_set_gaduation_value"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

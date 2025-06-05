@@ -284,6 +284,30 @@ func procDownPrnFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownPrnFmt(scale, req)
 }
 
+func procSetMaxRange(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetMaxRange(scale, req)
+}
+
+func procSetDecimalValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetDecimalValue(scale, req)
+}
+
+func procSetGaduationValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetGaduationValue(scale, req)
+}
+
+func procCalMaxRange(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqCalMaxRange(scale, req)
+}
+
+func procSendCalHeart(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSendCalHeart(scale, req)
+}
+
+func procCalZeroRange(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqCalZeroRange(scale, req)
+}
+
 func procDownDefaultPrnFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownDefaultPrnFmt(scale, req)
 }
@@ -642,6 +666,12 @@ func init() {
 		SREQ_OPEN_SERIAL_PORT:         procOpenSerialPort,
 		SREQ_EXPORT_RECS:              procExportRecs,
 		SREQ_SEND_SCALE_ALIVE:         procSendScaleAlive,
+		SREQ_SET_MAX_RANGE:            procSetMaxRange,
+		SREQ_CAL_ZERO_RANGE:           procCalZeroRange,
+		SREQ_CAL_MAX_RANGE:            procCalMaxRange,
+		SREQ_SEND_CAL_HEART_BEAT:      procSendCalHeart,
+		SREQ_SET_DECIMAL_VALUE:        procSetDecimalValue,
+		SREQ_SET_GADUATION_VALUE:      procSetGaduationValue,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

@@ -322,7 +322,7 @@ func (s *Scale) keepSerialPortState() {
 func (s *Scale) keepNetState() {
 	for {
 		if s.MyNet == nil {
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			break
 		}
 		if s.MyNet.toQuit {
@@ -2034,82 +2034,6 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 
 }
 
-// func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
-// 	res := false
-// 	composer := c.composer
-// 	fn := composer.ComposeCmd
-// 	reqMsg, _ := excuteSimpCmd(c, m.CMD_CHECK_FAC_MODE, m.EN_FAC_MODE_RESP)
-// 	if reqMsg.MsgBody == "ok" {
-// 		return &ScaleRespMsg{}, nil, true
-// 	}
-
-// 	var dataStruct FIFromScale
-
-// 	cmd, timeoutMs, err := fn(composer, m.CMD_GET_FACTORY_INFO, m.CmdData{})
-// 	if err != nil {
-// 		return &ScaleRespMsg{}, err, res
-// 	}
-// 	if res, err := perfCmdNwaitResult(c, cmd, m.GET_FACTORY_INFO_RESP, timeoutMs); err != nil {
-// 		return &ScaleRespMsg{}, err, false
-// 	} else if res.MsgBody == "" {
-// 		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-// 	} else {
-// 		msgBodyStr, ok := res.MsgBody.(string)
-// 		if !ok {
-// 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-// 		}
-// 		err := json.UnmarshalFromString(msgBodyStr, &dataStruct)
-// 		if err != nil {
-// 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-// 		}
-// 	}
-// 	if dataStruct.ModelName == "" || dataStruct.ScaleSn == "" {
-// 		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-// 	}
-
-// 	crc16Byte := calculateMD5(dataStruct.ModelName + dataStruct.ScaleSn + MD5SEED)
-// 	byte4Md5 := crc16Byte[0:4]
-// 	fmt.Println(byte4Md5)
-// 	//------拿到随机数
-// 	var nums []uint8
-// 	cmd, timeoutMs, err = fn(composer, m.CMD_GET_RANDOM_DATA, m.CmdData{})
-// 	if err != nil {
-// 		return &ScaleRespMsg{}, err, false
-// 	}
-// 	if res, err := perfCmdNwaitResult(c, cmd, m.GET_RANDOM_DATA_RESP, timeoutMs); err != nil {
-// 		return &ScaleRespMsg{}, err, false
-// 	} else if res.MsgBody == "" {
-// 		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-// 	} else {
-// 		numsInt, ok := res.MsgBody.([]uint8)
-// 		nums = numsInt
-// 		if !ok || len(numsInt) != 2 {
-// 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-// 		}
-// 	}
-
-// 	dataLast := make([]byte, 6)
-// 	dataLast[0] = nums[0]
-// 	dataLast[1] = nums[1]
-// 	copy(dataLast[2:6], byte4Md5)
-
-// 	//打开工厂模式
-// 	packDataHexStr := hex.EncodeToString(dataLast)
-// 	cmd, timeoutMs, err = fn(composer, m.CMD_EN_FACTORY_MODE, m.CmdData{Type: m.DATA_TYPE_STR, Data: packDataHexStr})
-// 	if err != nil {
-// 		return &ScaleRespMsg{}, err, false
-// 	}
-// 	if res, err := perfCmdNwaitResult(c, cmd, m.EN_FACTORY_MODE_RESP, timeoutMs); err != nil {
-// 		return &ScaleRespMsg{}, err, false
-// 	} else if res.MsgBody != "ok" {
-// 		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-// 	}
-
-// 	res = true
-// 	return &ScaleRespMsg{}, err, res
-
-// }
-
 // func ReqDownPrnFmt(c *Scale, csvPrnFmt string, seqno string) error {
 func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reg, err, res := openFactory(c)
@@ -2375,6 +2299,45 @@ func getEepromData(c *Scale, readLen int) ([]byte, error) {
 	dataBuffer := make([]byte, 0)
 
 	loopAddr := 0
+	packetCount := readLen / 8
+	for i := 0; i < packetCount; i++ {
+		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_READ_EEPROM_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, "")})
+		if err != nil {
+			return dataBuffer, nil
+		}
+		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+			return dataBuffer, nil
+		} else if res.MsgBody == "fail" {
+			return dataBuffer, nil
+		} else {
+			strData := res.MsgBody
+			if str, ok := strData.(string); ok {
+				addrBytes := []byte(str)
+				if len(addrBytes) == 8 {
+					dataBuffer = append(dataBuffer, addrBytes...)
+				} else {
+					return dataBuffer, nil
+				}
+			} else {
+				return dataBuffer, nil
+			}
+		}
+		loopAddr = loopAddr + 8
+		println("test:" + string(loopAddr))
+
+	}
+
+	return dataBuffer, nil
+
+}
+
+func getEepromDataOiml(c *Scale, readLen int) ([]byte, error) {
+
+	composer := c.composer
+	l.Log.Debug("get eeprom data from scale")
+	dataBuffer := make([]byte, 0)
+
+	loopAddr := 152
 	packetCount := readLen / 8
 	for i := 0; i < packetCount; i++ {
 		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_READ_EEPROM_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, "")})
@@ -4198,4 +4161,109 @@ func sendRespMsgClient(s *Scale, msg *ScaleRespMsg) {
 		l.Log.Error("fromScaleMsgCh full")
 	}
 	return
+}
+
+// 设置最大量程
+func ReqSetMaxRange(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+	num, err := strconv.Atoi(reqData)
+	if err != nil {
+		return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, "fail, data error", c.Id}, nil
+	}
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+	composer := c.composer
+	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_SET_MAX_RANGE, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_MAX_RANGE_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+
+	return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, "ok", c.Id}, nil
+}
+
+// 设置零点内码
+func ReqCalZeroRange(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_CAl_ZERO_RANGE, m.CAL_VALUE_RESP)
+	if reqMsg.MsgBody != "ok" {
+		return &ScaleRespMsg{m.CAL_VALUE_RESP, "fail", c.Id}, nil
+	}
+	return &ScaleRespMsg{m.CAL_VALUE_RESP, "ok", c.Id}, nil
+}
+
+// 标定最大量程内码
+func ReqCalMaxRange(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_CAl_MAX_RANGE, m.CAL_VALUE_RESP)
+	if reqMsg.MsgBody != "ok" {
+		return &ScaleRespMsg{m.CAL_VALUE_RESP, "fail", c.Id}, nil
+	}
+	return &ScaleRespMsg{m.CAL_VALUE_RESP, "ok", c.Id}, nil
+}
+
+// 标定时发送的心跳
+func ReqSendCalHeart(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	excuteSimpCmd(c, m.CMD_SEND_CAL_HEART_BEAT, m.UNKNOWN_DATA, 1)
+
+	return &ScaleRespMsg{}, nil
+}
+
+// 设置小数点位数
+func ReqSetDecimalValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_DECIMAl_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+	if err != nil {
+		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_DECIMAL_VALUE_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+
+	return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, "ok", c.Id}, nil
+}
+
+// 设置小数点位数
+func ReqSetGaduationValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+
+	reg, err, res := openFactory(c)
+	if err != nil || !res {
+		return reg, err
+	}
+
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GADUATION_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+	if err != nil {
+		return &ScaleRespMsg{m.SET_GADUATION_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_GADUATION_VALUE_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{m.SET_GADUATION_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.SET_GADUATION_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return &ScaleRespMsg{m.SET_GADUATION_VALUE_RESP, "ok", c.Id}, nil
 }
