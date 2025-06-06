@@ -138,10 +138,18 @@ func (tnet *TNet) read() {
 		// read data from net at least PACK_MIN_LEN or timeout (2 * 1/baud)
 		if n, err := tnet.readScale(); err != nil { // data will be stored in the queue
 			log.Log.Errorf("@TNet read(), err: %v\n", err)
+			if tnet.toQuit {
+				continue
+
+			}
+			if err.Error() == "EOF" { // 20240801
+				log.Log.Errorf("EOF")
+				break
+			}
 			if !IsPacketChClosed(tnet.recvCh) {
 				// tnet.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
 			}
-			time.Sleep(10 * time.Second) // to avoid sending error too often to UI
+			time.Sleep(100 * time.Millisecond) // to avoid sending error too often to UI
 			continue
 		} else if n == 0 {
 			time.Sleep(1 * time.Millisecond) // to avoid consume too much cpu time
@@ -192,6 +200,11 @@ func (tnet *TNet) readScale() (int, error) {
 	if tnet.isAlive == false {
 		time.Sleep(1 * time.Second)
 		return 0, nil //关闭了会报错
+	}
+	if tnet.toQuit {
+		time.Sleep(1 * time.Second)
+		return 0, nil //关闭了会报错
+
 	}
 
 	n, err := tnet.conn.Read(tnet.tmpbuf)
@@ -256,11 +269,14 @@ func (tnet *TNet) monitorConnection() {
 }
 
 func (tnet *TNet) reconnect() (*net.TCPConn, error) {
+
 	conn, err := tnet.connect()
 	if err == nil {
 		tnet.conn = conn
 		tnet.isAlive = true
 	}
+	println("reconnect")
+	println(tnet.ip)
 
 	return conn, err
 }

@@ -452,6 +452,7 @@ func (s *ScaleMgr) Run() {
 	// list serial from time to time to check if the port that connecting to scale is varied
 	s.medias, _ = s.connPb.GetScaleConnsList() // scaleId "0000" is for get all scale connections
 	//如果没有秤则新增一个串口
+
 	if len(s.medias) == 0 {
 		var comInfo ComInfo = ComInfo{DevPath: "COM3", Baud: 115200, DataBits: 8, Parity: 0, StopBits: 0}
 		var conf MediaConf = MediaConf{}
@@ -478,29 +479,30 @@ func (s *ScaleMgr) Run() {
 		}
 
 	}
+	for _, conn := range s.medias {
+		if conn.scale == nil {
+			// new scale and assign scaleid to the instance
+			var scale *Scale
+			scale, _ = NewScale(s, conn, conn.ScaleCat, conn.ScaleModel, conn.ScaleSn, false)
+			// scale.Id = nextScaleId
+			scale.Id = conn.ScaleId
+			conn.scale = scale
+			conn.ScaleId = scale.Id
+			s.scales[scale.Id] = scale
+			s.srvMgr.addScale <- scale // register new scale instance to srvMgr
+
+			if conn.ScaleId >= nextScaleId {
+				nextScaleId = conn.ScaleId
+				nextScaleId++
+			}
+
+		}
+
+	}
 
 	for {
 
 		// construct scale instance if it doesn't exist
-		for _, conn := range s.medias {
-			if conn.scale == nil {
-				// new scale and assign scaleid to the instance
-				var scale *Scale
-				scale, _ = NewScale(s, conn, conn.ScaleCat, conn.ScaleModel, conn.ScaleSn, false)
-				// scale.Id = nextScaleId
-				scale.Id = conn.ScaleId
-				conn.scale = scale
-				conn.ScaleId = scale.Id
-				s.scales[scale.Id] = scale
-				s.srvMgr.addScale <- scale // register new scale instance to srvMgr
-
-				if conn.ScaleId >= nextScaleId {
-					nextScaleId = conn.ScaleId
-					nextScaleId++
-				}
-
-			}
-		}
 
 		ports, _ := getPortsList()
 
@@ -832,6 +834,7 @@ func (s *ScaleMgr) DelScale(id int64) error {
 	}
 	// remove the conn then add new one s.conns
 	scale.MyNet.toQuit = true
+	time.Sleep(500 * time.Millisecond)
 	scale.Close()
 	s.srvMgr.removeScale <- scale
 	s.connPb.connPb.DeleteScaleConn(*conn)

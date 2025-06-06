@@ -269,6 +269,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 	} else if conn.TMedia == MEDIA_NET {
 		scale.MyNet = net
 		go scale.keepNetState()
+		// scale.keepNetState()
 	}
 
 	go scale.procScaleRespMsg()
@@ -322,7 +323,7 @@ func (s *Scale) keepSerialPortState() {
 func (s *Scale) keepNetState() {
 	for {
 		if s.MyNet == nil {
-			time.Sleep(1000 * time.Millisecond)
+			time.Sleep(20 * time.Millisecond)
 			break
 		}
 		if s.MyNet.toQuit {
@@ -333,14 +334,17 @@ func (s *Scale) keepNetState() {
 		}
 
 		if s.MyNet.conn != nil && s.MyNet.isAlive {
+
+			// 连接正常
 			// sendRespMsgScale(s)//网口不能接收，因此心跳包停止发送，改为问答形式。
 			time.Sleep(5 * time.Second)
 			continue
 		}
+
 		var err error
-		if s.MyNet != nil {
+		if s.MyNet != nil && s.MyNet.conn == nil {
 			sendScaleOnlineToUi(s, false)
-			println(s.MyNet.ip)
+			fmt.Printf("reconnect is nil:%v\n", s.MyNet.ip)
 			s.MyNet.conn, err = s.MyNet.reconnect()
 			if err == nil {
 				s.MyNet.isAlive = true
@@ -349,7 +353,32 @@ func (s *Scale) keepNetState() {
 				continue
 			}
 			s.MyNet.isAlive = false
+		} else if s.MyNet != nil && s.MyNet.conn != nil {
+			err, scaleModel, sn := getModelNameSn(s)
+			if err == nil {
+				req := ReqModifyScaleSn{
+					ScaleId:    s.Id,
+					ScaleModel: scaleModel,
+					Sn:         sn,
+				}
+				sendScaleOnlineToUi(s, true)
+				s.scaleMgr.UpdateScaleSn(req)
+				continue
 
+			}
+
+			sendScaleOnlineToUi(s, false)
+
+			fmt.Printf("reconnect not nil:%v\n", s.MyNet.ip)
+
+			s.MyNet.conn, err = s.MyNet.reconnect()
+			if err == nil {
+				s.MyNet.isAlive = true
+				go s.keepNetOnline()
+				time.Sleep(5 * time.Second) // 明确等待 10 秒
+				continue
+			}
+			s.MyNet.isAlive = false
 		}
 
 		time.Sleep(5 * time.Second) // 连不上等待 10 秒
@@ -357,10 +386,10 @@ func (s *Scale) keepNetState() {
 }
 
 func (s *Scale) keepNetOnline() {
-	var hasUpdated bool
+	hasUpdated := false
 	for {
 		if s.MyNet == nil {
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(2000 * time.Millisecond)
 			return
 		}
 		if s.MyNet.toQuit {
@@ -384,9 +413,10 @@ func (s *Scale) keepNetOnline() {
 					err := s.scaleMgr.UpdateScaleSn(req)
 					if err == nil {
 						hasUpdated = true
+						return
 					} else {
 						time.Sleep(5 * time.Second)
-						continue
+						// continue
 					}
 				}
 			}
