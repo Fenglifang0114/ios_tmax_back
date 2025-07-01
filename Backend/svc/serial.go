@@ -210,9 +210,37 @@ func (s *TSerial) readScale() (int, error) {
 	}
 
 	if n > 0 {
+		//用来debug
 		// log.Log.Debug(s.tmpbuf[0:n])
-		// fmt.Printf("data:%x ", string(s.tmpbuf[0:n]))
-		fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
+		// file, err := os.OpenFile("received_data.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		// if err != nil {
+		// 	log.Log.Errorf("Error opening file: %v", err)
+		// } else {
+		// 	// 确保文件在函数结束时关闭
+		// 	defer file.Close()
+		// 	// 将接收到的数据以十六进制格式写入文件
+		// 	hexData := fmt.Sprintf("%x ", s.tmpbuf[0:n])
+		// 	if _, err := file.WriteString(hexData); err != nil {
+		// 		log.Log.Errorf("Error writing to file: %v", err)
+		// 	}
+		// }
+
+		// // 打开或创建另一个文本文件，以追加模式写入
+		// textFile, err := os.OpenFile("received_text.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		// if err != nil {
+		// 	log.Log.Errorf("Error opening text file: %v", err)
+		// } else {
+		// 	defer textFile.Close()
+		// 	// 构造要写入的字符串
+		// 	outputStr := fmt.Sprintf("%s\n", string(s.tmpbuf[0:n]))
+		// 	// 将字符串写入文件
+		// 	if _, err := io.WriteString(textFile, outputStr); err != nil {
+		// 		log.Log.Errorf("Error writing text to file: %v", err)
+		// 	}
+		// }
+
+		// fmt.Printf("recv data:%x ", string(s.tmpbuf[0:n]))
+		// fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
 		if err := s.queue.EnqueueN(s.tmpbuf[0:n], n); err != nil {
 			s.queue.Reset()
 		}

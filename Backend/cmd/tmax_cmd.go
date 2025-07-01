@@ -224,7 +224,9 @@ var EN_DHCP_DEF_CMD_32 []byte = []byte("AT+CWDHCP=1,1\r\n")
 var SET_WIFI_STATIC_IP_DEF_CMD []byte = []byte("AT+CIPSTA_DEF=\"%s\",\"%s\",\"%s\"\r\n") // ip, gateway, netmask
 var SET_WIFI_STATIC_IP_DEF_CMD_32 []byte = []byte("AT+CIPSTA=\"%s\",\"%s\",\"%s\"\r\n")  // ip, gateway, netmask
 var CHANGE_WIFI_MODE_CMD []byte = []byte("AT+CWMODE=1\r\n")
-var GET_AT_MODE_CMD []byte = []byte("AT+CWMODE?\r\n")
+
+// var GET_AT_MODE_CMD []byte = []byte("AT+CWMODE?\r\n")
+var GET_AT_MODE_CMD []byte = []byte("AT+CWAUTOCONN?\r\n")
 
 const (
 	PACKET_HEAD_TMAX         = 0x5AA5

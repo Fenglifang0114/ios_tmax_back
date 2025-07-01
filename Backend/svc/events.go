@@ -829,3 +829,143 @@ func (u FlowRateListed) Trigger(payload *SrvMgr) {
 		go handler.Handle(payload)
 	}
 }
+
+// 获取所有称重记录
+var getAllWgtRecList GetAllWgtRecListed
+
+type GetAllWgtRecListed struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload ReqGetAllWgtRecList)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetAllWgtRecListed) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload ReqGetAllWgtRecList)
+}) {
+
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetAllWgtRecListed) Trigger(srvMgr *SrvMgr, payload ReqGetAllWgtRecList) {
+	for _, handler := range u.handlers {
+		go handler.Handle(srvMgr, payload)
+	}
+}
+
+// 获取搜索的称重记录
+var getSearchRecList GetSearchRecListed
+
+type GetSearchRecListed struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload ReqGetSearchRecList)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetSearchRecListed) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload ReqGetSearchRecList)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetSearchRecListed) Trigger(srvMgr *SrvMgr, payload ReqGetSearchRecList) {
+	for _, handler := range u.handlers {
+		go handler.Handle(srvMgr, payload)
+	}
+}
+
+//新增称重记录
+
+var addWgtRec AddWgtRec
+
+type AddWgtRec struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload ReqAddWgtRec)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *AddWgtRec) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload ReqAddWgtRec)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u AddWgtRec) Trigger(srvMgr *SrvMgr, payload ReqAddWgtRec) {
+	for _, handler := range u.handlers {
+		go handler.Handle(srvMgr, payload)
+	}
+}
+
+// 删除记录
+var delWgtRec DelWgtRec
+
+type DelWgtRec struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload ReqDelWgtRec)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *DelWgtRec) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload ReqDelWgtRec)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u DelWgtRec) Trigger(srvMgr *SrvMgr, payload ReqDelWgtRec) {
+	for _, handler := range u.handlers {
+		go handler.Handle(srvMgr, payload)
+	}
+}
+
+// 根据RecId删除记录
+var delWgtRecById DelWgtRecById
+
+type DelWgtRecById struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload ReqDelWgtRecById)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *DelWgtRecById) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload ReqDelWgtRecById)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u DelWgtRecById) Trigger(srvMgr *SrvMgr, payload ReqDelWgtRecById) {
+	for _, handler := range u.handlers {
+		go handler.Handle(srvMgr, payload)
+	}
+}
+
+// 导出所有记录
+var exportAllRecs ExportAllRecs
+
+type ExportAllRecs struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload ReqExportAllRecs)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ExportAllRecs) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload ReqExportAllRecs)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ExportAllRecs) Trigger(srvMgr *SrvMgr, payload ReqExportAllRecs) {
+	for _, handler := range u.handlers {
+		go handler.Handle(srvMgr, payload)
+	}
+}

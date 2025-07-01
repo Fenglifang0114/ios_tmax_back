@@ -1264,9 +1264,7 @@ func getEncryptType(security int) string {
 // <wps>：wps flag
 // +CWLAP:<ecn>, <ssid>, <rssi>, <mac>, <ch>, <freq offset>, <freq calibration>  ESP8266
 func parseCWLAPResponse(data []byte) []CWLAPResponse {
-	if !containsOK(data) {
-		return nil
-	}
+
 	response := bytes.NewBuffer(data).String()
 	lines := strings.Split(response, "\n")
 	regex := regexp.MustCompile(`\+CWLAP:\(([^)]+)\)`)
@@ -1408,7 +1406,11 @@ func handleBTPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	if !containsOK(data) {
+	hexData := fmt.Sprintf("%x", data)
+	println("at get ap list resp:" + hexData)
+	println("at get ap list resp:" + string(data))
+
+	if !bytes.Contains(data, []byte("OK")) {
 		return ScaleRespMsg{}, 0
 	}
 
@@ -1416,6 +1418,7 @@ func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if apList == nil {
 		return ScaleRespMsg{}, 0
 	}
+	println("at get ap list resp:" + string(data))
 
 	// compose response
 	apInfoList := convertResponsesToInfos(apList)

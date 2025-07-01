@@ -1,12 +1,15 @@
 package svc
 
 import (
+	"encoding/csv"
 	"fmt"
 	"log"
 	"math"
 	"math/big"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,9 +20,12 @@ import (
 	"tmaxsrv/comm" // for the message types.  It is not a direct part of the code.  It is a "hel
 	"tmaxsrv/lic"
 	l "tmaxsrv/log"
+	"tmaxsrv/util"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
+var SERVICE_ID int64 = 999999900 //小服务的ID是从999999900开始的
 
 type SrvMgr struct {
 	scaleMgr *ScaleMgr
@@ -152,7 +158,7 @@ func (h *SrvMgr) Run() {
 		select {
 		case client := <-h.register:
 			scaleId := client.scaleId
-			if scaleId > 0 && scaleId < 999999900 { // scaleId 0 is for management
+			if scaleId > 0 && scaleId < SERVICE_ID { // scaleId 0 is for management
 				scale := h.scales[scaleId]
 				if scale == nil {
 					l.Log.Errorf("The scale: %v is not existed", scaleId)
@@ -170,14 +176,14 @@ func (h *SrvMgr) Run() {
 			if !isRegisted {
 				h.clients[client] = true
 				// if scaleId != 0 { // 0 reserved for common information channel, 9999 reserved for legacy MCU scale, only support one scale with this ID
-				if scaleId < 999999900 {
+				if scaleId < SERVICE_ID {
 					h.clientOfScales[h.scales[scaleId]] = client
 				}
-				if scaleId != 0 && scaleId < 999999900 { // id 0 is reserved for common information channel
+				if scaleId != 0 && scaleId < SERVICE_ID { // id 0 is reserved for common information channel
 					h.scales[scaleId].SetClient(client)
 				}
 
-				if scaleId > 999999900 { // id 0 is reserved for common information channel
+				if scaleId > SERVICE_ID { // id 0 is reserved for common information channel
 					h.clientOfService[scaleId] = client
 				}
 
@@ -198,7 +204,7 @@ func (h *SrvMgr) Run() {
 				}
 				// client.Close()
 				delete(h.clients, client)
-				if client.scaleId > 999999900 {
+				if client.scaleId > SERVICE_ID {
 					delete(h.clientOfService, client.scaleId)
 				} else {
 					delete(h.clientOfScales, h.scales[client.scaleId])
@@ -234,7 +240,7 @@ func (h *SrvMgr) Run() {
 				l.Log.Infof("Got request from common channel %v\n", string(data["message"]))
 				parseMsgAndTrigEvt(h.scaleMgr, string(data["message"]))
 
-			} else if scaleId > 999999900 { // not for scale communication but for information purposes
+			} else if scaleId > SERVICE_ID { // not for scale communication but for information purposes
 				//小服务的接口
 				l.Log.Infof("Got request from common channel %v\n", string(data["message"]))
 				parseMsgAndTrigEvtService(h.scaleMgr, string(data["message"]), scaleId)
@@ -286,7 +292,7 @@ func (h *SrvMgr) Run() {
 			// handle the message from the scale
 			// 只要是服务，全送
 			outData, _ := json.Marshal(recvScaleMgrMsgSrv)
-			if recvScaleMgrMsgSrv.ScaleId > 999999900 {
+			if recvScaleMgrMsgSrv.ScaleId > SERVICE_ID {
 				client := h.clientOfService[recvScaleMgrMsgSrv.ScaleId]
 				if client != nil {
 					client.sendCh <- outData
@@ -434,24 +440,26 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		l.Log.Warn("Got quit application")
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_QUIT_APPLICATION, MsgBody: ""}
 		mSrvMgr.quitch <- true
-	// case REQ_GET_UI_CONF:
-	// 	l.Log.Info("Got get UI Config request")
-	// 	config, _ := mSrvMgr.uiConfig.GetConfig()
-	// 	configStr, _ := json.MarshalToString(config)
-	// 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_UI_CONFIG, MsgBody: configStr}
-	// case REQ_UPDATE_UI_CONF:
-	// 	l.Log.Info("Got update UI Config request")
-	// 	var config Config
-	// 	if err := json.UnmarshalFromString(req.ReqData, &config); err != nil {
-	// 		l.Log.Error(err)
-	// 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: "failed to parse update UI Config"}
-	// 	} else {
-	// 		err := mSrvMgr.uiConfig.UpdateConfig(&config)
-	// 		if err != nil {
-	// 			l.Log.Error(err)
-	// 		}
-	// 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: ""}
-	// 	}
+	case REQ_GET_UI_CONF:
+		l.Log.Info("Got get UI Config request")
+		modeInt, _ := strconv.Atoi(req.ReqData)
+		modeUint := uint(modeInt)
+		config, _ := mSrvMgr.modeSetting.GetModeSetting(modeUint)
+		configStr, _ := json.MarshalToString(config[0])
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_UI_CONFIG, MsgBody: configStr}
+	case REQ_UPDATE_UI_CONF:
+		l.Log.Info("Got update UI Config request")
+		var config ModeSetting
+		if err := json.UnmarshalFromString(req.ReqData, &config); err != nil {
+			l.Log.Error(err)
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: "failed to parse update UI Config"}
+		} else {
+			err := mSrvMgr.modeSetting.settingPb.UpdateModeSetting(config)
+			if err != nil {
+				l.Log.Error(err)
+			}
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_UI_CONFIG, MsgBody: "ok"}
+		}
 	case REQ_GET_LICENSE:
 		getLicenseList()
 		licListStr, _ := json.MarshalToString(gLicenseInfoList)
@@ -616,6 +624,69 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		//获取流速
 	case REQ_GET_FLOW_RATE_LIST:
 		flowRateList.Trigger(scaleMgr.srvMgr)
+		//获取称重记录列表
+	case REQ_GET_ALL_WGT_REC_LIST:
+		jsonStr := req.ReqData
+		var data ReqGetAllWgtRecList
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			getAllWgtRecList.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_GET_SEARCH_REC_LIST:
+		jsonStr := req.ReqData
+		var data ReqGetSearchRecList
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			getSearchRecList.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_ADD_WGT_REC:
+		jsonStr := req.ReqData
+		var data ReqAddWgtRec
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			addWgtRec.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_DEL_WGT_REC:
+		jsonStr := req.ReqData
+		var data ReqDelWgtRec
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			delWgtRec.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_DEL_WGT_REC_BY_ID:
+		jsonStr := req.ReqData
+		var data ReqDelWgtRecById
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			delWgtRecById.Trigger(scaleMgr.srvMgr, data)
+		}
+
+	case REQ_EXPORT_ALL_RECS:
+		jsonStr := req.ReqData
+		var data ReqExportAllRecs
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			exportAllRecs.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_KILL_BOOT_COMMANDER:
+
+		var OUR_USED_APP_NAMES []string = []string{"BootCommander.exe"}
+
+		for _, app := range OUR_USED_APP_NAMES {
+			if err := util.KillApp(app); err == nil {
+				fmt.Println("wait 5 seconds...")
+				time.Sleep(2 * time.Second)
+				fmt.Println("done")
+			}
+		}
+
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_KILL_BOOT_COMMANDER, MsgBody: "ok"}
 
 	}
 
@@ -1190,9 +1261,12 @@ func (p addFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 	// Do something for this event
 	l.Log.Debug("Handle addFormulaRecNotifier called")
 
+	headerKey, _ := NewFormulaRecProvider().GetMaxFormulaRecKey() //获取最新的配方ID
+
 	var header FormulaHeader = FormulaHeader{
 		FormulaID:     payload.Header.FormulaID,
 		FormulaName:   payload.Header.FormulaName,
+		FormulaKey:    headerKey + 1,
 		CategoryID:    payload.Header.CategoryID,
 		Remark:        payload.Header.Remark,
 		CreatedBy:     payload.Header.CreatedBy,
@@ -1240,6 +1314,7 @@ func (p editFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 	var header FormulaHeader = FormulaHeader{
 		FormulaID:     payload.Header.FormulaID,
 		FormulaName:   payload.Header.FormulaName,
+		FormulaKey:    payload.Header.FormulaKey,
 		CategoryID:    payload.Header.CategoryID,
 		Remark:        payload.Header.Remark,
 		CreatedBy:     payload.Header.CreatedBy,
@@ -1255,7 +1330,7 @@ func (p editFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 	details := []FormulaDetail{}
 	for _, detail := range payload.Detail {
 		tempRec := FormulaDetail{
-			FormulaRecID:       0,
+			FormulaRecID:       payload.Header.FormulaKey,
 			MaterialID:         detail.MaterialID,
 			MaterialWeight:     detail.MaterialWeight,
 			MaterialPercentage: detail.MaterialPercentage,
@@ -1320,6 +1395,7 @@ func (p addFormulaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqFormulaWgtRec) 
 		RecordSaveTime:    time.Now(),
 		Operator:          payload.RecHeader.Operator,
 		FormulaID:         fmaId,
+		FormulaKey:        fmaInfo.Header.FormulaHeader.FormulaKey,
 		FormulaName:       fmaInfo.Header.FormulaHeader.FormulaName,
 		FormulaMode:       fmaInfo.Header.FormulaHeader.FormulaMode,
 		FormulaTypeId:     fmaInfo.Header.FormulaHeader.CategoryID,
@@ -1525,4 +1601,397 @@ func (p getFlowRateListNotifier) Handle(mgr *SrvMgr) {
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FLOW_RATE_LIST, MsgBody: typesStr}
 
+}
+
+// 删除称重记录
+func (p delWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqDelWgtRec) {
+	// Do something for this event
+	l.Log.Debug("Handle delWgtRecNotifier called")
+	mode := payload.Mode
+
+	switch mode {
+	case 0:
+		if err := NewScaleRecProvider().NewDeleteAllRec(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+
+	case 1:
+		if err := NewScaleRecCheckWeigherProvider().NewDeleteAllRec(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+
+	case 2:
+		if err := NewScaleRecTakeInProvider().NewDeleteAllRec(); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+
+	case 3:
+		if err := NewScaleRecTakeOutProvider().NewDeleteAllRec(); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC, MsgBody: "ok"}
+}
+
+// 删除称重记录
+func (p delWgtRecByIdNotifier) Handle(mgr *SrvMgr, payload ReqDelWgtRecById) {
+	// Do something for this event
+	l.Log.Debug("Handle delWgtRecByIdNotifier called")
+	mode := payload.Mode
+	recId := payload.RecId
+	switch mode {
+	case 0:
+		if err := NewScaleRecProvider().DeleteRec(recId); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC_BY_ID, MsgBody: err.Error()}
+			return
+		}
+
+	case 1:
+		if err := NewScaleRecCheckWeigherProvider().DeleteRec(recId); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC_BY_ID, MsgBody: err.Error()}
+			return
+		}
+
+	case 2:
+		if err := NewScaleRecTakeInProvider().DeleteRec(recId); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC_BY_ID, MsgBody: err.Error()}
+			return
+		}
+
+	case 3:
+		if err := NewScaleRecTakeOutProvider().DeleteRec(recId); err != nil {
+			// TODO: error handling
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC_BY_ID, MsgBody: err.Error()}
+			return
+		}
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC_BY_ID, MsgBody: "ok"}
+}
+
+// 获取称重记录
+func (p getAllWgtRecListNotifier) Handle(mgr *SrvMgr, payload ReqGetAllWgtRecList) {
+	// Do something for this event
+	l.Log.Debug("Handle getAllWgtRecListNotifier called")
+	var recs PagedScaleRecInfo
+	var err error
+	mode := payload.Mode
+	switch mode {
+	case 0:
+		if recs, err = NewScaleRecProvider().NewGetRecsList(payload.Page, payload.PageSize, payload.ColumnName, payload.Direction); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_WGT_REC_LIST, MsgBody: err.Error()}
+			return
+		}
+
+	case 1:
+		if recs, err = NewScaleRecCheckWeigherProvider().NewGetRecsList(payload.Page, payload.PageSize, payload.ColumnName, payload.Direction); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_WGT_REC_LIST, MsgBody: err.Error()}
+			return
+		}
+
+	case 2:
+		if recs, err = NewScaleRecTakeInProvider().NewGetRecsList(payload.Page, payload.PageSize, payload.ColumnName, payload.Direction); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_WGT_REC_LIST, MsgBody: err.Error()}
+			return
+		}
+
+	case 3:
+		if recs, err = NewScaleRecTakeOutProvider().NewGetRecsList(payload.Page, payload.PageSize, payload.ColumnName, payload.Direction); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_WGT_REC_LIST, MsgBody: err.Error()}
+			return
+		}
+
+	}
+	var typesStr string
+	if typesStr, err = json.MarshalToString(recs); err != nil {
+		l.Log.Error(err)
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_WGT_REC_LIST, MsgBody: typesStr}
+}
+
+// 获取称重记录
+func (p getSearchRecListNotifier) Handle(mgr *SrvMgr, payload ReqGetSearchRecList) {
+	// Do something for this event
+	// l.Log.Debug("Handle getSearchRecListNotifier called")
+	// recs, _ := NewWgtRecProvider().GetSearchRecList(payload.SearchKey)
+
+	var typesStr string
+	// var err error
+	// if typesStr, err = json.MarshalToString(recs); err != nil {
+	// 	l.Log.Error(err)
+
+	// }
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_SEARCH_REC_LIST, MsgBody: typesStr}
+}
+
+// 增加称重记录
+func (p addWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqAddWgtRec) {
+	// Do something for this event
+	l.Log.Debug("Handle addWgtRecNotifier called")
+	// 找出头表中最大的recid
+	var err error
+	mode := payload.Mode
+	switch mode {
+	case 0:
+		if err := NewScaleRecProvider().InsertRec(payload.HeadRec); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+		var maxId uint
+		if maxId, err = NewScaleRecProvider().FindMaxRecId(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+		for _, detail := range payload.DetailRec {
+			detail.HeadId = maxId
+			if err := NewScaleRecProvider().InsertScaleRecDetail(detail); err != nil {
+				mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+				return
+			}
+		}
+
+	case 1:
+
+		if err := NewScaleRecCheckWeigherProvider().InsertRec(payload.HeadRec); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+		var maxId uint
+		if maxId, err = NewScaleRecCheckWeigherProvider().FindMaxRecId(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+
+		for _, detail := range payload.DetailRec {
+			detail.HeadId = maxId
+			if err := NewScaleRecCheckWeigherProvider().InsertScaleRecDetail(detail); err != nil {
+				mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+				return
+			}
+		}
+
+	case 2:
+
+		if err := NewScaleRecTakeInProvider().InsertRec(payload.HeadRec); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+		var maxId uint
+		if maxId, err = NewScaleRecTakeInProvider().FindMaxRecId(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+
+		for _, detail := range payload.DetailRec {
+			detail.HeadId = maxId
+			if err := NewScaleRecTakeInProvider().InsertScaleRecDetail(detail); err != nil {
+				mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+				return
+			}
+		}
+
+	case 3:
+
+		if err := NewScaleRecTakeOutProvider().InsertRec(payload.HeadRec); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+		var maxId uint
+		if maxId, err = NewScaleRecTakeOutProvider().FindMaxRecId(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+
+		for _, detail := range payload.DetailRec {
+			detail.HeadId = maxId
+			if err := NewScaleRecTakeOutProvider().InsertScaleRecDetail(detail); err != nil {
+				mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: err.Error()}
+				return
+			}
+		}
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: "ok"}
+
+}
+
+// 导出所有记录
+func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
+	// Do something for this event
+	l.Log.Debug("Handle exportAllRecsNotifier called")
+	// Do something with this event
+	// 导出所有记录
+	var recs []ScaleRecInfo
+	var config []ModeSetting
+	var err error
+	switch payload.Mode {
+	case 0:
+		if recs, err = NewScaleRecProvider().GetAllScaleRecInfos(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
+			return
+		}
+		config, _ = mSrvMgr.modeSetting.GetModeSetting(0)
+	case 1:
+		if recs, err = NewScaleRecCheckWeigherProvider().GetAllScaleRecInfos(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
+			return
+		}
+		config, _ = mSrvMgr.modeSetting.GetModeSetting(1)
+	case 2:
+		if recs, err = NewScaleRecTakeInProvider().GetAllScaleRecInfos(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
+			return
+		}
+		config, _ = mSrvMgr.modeSetting.GetModeSetting(2)
+	case 3:
+		if recs, err = NewScaleRecTakeOutProvider().GetAllScaleRecInfos(); err != nil {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
+			return
+		}
+		config, _ = mSrvMgr.modeSetting.GetModeSetting(3)
+
+	}
+
+	// 打开 CSV 文件
+	file, err := os.Create(payload.Path)
+	if err != nil {
+		mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
+		return
+	}
+	defer file.Close()
+
+	// 创建 CSV 写入器
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	//将recs写入csv文件，文件路径为payload.Path
+	//下面是总的表头
+	headers := []string{
+		"Id",
+		"ScaleModel",
+		"ScaleSn",
+		"PLU",
+		"Product Code",
+		"Item Code",
+		"Category",
+		"PLU Name",
+		"GeneralUnit",
+		"TaxType",
+		"Price",
+		"UnitWeight",
+		"Pretare",
+		"LimitHigh",
+		"LimitLow",
+		"Weight",
+		"Weight Unit",
+		"User NO.",
+		"User Name",
+		"Scale Name",
+		"Date Time",
+	}
+
+	//明细的头和表头共用即可，不需要重新写
+
+	// 写入总的标题
+	if err := writer.Write(headers); err != nil {
+		mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
+		return
+	}
+
+	//日期和分隔符的格式来源于config[0].DateFormat 和 config[0].Delimiter
+	dateFormat := config[0].DateFormat
+	delimiter := config[0].DateSeparator
+
+	// 定义日期格式模板
+	var formatTemplate string
+	switch dateFormat {
+	case "1":
+		formatTemplate = "2006" + delimiter + "01" + delimiter + "02" + " 15:04:05"
+	case "2":
+		formatTemplate = "02" + delimiter + "01" + delimiter + "2006" + " 15:04:05"
+	case "3":
+		formatTemplate = "01" + delimiter + "02" + delimiter + "2006" + " 15:04:05"
+	default:
+		// 默认使用 yyyy-mm-dd hh:mm:ss 格式
+		formatTemplate = "2006" + delimiter + "01" + delimiter + "02 15:04:05"
+	}
+
+	// 遍历每个 ScaleRecInfo
+	for _, info := range recs {
+		// 提取表头数据，需要根据 ScaleRec 结构体实际字段调整
+		createdAtFormatted := info.Header.CreatedAt.Format(formatTemplate)
+		headerData := []string{
+			fmt.Sprint(info.Header.RecId),
+			fmt.Sprint(info.Header.ScaleModel),
+			fmt.Sprint(info.Header.ScaleSn),
+			fmt.Sprint(info.Header.Plu),
+			fmt.Sprint(info.Header.ProductCode),
+			fmt.Sprint(info.Header.ItemCode),
+			fmt.Sprint(info.Header.Category),
+			fmt.Sprint(info.Header.ProductName),
+			fmt.Sprint(info.Header.GeneralUnit),
+			fmt.Sprint(info.Header.TaxType),
+			fmt.Sprint(info.Header.Price),
+			fmt.Sprint(info.Header.UnitWeight),
+			fmt.Sprint(info.Header.Pretare),
+			fmt.Sprint(info.Header.LimitHigh),
+			fmt.Sprint(info.Header.LimitLow),
+			fmt.Sprint(info.Header.Weight),
+			fmt.Sprint(info.Header.WeightUnit),
+			fmt.Sprint(info.Header.UserNo),
+			fmt.Sprint(info.Header.UserName),
+			fmt.Sprint(info.Header.ScaleName),
+			createdAtFormatted,
+		}
+		if err := writer.Write(headerData); err != nil {
+			mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
+			return
+		}
+
+		// 若有明细信息，写入明细
+		if len(info.Details) > 0 {
+			for _, detail := range info.Details {
+				// 假设明细和表头字段相同，若不同需要调整
+				headerData := []string{
+					"",
+					fmt.Sprint(detail.ScaleModel),
+					fmt.Sprint(detail.ScaleSn),
+					"",
+					"",
+					"",
+					"",
+					"",
+					"",
+					"",
+					"",
+					"",
+					"",
+					"",
+					"",
+					fmt.Sprint(detail.Weight),
+					fmt.Sprint(detail.WeightUnit),
+					"",
+					"",
+					fmt.Sprint(detail.ScaleName),
+					createdAtFormatted,
+				}
+				if err := writer.Write(headerData); err != nil {
+					mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
+					return
+				}
+			}
+		}
+	}
+
+	// 发送成功消息
+	mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: "ok"}
 }

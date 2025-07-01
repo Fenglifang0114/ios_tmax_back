@@ -109,15 +109,27 @@ response:{"MsgType":"resp_formula_type_list","MsgBody":"[{\"CategoryID\":1,\"Cat
 
 35. get formula data list => {"Req": "get_formula_data_list",	"ReqData": ""}
 
-35. delete formula data   => {"Req": "delete_formula_data",	"ReqData": ""}
+36. delete formula data   => {"Req": "delete_formula_data",	"ReqData": ""}
 
-35. add formula rec   => {"Req": "add_formula_rec",	"ReqData": ""}
+37. add formula rec   => {"Req": "add_formula_rec",	"ReqData": ""}
 
-35. get formula rec list => {"Req": "get_formula_rec_list",	"ReqData": ""}
+38. get formula rec list => {"Req": "get_formula_rec_list",	"ReqData": ""}
 
-35. add  flow data   => {"Req": "add_flow_rate",	"ReqData": ""}
+39. add  flow data   => {"Req": "add_flow_rate",	"ReqData": ""}
 
-35. get flow data list => {"Req": "get_flow_rate_list",	"ReqData": ""}
+40. get flow data list => {"Req": "get_flow_rate_list",	"ReqData": ""}
+
+41. get wgt rec list => {"Req": "get_all_wgt_rec_list",	"ReqData": ""}
+
+42. get search rec list => {"Req": "get_search_rec_list",	"ReqData": ""}
+
+43. add wgt rec => {"Req": "add_wgt_rec",	"ReqData": ""}
+
+44. del wgt rec => {"Req": "del_wgt_rec",	"ReqData": ""}
+
+45. del wgt rec by id => {"Req": "del_wgt_rec_by_id",	"ReqData": ""}
+
+ 
 
  
 

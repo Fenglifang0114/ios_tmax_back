@@ -73,6 +73,40 @@ func (p *ScaleRecProvider) DeleteAllRec(modelName string, scaleSn string) error 
 	return p.recPb.DeleteAllScaleRec(modelName, scaleSn)
 }
 
+func (p *ScaleRecProvider) NewDeleteAllRec() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.NewDeleteAllRec()
+}
+
+func (p *ScaleRecProvider) NewGetRecsList(page int, pageSize int, columnName string, direction string) (PagedScaleRecInfo, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.NewGetScaleRecsList(page, pageSize, columnName, direction)
+	return recs, err
+}
+
+func (p *ScaleRecProvider) FindMaxRecId() (uint, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	maxid, err := p.recPb.FindMaxRecId()
+	return maxid, err
+}
+
+func (p *ScaleRecProvider) InsertScaleRecDetail(detail ScaleRecDetail) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	err := p.recPb.InsertScaleRecDetail(detail)
+	return err
+}
+
+func (p *ScaleRecProvider) GetAllScaleRecInfos() ([]ScaleRecInfo, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.GetAllScaleRecInfos()
+	return recs, err
+}
+
 func NewScaleRecCheckWeigherProvider() *ScaleRecCheckWeigherProvider {
 	recPb, _ := NewDbScaleRec(SCALE_REC_DB_CHECK_FILE)
 	return &ScaleRecCheckWeigherProvider{myId: "ScaleRecCheckWeigherProvider", recPb: recPb}
@@ -107,6 +141,40 @@ func (p *ScaleRecCheckWeigherProvider) DeleteAllRec(modelName string, scaleSn st
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.recPb.DeleteAllScaleRec(modelName, scaleSn)
+}
+
+func (p *ScaleRecCheckWeigherProvider) NewDeleteAllRec() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.NewDeleteAllRec()
+}
+
+func (p *ScaleRecCheckWeigherProvider) NewGetRecsList(page int, pageSize int, columnName string, direction string) (PagedScaleRecInfo, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.NewGetScaleRecsList(page, pageSize, columnName, direction)
+	return recs, err
+}
+
+func (p *ScaleRecCheckWeigherProvider) FindMaxRecId() (uint, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	maxid, err := p.recPb.FindMaxRecId()
+	return maxid, err
+}
+
+func (p *ScaleRecCheckWeigherProvider) InsertScaleRecDetail(detail ScaleRecDetail) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	err := p.recPb.InsertScaleRecDetail(detail)
+	return err
+}
+
+func (p *ScaleRecCheckWeigherProvider) GetAllScaleRecInfos() ([]ScaleRecInfo, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.GetAllScaleRecInfos()
+	return recs, err
 }
 
 func NewScaleRecTakeInProvider() *ScaleRecTakeInProvider {
@@ -145,6 +213,40 @@ func (p *ScaleRecTakeInProvider) DeleteAllRec(modelName string, scaleSn string) 
 	return p.recPb.DeleteAllScaleRec(modelName, scaleSn)
 }
 
+func (p *ScaleRecTakeInProvider) NewDeleteAllRec() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.NewDeleteAllRec()
+}
+
+func (p *ScaleRecTakeInProvider) NewGetRecsList(page int, pageSize int, columnName string, direction string) (PagedScaleRecInfo, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.NewGetScaleRecsList(page, pageSize, columnName, direction)
+	return recs, err
+}
+
+func (p *ScaleRecTakeInProvider) FindMaxRecId() (uint, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	maxid, err := p.recPb.FindMaxRecId()
+	return maxid, err
+}
+
+func (p *ScaleRecTakeInProvider) InsertScaleRecDetail(detail ScaleRecDetail) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	err := p.recPb.InsertScaleRecDetail(detail)
+	return err
+}
+
+func (p *ScaleRecTakeInProvider) GetAllScaleRecInfos() ([]ScaleRecInfo, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.GetAllScaleRecInfos()
+	return recs, err
+}
+
 func NewScaleRecTakeOutProvider() *ScaleRecTakeOutProvider {
 	recPb, _ := NewDbScaleRec(SCALE_REC_DB_TAKE_OUT_FILE)
 	return &ScaleRecTakeOutProvider{myId: "ScaleRecTakeOutProvider", recPb: recPb}
@@ -180,4 +282,38 @@ func (p *ScaleRecTakeOutProvider) DeleteAllRec(modelName string, scaleSn string)
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.recPb.DeleteAllScaleRec(modelName, scaleSn)
+}
+
+func (p *ScaleRecTakeOutProvider) NewDeleteAllRec() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.recPb.NewDeleteAllRec()
+}
+
+func (p *ScaleRecTakeOutProvider) NewGetRecsList(page int, pageSize int, columnName string, direction string) (PagedScaleRecInfo, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.NewGetScaleRecsList(page, pageSize, columnName, direction)
+	return recs, err
+}
+
+func (p *ScaleRecTakeOutProvider) FindMaxRecId() (uint, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	maxid, err := p.recPb.FindMaxRecId()
+	return maxid, err
+}
+
+func (p *ScaleRecTakeOutProvider) InsertScaleRecDetail(detail ScaleRecDetail) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	err := p.recPb.InsertScaleRecDetail(detail)
+	return err
+}
+
+func (p *ScaleRecTakeOutProvider) GetAllScaleRecInfos() ([]ScaleRecInfo, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	recs, err := p.recPb.GetAllScaleRecInfos()
+	return recs, err
 }

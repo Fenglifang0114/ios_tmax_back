@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"tmaxsrv/cmd"
+
 	mcmd "tmaxsrv/cmd"
-	"tmaxsrv/comm"
+
 	m "tmaxsrv/comm"
 	l "tmaxsrv/log"
 	"tmaxsrv/util"
@@ -41,7 +41,7 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 
 	output := make(chan string)
 	done := make(chan error)
-	bootCommanderPath := comm.GetExePath()
+	bootCommanderPath := m.GetExePath()
 	print(bootCommanderPath)
 	bootCommanderPath = filepath.Join(bootCommanderPath, "BootCommander.exe")
 	go util.RunCommand(output, done, bootCommanderPath, "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
@@ -252,7 +252,7 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	c.isSendUnolicitedData = false
 	c.isScalePassth = false
-	msg, err := perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
+	msg, err := perfCmdNwaitResult(c, mcmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, mcmd.CMD_TIMEOUT_SHORT_1500_MS)
 
 	if str, ok := msg.MsgBody.(string); ok && strings.Contains(str, "ok") {
 		return msg, err
@@ -263,7 +263,7 @@ func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 		msg.MsgType = m.UNREG_WEIGHT_RESP
 		return msg, err
 	}
-	msg, err = perfCmdNwaitResult(c, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, cmd.CMD_TIMEOUT_SHORT_1500_MS)
+	msg, err = perfCmdNwaitResult(c, mcmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, mcmd.CMD_TIMEOUT_SHORT_1500_MS)
 	//sendErrMsg(c, msg)
 	// _, _ = EnFacMode(c)
 	return msg, err
@@ -711,6 +711,7 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 }
 
 func writeScale(c *Scale, data []byte) error {
+
 	if c.MySerial != nil && c.MySerial.isDefault {
 		if len(c.MySerial.sendCh) > SEND_CH_SIZE {
 			return fmt.Errorf("serial sendCh full")
@@ -916,6 +917,6 @@ var cmdComposerFuncMap map[m.ScaleCat]m.CmdComposer
 
 func init() {
 	cmdComposerFuncMap = make(map[m.ScaleCat]m.CmdComposer)
-	cmdComposerFuncMap[m.SCALE_T2200] = *cmd.NewComposerT2200()
-	cmdComposerFuncMap[m.SCALE_TMAX] = *cmd.NewComposerTMAX()
+	cmdComposerFuncMap[m.SCALE_T2200] = *mcmd.NewComposerT2200()
+	cmdComposerFuncMap[m.SCALE_TMAX] = *mcmd.NewComposerTMAX()
 }

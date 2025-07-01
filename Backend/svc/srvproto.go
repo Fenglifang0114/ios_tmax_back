@@ -37,9 +37,9 @@ const (
 	REQ_DEL_USER    ReqType = "del_user"    // with ReqDelScale parameter
 	REQ_MODIFY_USER ReqType = "modify_user" // with ReqModifyScale parameter
 
-	REQ_QUIT_APPLICATION ReqType = "quit_application" // without parameter
-	// REQ_GET_UI_CONF       ReqType = "get_ui_conf"       // without parameter
-	// REQ_UPDATE_UI_CONF    ReqType = "update_ui_conf"    // without parameter
+	REQ_QUIT_APPLICATION  ReqType = "quit_application"  // without parameter
+	REQ_GET_UI_CONF       ReqType = "get_ui_conf"       // without parameter
+	REQ_UPDATE_UI_CONF    ReqType = "update_ui_conf"    // without parameter
 	REQ_GET_LICENSE       ReqType = "get_license"       // without parameter
 	REQ_CHECK_LICENSE_KEY ReqType = "check_license_key" // with parameter
 	REQ_UPDATE_LICENSE    ReqType = "update_license"    // with parameter
@@ -74,7 +74,14 @@ const (
 	REQ_GET_FORMULA_REC_LIST  ReqType = "get_formula_rec_list"  //获取配方称重记录列表
 	REQ_ADD_FLOW_RATE         ReqType = "add_flow_rate"         //新增流速
 	REQ_GET_FLOW_RATE_LIST    ReqType = "get_flow_rate_list"    //获取流速列表
-
+	//获取称重记录，不按秤来，总体的记录
+	REQ_GET_ALL_WGT_REC_LIST ReqType = "get_all_wgt_rec_list" //获取称重记录列表  要分类型(重量收集，检重，加法，减法)
+	REQ_GET_SEARCH_REC_LIST  ReqType = "get_search_rec_list"  //获取搜索记录列表  (搜索字段)
+	REQ_ADD_WGT_REC          ReqType = "add_wgt_rec"          //添加称重记录(汇总的称重记录)
+	REQ_DEL_WGT_REC          ReqType = "del_wgt_rec"          //删除称重记录  根据称重类型删除所有的数据
+	REQ_DEL_WGT_REC_BY_ID    ReqType = "del_wgt_rec_by_id"    //根据称重记录recID 删除称重记录
+	REQ_EXPORT_ALL_RECS      ReqType = "export_all_recs"      //导出所有记录
+	REQ_KILL_BOOT_COMMANDER  ReqType = "kill_boot_commander"  //杀掉boot_commander进程
 )
 
 type ReqAddScale struct {
@@ -220,6 +227,8 @@ type ReqAddFormulaData struct {
 
 // 配方头表
 type ReqAddFormulaHeader struct {
+	FormulaKey int `gorm:"not null"`
+
 	// 配方编号（主键）
 	FormulaID string `gorm:"not null"`
 	// 配方名称
@@ -353,6 +362,61 @@ type ReqFlowRateDetail struct {
 	Time float64
 }
 
+//公共接口去拿所有称重的数据（分称重类型）
+
+type ReqGetAllWgtRecList struct {
+	Mode       int //按称重模式 重量收集:0  加法秤:，减法秤: ，检重秤:
+	Page       int
+	PageSize   int
+	ColumnName string //排序字段
+	Direction  string // 排序的方向
+
+}
+
+// 按条件拿数据
+type ReqGetSearchRecList struct {
+	Mode        int //按称重模式 重量收集:0  加法秤:，减法秤: ，检重秤:
+	ScaleModel  string
+	ScaleSn     string
+	Plu         string
+	ProductCode string
+	ItemCode    string
+	Category    string
+	ProductName string
+	GeneralUnit string
+	TaxType     string
+	UnitWeight  string
+	WeightUnit  string
+	UserNo      string
+	UserName    string
+	ScaleMode   string //0 =DC500 1=check Weigher 2=take in  3=take out
+	ScaleName   string
+	Page        int
+	PageSize    int
+	ColumnName  string //排序字段
+	Direction   string // 排序的方向
+}
+
+type ReqAddWgtRec struct {
+	Mode      int
+	HeadRec   ScaleRec
+	DetailRec []ScaleRecDetail
+}
+
+type ReqDelWgtRec struct {
+	Mode uint
+}
+
+type ReqDelWgtRecById struct {
+	Mode  uint
+	RecId uint
+}
+
+type ReqExportAllRecs struct {
+	Mode uint
+	Path string
+}
+
 // ********** Response of scale manager **********
 type ScaleMgrRespMsg struct {
 	MsgType ScaleMgrRespMsgType
@@ -400,22 +464,31 @@ const (
 	SCALE_MGR_RESP_DO_SERVICE_ACTION  ScaleMgrRespMsgType = "resp_do_service_action"  // with response
 
 	//配方秤
-	SCALE_MGR_RESP_RAW_TYPE_ADD      ScaleMgrRespMsgType = "resp_raw_type_add"
-	SCALE_MGR_RESP_FORMULA_TYPE_ADD  ScaleMgrRespMsgType = "resp_formula_type_add"
-	SCALE_MGR_RESP_FORMULA_TYPE_LIST ScaleMgrRespMsgType = "resp_formula_type_list"
-	SCALE_MGR_RESP_RAW_TYPE_LIST     ScaleMgrRespMsgType = "resp_raw_type_list"
-	SCALE_MGR_RESP_RAW_LIST          ScaleMgrRespMsgType = "resp_raw_list"
-	SCALE_MGR_RESP_RAW_DATA_EDIT     ScaleMgrRespMsgType = "resp_raw_data_edit"
-	SCALE_MGR_RESP_RAW_DATA_DELETE   ScaleMgrRespMsgType = "resp_raw_data_delete"
-	SCALE_MGR_RESP_RAW_DATA_ADD      ScaleMgrRespMsgType = "resp_raw_data_add"
-	SCALE_MGR_RESP_FORMULA_ADD       ScaleMgrRespMsgType = "resp_formula_add"
-	SCALE_MGR_RESP_FORMULA_UPDATE    ScaleMgrRespMsgType = "resp_formula_update"
-	SCALE_MGR_RESP_FORMULA_LIST      ScaleMgrRespMsgType = "resp_formula_list"
-	SCALE_MGR_RESP_FORMULA_REC_ADD   ScaleMgrRespMsgType = "resp_formula_rec_add"
-	SCALE_MGR_RESP_FORMULA_REC_LIST  ScaleMgrRespMsgType = "resp_formula_rec_list"
-	SCALE_MGR_RESP_FORMULA_DELETE    ScaleMgrRespMsgType = "resp_formula_delete"
-	SCALE_MGR_RESP_FLOW_RATE_ADD     ScaleMgrRespMsgType = "resp_flow_rate_add"
-	SCALE_MGR_RESP_FLOW_RATE_LIST    ScaleMgrRespMsgType = "resp_flow_rate_list"
+	SCALE_MGR_RESP_RAW_TYPE_ADD         ScaleMgrRespMsgType = "resp_raw_type_add"
+	SCALE_MGR_RESP_FORMULA_TYPE_ADD     ScaleMgrRespMsgType = "resp_formula_type_add"
+	SCALE_MGR_RESP_FORMULA_TYPE_LIST    ScaleMgrRespMsgType = "resp_formula_type_list"
+	SCALE_MGR_RESP_RAW_TYPE_LIST        ScaleMgrRespMsgType = "resp_raw_type_list"
+	SCALE_MGR_RESP_RAW_LIST             ScaleMgrRespMsgType = "resp_raw_list"
+	SCALE_MGR_RESP_RAW_DATA_EDIT        ScaleMgrRespMsgType = "resp_raw_data_edit"
+	SCALE_MGR_RESP_RAW_DATA_DELETE      ScaleMgrRespMsgType = "resp_raw_data_delete"
+	SCALE_MGR_RESP_RAW_DATA_ADD         ScaleMgrRespMsgType = "resp_raw_data_add"
+	SCALE_MGR_RESP_FORMULA_ADD          ScaleMgrRespMsgType = "resp_formula_add"
+	SCALE_MGR_RESP_FORMULA_UPDATE       ScaleMgrRespMsgType = "resp_formula_update"
+	SCALE_MGR_RESP_FORMULA_LIST         ScaleMgrRespMsgType = "resp_formula_list"
+	SCALE_MGR_RESP_FORMULA_REC_ADD      ScaleMgrRespMsgType = "resp_formula_rec_add"
+	SCALE_MGR_RESP_FORMULA_REC_LIST     ScaleMgrRespMsgType = "resp_formula_rec_list"
+	SCALE_MGR_RESP_FORMULA_DELETE       ScaleMgrRespMsgType = "resp_formula_delete"
+	SCALE_MGR_RESP_FLOW_RATE_ADD        ScaleMgrRespMsgType = "resp_flow_rate_add"
+	SCALE_MGR_RESP_FLOW_RATE_LIST       ScaleMgrRespMsgType = "resp_flow_rate_list"
+	SCALE_MGR_RESP_GET_ALL_WGT_REC_LIST ScaleMgrRespMsgType = "resp_get_all_wgt_rec_list"
+	SCALE_MGR_RESP_GET_SEARCH_REC_LIST  ScaleMgrRespMsgType = "resp_get_search_rec_list"
+	SCALE_MGR_RESP_ADD_WGT_REC          ScaleMgrRespMsgType = "resp_add_wgt_rec"
+	SCALE_MGR_RESP_DEL_WGT_REC          ScaleMgrRespMsgType = "resp_del_wgt_rec"
+	SCALE_MGR_RESP_DEL_WGT_REC_BY_ID    ScaleMgrRespMsgType = "resp_del_wgt_rec_by_id"
+	SCALE_MGR_RESP_GET_UI_CONFIG        ScaleMgrRespMsgType = "resp_get_ui_config"       // with response of UI configuration
+	SCALE_MGR_RESP_UPDATE_UI_CONFIG     ScaleMgrRespMsgType = "resp_update_ui_config"    // without parameter
+	SCALE_MGR_RESP_EXPORT_ALL_RECS      ScaleMgrRespMsgType = "resp_export_all_recs"     // without parameter
+	SCALE_MGR_RESP_KILL_BOOT_COMMANDER  ScaleMgrRespMsgType = "resp_kill_boot_commander" // without parameter
 )
 
 type PortsListMsg struct {

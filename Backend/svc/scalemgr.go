@@ -170,6 +170,24 @@ func init() {
 	createFlowRateListNotifier := getFlowRateListNotifier{}
 	flowRateList.Register(createFlowRateListNotifier)
 
+	createDelWgtRecNotifier := delWgtRecNotifier{}
+	delWgtRec.Register(createDelWgtRecNotifier)
+
+	createDelWgtRecByIdNotifier := delWgtRecByIdNotifier{}
+	delWgtRecById.Register(createDelWgtRecByIdNotifier)
+
+	createGetAllWgtRecListNotifier := getAllWgtRecListNotifier{}
+	getAllWgtRecList.Register(createGetAllWgtRecListNotifier)
+
+	createGetSearchRecListNotifier := getSearchRecListNotifier{}
+	getSearchRecList.Register(createGetSearchRecListNotifier)
+
+	createAddWgtRecNotifier := addWgtRecNotifier{}
+	addWgtRec.Register(createAddWgtRecNotifier)
+
+	createExportAllRecsNotifier := exportAllRecsNotifier{}
+	exportAllRecs.Register(createExportAllRecsNotifier)
+
 }
 
 type portListedNotifier struct{}
@@ -251,6 +269,18 @@ type delFormulaNotifier struct{}
 type addFlowRateNotifier struct{}
 
 type getFlowRateListNotifier struct{}
+
+type delWgtRecNotifier struct{}
+
+type delWgtRecByIdNotifier struct{}
+
+type getAllWgtRecListNotifier struct{}
+
+type getSearchRecListNotifier struct{}
+
+type addWgtRecNotifier struct{}
+
+type exportAllRecsNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event
@@ -452,15 +482,16 @@ func (s *ScaleMgr) Run() {
 	// list serial from time to time to check if the port that connecting to scale is varied
 	s.medias, _ = s.connPb.GetScaleConnsList() // scaleId "0000" is for get all scale connections
 	//如果没有秤则新增一个串口
+	//统一由此处去新增一个秤，当需要新增的时候只需要将秤加入数据库即可
 
-	if len(s.medias) == 0 {
-		var comInfo ComInfo = ComInfo{DevPath: "COM3", Baud: 115200, DataBits: 8, Parity: 0, StopBits: 0}
-		var conf MediaConf = MediaConf{}
-		conf.Type = MEDIA_COM
-		conf.MediaInfoJson, _ = json.MarshalToString(comInfo)
-		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: comm.SCALE_TMAX, ScaleId: 1, ScaleModel: "T-Max", ScaleSn: "123456", TMedia: MEDIA_COM, MediaConf: conf, IsDefault: true, ScaleName: "ComScale"}
-		s.connPb.connPb.InsertScaleConn(*scaleConn)
-	}
+	// if len(s.medias) == 0 {
+	// 	var comInfo ComInfo = ComInfo{DevPath: "COM3", Baud: 115200, DataBits: 8, Parity: 0, StopBits: 0}
+	// 	var conf MediaConf = MediaConf{}
+	// 	conf.Type = MEDIA_COM
+	// 	conf.MediaInfoJson, _ = json.MarshalToString(comInfo)
+	// 	scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: comm.SCALE_TMAX, ScaleId: 1, ScaleModel: "T-Max", ScaleSn: "123456", TMedia: MEDIA_COM, MediaConf: conf, IsDefault: true, ScaleName: "ComScale"}
+	// 	s.connPb.connPb.InsertScaleConn(*scaleConn)
+	// }
 
 	s.medias, _ = s.connPb.GetScaleConnsList()
 	//将所有的秤都与服务建立对应关系
@@ -484,20 +515,13 @@ func (s *ScaleMgr) Run() {
 			// new scale and assign scaleid to the instance
 			var scale *Scale
 			scale, _ = NewScale(s, conn, conn.ScaleCat, conn.ScaleModel, conn.ScaleSn, false)
-			// scale.Id = nextScaleId
 			scale.Id = conn.ScaleId
 			conn.scale = scale
 			conn.ScaleId = scale.Id
 			s.scales[scale.Id] = scale
 			s.srvMgr.addScale <- scale // register new scale instance to srvMgr
 
-			if conn.ScaleId >= nextScaleId {
-				nextScaleId = conn.ScaleId
-				nextScaleId++
-			}
-
 		}
-
 	}
 
 	for {
@@ -505,11 +529,12 @@ func (s *ScaleMgr) Run() {
 		// construct scale instance if it doesn't exist
 
 		ports, _ := getPortsList()
+		fmt.Printf("ports: %v\n", ports)
 
 		// portsNotInUse := handlePortState(&ports, &s.conns)
-		_ = handlePortState(&ports, &s.medias)
+		// portsNotInUse := handlePortState(&ports, &s.medias)
 		_ = handleNetState(&s.medias)
-		// fmt.Printf("%v\n", portsNotInUse)
+		// fmt.Printf("portsNotInUse:  %v\n", portsNotInUse)
 		// TODO: scan ports for finding scales and handle new finding scales
 
 		// TODO: handle scales that offline
@@ -674,7 +699,7 @@ func handlePortState(inPorts *[]string, conns *[]*ScaleConnMedia) (portsNotInUse
 		}
 
 	}
-	return
+	return portsNotInUse
 }
 
 func handleNetState(conns *[]*ScaleConnMedia) (netsNotInUse []string) {
@@ -761,12 +786,56 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 	// check if the scaleConn is existing via checking the scale's model and scale's sn
 	//TODO:要用于增加管理的秤  202406
 	s.medias, _ = s.connPb.GetScaleConnsList()
+
+	var reqComInfo ComInfo
+
+	if req.MediaConf.Type == MEDIA_COM {
+		if err := json.UnmarshalFromString(req.MediaConf.MediaInfoJson, &reqComInfo); err != nil {
+			return err
+		}
+		if len(s.medias) == 0 {
+			nextScaleId = 1
+		} else {
+			maxScaleID := int64(0)
+			// 遍历 s.medias 找出最大的 ScaleId
+			for _, media := range s.medias {
+				if media.ScaleId > maxScaleID {
+					maxScaleID = media.ScaleId
+				}
+			}
+			nextScaleId = maxScaleID + 1
+		}
+		scaleName := "Scale" + strconv.FormatInt(nextScaleId, 10)
+		var comInfo ComInfo = ComInfo{DevPath: reqComInfo.DevPath, Baud: reqComInfo.Baud, DataBits: 8, Parity: 0, StopBits: 0}
+		var conf MediaConf = MediaConf{}
+		conf.Type = MEDIA_COM
+		conf.MediaInfoJson, _ = json.MarshalToString(comInfo)
+		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: comm.SCALE_TMAX, ScaleId: nextScaleId, ScaleModel: "T-Max", ScaleSn: getSn(), TMedia: MEDIA_COM, MediaConf: conf, IsDefault: true, ScaleName: scaleName}
+		s.connPb.connPb.InsertScaleConn(*scaleConn)
+		s.AddMediaList(scaleConn.ScaleId, *scaleConn)
+
+		var scale *Scale
+
+		scale, _ = NewScale(s, scaleConn, scaleConn.ScaleCat, scaleConn.ScaleModel, scaleConn.ScaleSn, false)
+		scale.Id = scaleConn.ScaleId
+		scaleConn.scale = scale
+
+		s.scales[scale.Id] = scale
+		s.srvMgr.addScale <- scale // register new scale instance to srvMgr
+
+		s.AddSrvScaleList(scale.Id)
+
+		return nil
+	}
+
+	//下面是新增网络秤
 	var netInfo NetInfo
 	var reqNetInfo NetInfo
-	//现在只新增网络秤
+
 	if req.MediaConf.Type != MEDIA_NET {
 		return fmt.Errorf("only can add net scale")
 	}
+
 	if err := json.UnmarshalFromString(req.MediaConf.MediaInfoJson, &reqNetInfo); err != nil {
 		return err
 	}
@@ -779,6 +848,19 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 				return fmt.Errorf("This IP address already exists")
 			}
 		}
+	}
+
+	if len(s.medias) == 0 {
+		nextScaleId = 1
+	} else {
+		maxScaleID := int64(0)
+		// 遍历 s.medias 找出最大的 ScaleId
+		for _, media := range s.medias {
+			if media.ScaleId > maxScaleID {
+				maxScaleID = media.ScaleId
+			}
+		}
+		nextScaleId = maxScaleID + 1
 	}
 
 	conn := &ScaleConnMedia{ScaleModel: req.ScaleModel, ScaleSn: getSn(), TMedia: req.MediaConf.Type, MediaConf: req.MediaConf}
@@ -798,7 +880,6 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 	s.scales[scale.Id] = scale
 	s.srvMgr.addScale <- scale // register new scale instance to srvMgr
 
-	nextScaleId++
 	s.connPb.connPb.InsertScaleConn(*conn)
 	s.AddMediaList(scale.Id, *conn)
 	//增加服务的对应关系
@@ -816,37 +897,61 @@ func (s *ScaleMgr) DelScale(id int64) error {
 	if scale == nil {
 		return fmt.Errorf("can't find scale with id: %v", id)
 	}
-	if scale.Conn.TMedia == MEDIA_COM {
-		return fmt.Errorf("serial connect can not delete")
-	}
-
 	conn := scale.Conn
 	if conn == nil {
 		return fmt.Errorf("can't find connection associated with the scale Id")
 	}
+	if scale.Conn.TMedia == MEDIA_COM {
+		// return fmt.Errorf("serial connect can not delete")
+		client := s.srvMgr.clientOfScales[scale]
+		if client != nil && client.scaleId == id {
+			s.srvMgr.unregister <- client
+			if client.conn != nil {
+				client.conn.Close()
+			} // terminate the socket that associate with the scale
+		}
+		// remove the conn then add new one s.conns
+		scale.MySerial.toQuit = true
+		time.Sleep(500 * time.Millisecond)
+		scale.Close()
+		s.srvMgr.removeScale <- scale
+		s.connPb.connPb.DeleteScaleConn(*conn)
+		if s.scales[scale.Id] != nil { // scale not existing
+			s.scales[scale.Id] = nil
+		}
+		s.DelMediaList(scale.Id, *conn)
+		//删除连接关系
+		s.connPb.DeleteSrvScaleRelByScaleId(scale.Id)
+		s.DelSrvScaleList(scale.Id)
+		return nil
+	}
 
-	client := s.srvMgr.clientOfScales[scale]
-	if client != nil && client.scaleId == id {
-		s.srvMgr.unregister <- client
-		if client.conn != nil {
-			client.conn.Close()
-		} // terminate the socket that associate with the scale
+	if scale.Conn.TMedia == MEDIA_NET {
+
+		client := s.srvMgr.clientOfScales[scale]
+		if client != nil && client.scaleId == id {
+			s.srvMgr.unregister <- client
+			if client.conn != nil {
+				client.conn.Close()
+			} // terminate the socket that associate with the scale
+		}
+		// remove the conn then add new one s.conns
+		scale.MyNet.toQuit = true
+		time.Sleep(500 * time.Millisecond)
+		scale.Close()
+		s.srvMgr.removeScale <- scale
+		s.connPb.connPb.DeleteScaleConn(*conn)
+		if s.scales[scale.Id] != nil { // scale not existing
+			s.scales[scale.Id] = nil
+		}
+		s.DelMediaList(scale.Id, *conn)
+		//删除连接关系
+		s.connPb.DeleteSrvScaleRelByScaleId(scale.Id)
+		s.DelSrvScaleList(scale.Id)
+		return nil
+
 	}
-	// remove the conn then add new one s.conns
-	scale.MyNet.toQuit = true
-	time.Sleep(500 * time.Millisecond)
-	scale.Close()
-	s.srvMgr.removeScale <- scale
-	s.connPb.connPb.DeleteScaleConn(*conn)
-	if s.scales[scale.Id] != nil { // scale not existing
-		s.scales[scale.Id] = nil
-	}
-	s.DelMediaList(scale.Id, *conn)
-	//删除连接关系
-	s.connPb.DeleteSrvScaleRelByScaleId(scale.Id)
-	s.DelSrvScaleList(scale.Id)
 	return nil
-
 }
 
 // for user to update a scale

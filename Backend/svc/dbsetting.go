@@ -22,6 +22,8 @@ type ModeSetting struct {
 	RecMode       string
 	ScaleSn       string
 	SaveMode      string
+	WgtMode       uint `gorm:"default:0"` //0 单台模式  1 合并称重模式
+
 }
 
 func NewDbModeSetting(dbName string) (*DbModeSetting, error) {
@@ -41,6 +43,7 @@ func NewDbModeSetting(dbName string) (*DbModeSetting, error) {
 	if err = db.AutoMigrate(&ModeSetting{}); err != nil {
 		panic("failed to migrate database of scale connection")
 	}
+
 	return &DbModeSetting{dbName: dbName}, nil
 }
 
@@ -81,9 +84,10 @@ func (d *DbModeSetting) UpdateModeSetting(setting ModeSetting) error {
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
-	rowAffected := db.Model(&setting).Where("scale_mode=?", setting.ScaleMode).Updates(&setting).RowsAffected
+	// 明确指定要更新的字段
+	rowAffected := db.Model(&setting).Where("scale_mode=?", setting.ScaleMode).Select("*").Updates(&setting).RowsAffected
 	if rowAffected == 0 {
-		return errors.New("@UpdateScaleRec failed, mybe record not existing")
+		return errors.New("@UpdateScaleRec failed, maybe record not existing")
 	}
 	return nil
 }

@@ -76,6 +76,11 @@ func (p *FormulaRecProvider) GetMaxFormulaRecId() (int, error) {
 	return p.infoPb.GetMaxFormulaRecId()
 }
 
+// 获取配方信息头key
+func (p *FormulaRecProvider) GetMaxFormulaRecKey() (int, error) {
+	return p.infoPb.GetMaxFormulaRecKey()
+}
+
 // 新增配方信息头
 func (p *FormulaRecProvider) InsertFormulaHeader(rec FormulaHeader) error {
 	return p.infoPb.CreateFormulaHeader(rec)

@@ -130,7 +130,6 @@ func procSendScaleAlive(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 // 导出csv时用来写表头
 func procExportRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// 获取记录
-
 	dataReq := strings.Split(req.ReqData, ",")
 	path := ""
 
@@ -149,7 +148,8 @@ func procExportRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	// 获取结构体字段名并反向转换为原始字段作为表头
 	headers := []string{
-		"Id", "ScaleModel",
+		"Id",
+		"ScaleModel",
 		"ScaleSn",
 		"PLU",
 		"Product Code",
