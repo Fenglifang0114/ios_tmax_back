@@ -158,7 +158,7 @@ type FormulaWgtRecHeader struct {
 	// 记录操作员
 	Operator string
 	//配方唯一标识
-	FormulaKey int `gorm:"default:0"`
+	FormulaKey int `gorm:"not null;default:0"`
 	// 配方编号
 	FormulaID string
 	// 配方名称
@@ -299,9 +299,51 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 	}
 
 	// 检查并更新现有数据
-	db.Exec("UPDATE formula_headers SET formula_key = rec_id WHERE formula_key IS NULL OR formula_key = 0")
+	db.Exec("UPDATE formula_headers SET formula_key = rec_id WHERE formula_key = 0")
+	info := &DbFormulaInfo{dbName: dbName}
+	// 通过实例调用方法
+	if err := info.UpdateFormulaKeyInWgtRecHeader(); err != nil {
+		return nil, err
+	}
 
-	return &DbFormulaInfo{dbName: dbName}, nil
+	return info, nil
+}
+
+// 更新 FormulaWgtRecHeader 中 formula_key 为 0 的记录
+func (d *DbFormulaInfo) UpdateFormulaKeyInWgtRecHeader() error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 使用 gorm.Expr 实现子查询
+	subQueryExpr := gorm.Expr("(SELECT rec_id FROM formula_headers WHERE formula_id = formula_wgt_rec_headers.formula_id)")
+
+	// 更新 FormulaWgtRecHeader 中 formula_key 为 0 的记录
+	err = tx.Model(&FormulaWgtRecHeader{}).
+		Where("formula_key = ?", 0).
+		Update("formula_key", subQueryExpr).
+		Error
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 提交事务
+	return tx.Commit().Error
 }
 
 // 新增配方类别
@@ -1000,65 +1042,6 @@ func (d *DbFormulaInfo) UpdateFormula(header FormulaHeader, details []FormulaDet
 	// 提交事务
 	return tx.Commit().Error
 }
-
-// // 修改配方，包含配方头和明细
-// func (d *DbFormulaInfo) UpdateFormula(header FormulaHeader, details []FormulaDetail) error {
-// 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
-// 	if err != nil {
-// 		return err
-// 	}
-// 	sqlDB, err := db.DB()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if sqlDB != nil {
-// 		defer sqlDB.Close()
-// 	}
-
-// 	// 开启事务
-// 	tx := db.Begin()
-// 	if tx.Error != nil {
-// 		return tx.Error
-// 	}
-
-// 	// 查询旧的配方头
-// 	var oldHeader FormulaHeader
-// 	if err := tx.Where("formula_id = ? AND is_latest = ?", header.FormulaID, true).First(&oldHeader).Error; err != nil {
-// 		tx.Rollback()
-// 		return err
-// 	}
-
-// 	// 将旧配方头中的isLatest改为false
-// 	if err := tx.Model(&FormulaHeader{}).Where("rec_id = ?", oldHeader.RecId).Updates(map[string]interface{}{
-// 		"is_used":   false,
-// 		"is_latest": false,
-// 	}).Error; err != nil {
-// 		tx.Rollback()
-// 		return err
-// 	}
-
-// 	// 插入新的配方头
-// 	if err := tx.Create(&header).Error; err != nil {
-// 		tx.Rollback()
-// 		return err
-// 	}
-
-// 	// 使用新插入配方头的 RecId 更新配方明细的 formulaRecId
-// 	for i := range details {
-// 		details[i].FormulaRecID = header.RecId
-// 	}
-
-// 	// 插入新的配方明细
-// 	for _, detail := range details {
-// 		if err := tx.Create(&detail).Error; err != nil {
-// 			tx.Rollback()
-// 			return err
-// 		}
-// 	}
-
-// 	// 提交事务
-// 	return tx.Commit().Error
-// }
 
 // 新增配方称重记录，包含记录头和详情
 func (d *DbFormulaInfo) CreateFormulaWgtRec(header FormulaWgtRecHeader, details []FormulaWgtRecDetail) error {

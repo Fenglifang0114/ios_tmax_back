@@ -120,9 +120,10 @@ var (
 var LogFile *os.File
 
 const (
-	AT_VERSION    = "ESP32C3"
-	IS_ESP32      = true
-	PLU_BACK_PATH = "plufiles"
+	AT_VERSION     = "ESP32C3"
+	IS_ESP32       = true
+	PLU_BACK_PATH  = "plufiles"
+	AT_VERSION8266 = "8266"
 )
 
 type CmdComposer struct {

@@ -483,7 +483,15 @@ func procUnRegWeight(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if scale.isScalePassth {
 		scale.isScalePassth = false
 		picker := picker.GetPickerFn(scale.ScaleCat)
-		scale.MySerial.ChangePickFunc(picker)
+		// scale.MySerial.ChangePickFunc(picker)
+		if scale.MySerial != nil {
+			scale.MySerial.ChangePickFunc(picker)
+
+		} else if scale.MyNet != nil {
+			scale.MyNet.ChangePickFunc(picker)
+		} else {
+			l.Log.Errorf("MySerial and MyNet are nil, cannot change pick function")
+		}
 	}
 	return scale.UnRegWeightData()
 }
@@ -499,7 +507,15 @@ func procOpenScalePassth(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 			scale.IsScalePassthHex = false
 		}
 		picker := picker.GetPickerFn(scale.ScaleCat + 1)
-		scale.MySerial.ChangePickFunc(picker)
+
+		if scale.MySerial != nil {
+			scale.MySerial.ChangePickFunc(picker)
+
+		} else if scale.MyNet != nil {
+			scale.MyNet.ChangePickFunc(picker)
+		} else {
+			l.Log.Errorf("MySerial and MyNet are nil, cannot change pick function")
+		}
 	}
 
 	return msg, err

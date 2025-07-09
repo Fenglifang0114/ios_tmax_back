@@ -1384,8 +1384,11 @@ func handleGetWifiAtVersionResp(scaleId int64, data []byte) (ScaleRespMsg, int) 
 		if strings.Contains(string(data), m.AT_VERSION) {
 			return ScaleRespMsg{m.GET_AT_VERSION_RESP, m.AT_VERSION, scaleId}, len(data)
 		} else {
-			return ScaleRespMsg{m.GET_AT_VERSION_RESP, "8266", scaleId}, len(data)
-
+			if strings.Contains(string(data), m.AT_VERSION8266) {
+				return ScaleRespMsg{m.GET_AT_VERSION_RESP, "8266", scaleId}, len(data)
+			} else {
+				return ScaleRespMsg{m.GET_AT_VERSION_RESP, m.AT_VERSION, scaleId}, len(data)
+			}
 		}
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_AT_VERSION_RESP, MsgBody: "fail"}, len(data)

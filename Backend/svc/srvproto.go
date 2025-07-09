@@ -114,11 +114,11 @@ type ReqModifyScaleSn struct {
 }
 
 // type ReqAddProduct struct {
-// 	Id          string
-// 	Product     string
-// 	WithPretare bool
-// 	Pretare     string
-// 	Remarks     string
+//     Id          string
+//     Product     string
+//     WithPretare bool
+//     Pretare     string
+//     Remarks     string
 // }
 
 type ReqAddProductList []AddProduct

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	mcmd "tmaxsrv/cmd"
+	"tmaxsrv/log"
 
 	m "tmaxsrv/comm"
 	l "tmaxsrv/log"
@@ -688,7 +689,10 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 			continue
 		}
 
+		log.Log.Infof("================wait: %v\n", waitMsgType)
+
 		fmt.Printf("================wait: %v\n", waitMsgType)
+
 		select {
 		case ret = <-ch:
 		case <-time.After(time.Duration(curTimeoutMs) * time.Millisecond):
@@ -702,6 +706,9 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 		}
 
 		fmt.Printf("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
+		log.Log.Infof("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
+
+		/////////////
 
 		break
 
