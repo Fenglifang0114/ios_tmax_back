@@ -149,9 +149,6 @@ func (d *DbWifiRec) DeleteWifiRec(id uint) error {
 		defer sqlDB.Close()
 	}
 
-	if err != nil {
-		panic("failed to connect database")
-	}
 	var rec WifiRec
 	rec.Id = id
 	db.Where("rec_id=?", id).Delete((&rec))

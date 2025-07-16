@@ -137,6 +137,18 @@ func init() {
 	creategetAddRawDataNotifier := rawDataAddedNotifier{}
 	rawDataAdded.Register(creategetAddRawDataNotifier)
 
+	creategetEditRawTypeNotifier := rawTypeEditedNotifier{}
+	rawTypeModified.Register(creategetEditRawTypeNotifier)
+
+	creategetDelRawTypeNotifier := rawTypeDeletedNotifier{}
+	rawTypeDeleted.Register(creategetDelRawTypeNotifier)
+
+	creategetEditFmaTypeNotifier := fmaTypeEditedNotifier{}
+	fmaTypeModified.Register(creategetEditFmaTypeNotifier)
+
+	creategetDelFmaTypeNotifier := fmaTypeDeletedNotifier{}
+	fmaTypeDeleted.Register(creategetDelFmaTypeNotifier)
+
 	createGetrawDataListedNotifier := rawDataListedNotifier{}
 	rawDataListed.Register(createGetrawDataListedNotifier)
 
@@ -187,6 +199,12 @@ func init() {
 
 	createExportAllRecsNotifier := exportAllRecsNotifier{}
 	exportAllRecs.Register(createExportAllRecsNotifier)
+
+	createUpdateAutoNextNotifier := updateAutoNextNotifier{}
+	updateAutoNext.Register(createUpdateAutoNextNotifier)
+
+	createGetAutoNextNotifier := getAutoNextNotifier{}
+	getAutoNext.Register(createGetAutoNextNotifier)
 
 }
 
@@ -248,6 +266,14 @@ type getRawTypeListNotifier struct{}
 
 type rawDataAddedNotifier struct{}
 
+type rawTypeEditedNotifier struct{}
+
+type rawTypeDeletedNotifier struct{}
+
+type fmaTypeEditedNotifier struct{}
+
+type fmaTypeDeletedNotifier struct{}
+
 type rawDataListedNotifier struct{}
 
 type rawDataEditedNotifier struct{}
@@ -281,6 +307,10 @@ type getSearchRecListNotifier struct{}
 type addWgtRecNotifier struct{}
 
 type exportAllRecsNotifier struct{}
+
+type getAutoNextNotifier struct{}
+
+type updateAutoNextNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event

@@ -227,9 +227,6 @@ func (d *DbProductRec) DeleteProductRec(id uint) error {
 		defer sqlDB.Close()
 	}
 
-	if err != nil {
-		panic("failed to connect database")
-	}
 	var rec ProductRec
 	rec.RecId = id
 	db.Where("rec_id=?", id).Delete((&rec))

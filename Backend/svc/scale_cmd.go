@@ -10,8 +10,6 @@ import (
 	"time"
 
 	mcmd "tmaxsrv/cmd"
-	"tmaxsrv/log"
-
 	m "tmaxsrv/comm"
 	l "tmaxsrv/log"
 	"tmaxsrv/util"
@@ -25,7 +23,7 @@ const (
 )
 
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
-	// EnFacMode(c)
+
 	_, err, res := openFactory(c)
 	if err != nil || !res {
 		l.Log.Debug(err)
@@ -36,6 +34,9 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 		//to do nothing
 		excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA, 1)
 	}
+	//小天平烧录专用下面的
+	// time.Sleep(1000 * time.Millisecond) // wait for scale reboot
+	// var err error
 
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()
@@ -63,6 +64,7 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 		case line := <-output:
 			cmdOutput += line
 			fmt.Println(line) // Print each line of output as it is received
+			l.Log.Debug(line)
 			// send progress notification to UI
 			if isStartUpdate {
 				// check percentage and send progress notification to UI
@@ -689,7 +691,7 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 			continue
 		}
 
-		log.Log.Infof("================wait: %v\n", waitMsgType)
+		l.Log.Infof("================wait: %v\n", waitMsgType)
 
 		fmt.Printf("================wait: %v\n", waitMsgType)
 
@@ -706,7 +708,7 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 		}
 
 		fmt.Printf("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
-		log.Log.Infof("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
+		l.Log.Infof("^^^^^^^^^^^^^^^^Got: %v\n", waitMsgType)
 
 		/////////////
 

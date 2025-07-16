@@ -150,9 +150,6 @@ func (d *DbUserRec) DeleteUserRec(id uint) error {
 		defer sqlDB.Close()
 	}
 
-	if err != nil {
-		panic("failed to connect database")
-	}
 	var rec UserRec
 	rec.RecId = id
 	db.Where("rec_id=?", id).Delete((&rec))

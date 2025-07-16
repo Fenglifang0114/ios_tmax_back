@@ -1142,7 +1142,7 @@ func ReqSetEepromFromBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 
 	if len(dataInfo) != 512 {
-		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail.")
+		return &ScaleRespMsg{}, fmt.Errorf("fail, get def value fail")
 	}
 
 	dataInfo[len(dataInfo)-2] = 0x5A
@@ -1198,7 +1198,7 @@ func ReqSetEepromFromBinFc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 
 	if len(dataInfo) != 512 {
-		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail.")
+		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail")
 	}
 
 	dataInfo[len(dataInfo)-2] = 0x5A
@@ -1303,12 +1303,12 @@ func ReqGetEepromInfoToBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			dataInfo[i] = 0xff
 		}
 		if !saveByteToBin(filePath, dataInfo) {
-			return &ScaleRespMsg{}, fmt.Errorf("fail,write bin fail.")
+			return &ScaleRespMsg{}, fmt.Errorf("fail,write bin fail")
 		}
 
 		l.Log.Info("save bin ok")
 	} else {
-		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail.")
+		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail")
 	}
 
 	return &ScaleRespMsg{m.GET_EEPROM_TO_BIN_RESP, "ok", c.Id}, nil
@@ -2011,6 +2011,7 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 	res := false
 	composer := c.composer
 	fn := composer.ComposeCmd
+
 	reqMsg, _ := excuteSimpCmd(c, m.CMD_CHECK_FAC_MODE, m.EN_FAC_MODE_RESP)
 	if reqMsg.MsgBody == "ok" {
 		return &ScaleRespMsg{}, nil, true
@@ -2037,7 +2038,7 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 		}
 	}
 	if dataStruct.ModelName == "" || dataStruct.ScaleSn == "" {
-		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
+		// return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
 	}
 
 	crc16Byte := calculateMD5(dataStruct.ModelName + dataStruct.ScaleSn + MD5SEED)
@@ -2137,7 +2138,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 		tempStr := decryptCsv(string(csvFmtContent))
 		if !strings.Contains(tempStr, "ROTATE") {
-			return &ScaleRespMsg{}, fmt.Errorf("format error,download fail!")
+			return &ScaleRespMsg{}, fmt.Errorf("format error,download fail! ")
 		}
 
 		if prnfmt.ParserFmtToFile(tempStr, reqData.PrinterModel, eraseLen) {
@@ -2336,7 +2337,7 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		l.Log.Info("send bin ok")
 	} else {
-		return &ScaleRespMsg{}, fmt.Errorf("fail,Check for over 150 variables, excessive 8K print format, or incorrect print format.")
+		return &ScaleRespMsg{}, fmt.Errorf("fail,Check for over 150 variables, excessive 8K print format, or incorrect print format")
 	}
 
 	return &ScaleRespMsg{m.DOWN_DEFAULT_PRN_FMT_RESP, "ok", c.Id}, nil
@@ -2372,7 +2373,6 @@ func getEepromData(c *Scale, readLen int) ([]byte, error) {
 			}
 		}
 		loopAddr = loopAddr + 8
-		println("test:" + string(loopAddr))
 
 	}
 
@@ -2380,44 +2380,43 @@ func getEepromData(c *Scale, readLen int) ([]byte, error) {
 
 }
 
-func getEepromDataOiml(c *Scale, readLen int) ([]byte, error) {
+// func getEepromDataOiml(c *Scale, readLen int) ([]byte, error) {
 
-	composer := c.composer
-	l.Log.Debug("get eeprom data from scale")
-	dataBuffer := make([]byte, 0)
+// 	composer := c.composer
+// 	l.Log.Debug("get eeprom data from scale")
+// 	dataBuffer := make([]byte, 0)
 
-	loopAddr := 152
-	packetCount := readLen / 8
-	for i := 0; i < packetCount; i++ {
-		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_READ_EEPROM_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, "")})
-		if err != nil {
-			return dataBuffer, nil
-		}
-		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
-			return dataBuffer, nil
-		} else if res.MsgBody == "fail" {
-			return dataBuffer, nil
-		} else {
-			strData := res.MsgBody
-			if str, ok := strData.(string); ok {
-				addrBytes := []byte(str)
-				if len(addrBytes) == 8 {
-					dataBuffer = append(dataBuffer, addrBytes...)
-				} else {
-					return dataBuffer, nil
-				}
-			} else {
-				return dataBuffer, nil
-			}
-		}
-		loopAddr = loopAddr + 8
-		println("test:" + string(loopAddr))
+// 	loopAddr := 152
+// 	packetCount := readLen / 8
+// 	for i := 0; i < packetCount; i++ {
+// 		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_READ_EEPROM_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, "")})
+// 		if err != nil {
+// 			return dataBuffer, nil
+// 		}
+// 		if res, err := perfCmdNwaitResult(c, cmd, m.READ_FLASH_DATA_RESP, timeoutMs); err != nil {
+// 			return dataBuffer, nil
+// 		} else if res.MsgBody == "fail" {
+// 			return dataBuffer, nil
+// 		} else {
+// 			strData := res.MsgBody
+// 			if str, ok := strData.(string); ok {
+// 				addrBytes := []byte(str)
+// 				if len(addrBytes) == 8 {
+// 					dataBuffer = append(dataBuffer, addrBytes...)
+// 				} else {
+// 					return dataBuffer, nil
+// 				}
+// 			} else {
+// 				return dataBuffer, nil
+// 			}
+// 		}
+// 		loopAddr = loopAddr + 8
 
-	}
+// 	}
 
-	return dataBuffer, nil
+// 	return dataBuffer, nil
 
-}
+// }
 
 func ReqBackupDefSetting(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reg, err, res := openFactory(c)
@@ -2482,7 +2481,7 @@ func ReqBackupDefSetting(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		l.Log.Info("send bin ok")
 	} else {
-		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail.")
+		return &ScaleRespMsg{}, fmt.Errorf("fail,get def value fail")
 	}
 
 	return &ScaleRespMsg{m.BACKUP_DEF_SETTING_RESP, "ok", c.Id}, nil
@@ -2515,58 +2514,58 @@ func getFileData(zipFilePath []string) ([]string, bool) {
 	return strFileDataArray, true
 }
 
-func getFileDataAndMd5(zipFilePath string) ([12]string, [12]string, bool) {
-	var strFileDataArray [12]string
-	var strMd5Array [12]string
-	r, err := zip.OpenReader(zipFilePath)
-	if err != nil {
-		return strFileDataArray, strMd5Array, false
-	}
-	defer r.Close()
-	for _, f := range r.File {
-		fmt.Println("File:", f.Name)
-		// 打开文件
-		rc, err := f.Open()
-		if err != nil {
-			return strFileDataArray, strMd5Array, false
-		}
-		defer rc.Close()
-		num, res := getFileNum(f.Name)
-		if !res {
-			return strFileDataArray, strMd5Array, false
-		}
-		tempContent, err := io.ReadAll(rc)
-		if err != nil {
-			return strFileDataArray, strMd5Array, false
-		}
-		if strings.Contains(f.Name, "fmt") {
-			tempStr := decryptCsv(string(tempContent))
-			if !strings.Contains(tempStr, "ROTATE") {
-				return strFileDataArray, strMd5Array, false
-			}
-			strFileDataArray[num-1] = tempStr
-		} else if strings.Contains(f.Name, "txt") {
-			strMd5Array[num-1] = string(tempContent)
-		}
-	}
-	return strFileDataArray, strMd5Array, true
-}
+// func getFileDataAndMd5(zipFilePath string) ([12]string, [12]string, bool) {
+// 	var strFileDataArray [12]string
+// 	var strMd5Array [12]string
+// 	r, err := zip.OpenReader(zipFilePath)
+// 	if err != nil {
+// 		return strFileDataArray, strMd5Array, false
+// 	}
+// 	defer r.Close()
+// 	for _, f := range r.File {
+// 		fmt.Println("File:", f.Name)
+// 		// 打开文件
+// 		rc, err := f.Open()
+// 		if err != nil {
+// 			return strFileDataArray, strMd5Array, false
+// 		}
+// 		defer rc.Close()
+// 		num, res := getFileNum(f.Name)
+// 		if !res {
+// 			return strFileDataArray, strMd5Array, false
+// 		}
+// 		tempContent, err := io.ReadAll(rc)
+// 		if err != nil {
+// 			return strFileDataArray, strMd5Array, false
+// 		}
+// 		if strings.Contains(f.Name, "fmt") {
+// 			tempStr := decryptCsv(string(tempContent))
+// 			if !strings.Contains(tempStr, "ROTATE") {
+// 				return strFileDataArray, strMd5Array, false
+// 			}
+// 			strFileDataArray[num-1] = tempStr
+// 		} else if strings.Contains(f.Name, "txt") {
+// 			strMd5Array[num-1] = string(tempContent)
+// 		}
+// 	}
+// 	return strFileDataArray, strMd5Array, true
+// }
 
-func checkFilesMd5(strFileDataArray [12]string, strMd5Array [12]string) bool {
-	for i := 0; i < 12; i++ {
-		if strFileDataArray[i] != "" {
-			tempMd5Arr := calculateMD5(strFileDataArray[i] + MD5SEED) //统一为seed,要改打包的UI，此处先暂定这样
-			var md5TmpStr string
-			for _, b := range tempMd5Arr {
-				md5TmpStr += fmt.Sprintf("%02X", b) // 将每个字节转换为两位16进制格式的字符串并拼接
-			}
-			if !strings.EqualFold(md5TmpStr, strMd5Array[i]) {
-				return false
-			}
-		}
-	}
-	return true
-}
+// func checkFilesMd5(strFileDataArray [12]string, strMd5Array [12]string) bool {
+// 	for i := 0; i < 12; i++ {
+// 		if strFileDataArray[i] != "" {
+// 			tempMd5Arr := calculateMD5(strFileDataArray[i] + MD5SEED) //统一为seed,要改打包的UI，此处先暂定这样
+// 			var md5TmpStr string
+// 			for _, b := range tempMd5Arr {
+// 				md5TmpStr += fmt.Sprintf("%02X", b) // 将每个字节转换为两位16进制格式的字符串并拼接
+// 			}
+// 			if !strings.EqualFold(md5TmpStr, strMd5Array[i]) {
+// 				return false
+// 			}
+// 		}
+// 	}
+// 	return true
+// }
 
 func getFileNum(fNameStr string) (int, bool) {
 	re := regexp.MustCompile(`(\d+)`) // 使用正则表达式提取数字部分
@@ -2718,7 +2717,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			return &ScaleRespMsg{}, fmt.Errorf("no enough space to insert")
 		}
 		if len(bufPluNumData) > 256 {
-			return &ScaleRespMsg{}, fmt.Errorf("The number cannot be more than 60.")
+			return &ScaleRespMsg{}, fmt.Errorf("the number cannot be more than 60")
 		}
 		l.Log.Debug("delete plu number cmd to scale")
 		cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_DEL_PLU, m.CmdData{Type: m.DATA_TYPE_STR, Data: string(bufPluNumData)})
@@ -2954,6 +2953,7 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if err != nil || len(readSrecData) == 0 {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
 	}
+	// parts[1] = "1" 小天平烧录专用
 	if parts[1] == "0" {
 		err, scaleName, _ := getModelNameSn(c)
 		if err != nil {
@@ -3513,7 +3513,7 @@ func ReqGetWeightErr(c *Scale) (*ScaleRespMsg, error) {
 	}
 
 	//获取秤上的OLUL地址
-	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_SCALE_INFO, m.GET_SCALE_INFO_RESP)
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_GET_SCALE_INFO, m.GET_SCALE_INFO_RESP)
 	var scaleInfo SIFromScale
 	olAddr := 0
 	ulAddr := 0

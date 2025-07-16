@@ -119,9 +119,6 @@ func (d *DbScaleInfos) DeleteScaleInfos(id uint) error {
 		defer sqlDB.Close()
 	}
 
-	if err != nil {
-		panic("failed to connect database")
-	}
 	var info ScaleInfos
 	info.RecId = id
 	db.Where("rec_id=?", id).Delete((&info))
@@ -140,10 +137,6 @@ func (d *DbScaleInfos) DeleteAllScaleInfos() error {
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
-	}
-
-	if err != nil {
-		panic("failed to connect database")
 	}
 
 	err = db.Migrator().DropTable(&ScaleInfos{})

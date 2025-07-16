@@ -528,6 +528,22 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			RawTypeAdded.Trigger(rawTypeAdded, scaleMgr.srvMgr, data)
 		}
+	case REQ_EDIT_RAW_TYPE:
+		jsonStr := req.ReqData
+		var data ReqEditRawType
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			RawTypeModified.Trigger(rawTypeModified, scaleMgr.srvMgr, data)
+		}
+	case REQ_DEL_RAW_TYPE:
+		jsonStr := req.ReqData
+		var data ReqAddRawType
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			RawTypeDeleted.Trigger(rawTypeDeleted, scaleMgr.srvMgr, data)
+		}
 
 		//新增配方类型
 	case REQ_ADD_FORMULA_TYPE:
@@ -554,6 +570,18 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		}
 	case REQ_GET_RAW_DATA_LIST:
 		rawDataListed.Trigger(scaleMgr.srvMgr)
+
+	case REQ_GET_AUTO_NEXT:
+		getAutoNext.Trigger(scaleMgr.srvMgr)
+	case REQ_UPDATE_AUTO_NEXT:
+		jsonStr := req.ReqData
+		var data ReqUpdateAutoNext
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			updateAutoNext.Trigger(scaleMgr.srvMgr, data)
+		}
+
 	case REQ_EDIT_RAW_DATA:
 		jsonStr := req.ReqData
 		var data ReqEditRawData
@@ -569,6 +597,21 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			l.Log.Error(err)
 		}
 		rawDataDeleted.Trigger(scaleMgr.srvMgr, data)
+	case REQ_EDIT_FORMULA_TYPE:
+		jsonStr := req.ReqData
+		var data ReqEditRawType
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			FmaTypeModified.Trigger(fmaTypeModified, scaleMgr.srvMgr, data)
+		}
+	case REQ_DEL_FORMULA_TYPE:
+		jsonStr := req.ReqData
+		var data ReqAddRawType
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		}
+		fmaTypeDeleted.Trigger(scaleMgr.srvMgr, data)
 
 	//新增配方
 	case REQ_ADD_FORMULA_DATA:
@@ -675,9 +718,7 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			exportAllRecs.Trigger(scaleMgr.srvMgr, data)
 		}
 	case REQ_KILL_BOOT_COMMANDER:
-
 		var OUR_USED_APP_NAMES []string = []string{"BootCommander.exe"}
-
 		for _, app := range OUR_USED_APP_NAMES {
 			if err := util.KillApp(app); err == nil {
 				fmt.Println("wait 5 seconds...")
@@ -685,7 +726,6 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 				fmt.Println("done")
 			}
 		}
-
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_KILL_BOOT_COMMANDER, MsgBody: "ok"}
 
 	}
@@ -1206,6 +1246,57 @@ func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: err.Error()}
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: "ok"}
+}
+
+// 修改原料类型
+func (p rawTypeEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawType) {
+	// Do something for this event
+	l.Log.Debug("Handle rawTypeEditedNotifier called")
+	var rec RawMaterialCategory = RawMaterialCategory{
+		CategoryID:   payload.Id,
+		CategoryName: payload.Name,
+	}
+	if err := NewFormulaRecProvider().UpdateRawType(rec); err != nil {
+
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_EDIT, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_EDIT, MsgBody: "ok"}
+}
+func (p rawTypeDeletedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawType) {
+	// Do something for this event
+	l.Log.Debug("Handle rawTypeDeletedNotifier called")
+	if err := NewFormulaRecProvider().DeleteRawType(payload.Name); err != nil {
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_DELETE, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_DELETE, MsgBody: "ok"}
+}
+
+// 修改配方类型
+func (p fmaTypeEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawType) {
+	// Do something for this event
+	l.Log.Debug("Handle fmaTypeEditedNotifier called")
+	var rec FormulaCategory = FormulaCategory{
+		CategoryID:   payload.Id,
+		CategoryName: payload.Name,
+	}
+	if err := NewFormulaRecProvider().UpdateFmaType(rec); err != nil {
+
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_TYPE_EDIT, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_TYPE_EDIT, MsgBody: "ok"}
+}
+func (p fmaTypeDeletedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawType) {
+	// Do something for this event
+	l.Log.Debug("Handle fmaTypeDeletedNotifier called")
+	if err := NewFormulaRecProvider().DeleteFmaType(payload.Name); err != nil {
+
+		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_TYPE_DELETE, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_TYPE_DELETE, MsgBody: "ok"}
 }
 
 func (p rawDataListedNotifier) Handle(mgr *SrvMgr) {
@@ -1994,4 +2085,40 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 
 	// 发送成功消息
 	mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: "ok"}
+}
+
+//获取自动下一步设置
+
+func (p getAutoNextNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle rawDataListedNotifier called")
+	formulaRecProvider := NewFormulaRecProvider()
+	rec, _ := formulaRecProvider.GetSetAutoNext()
+
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(rec); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_AUTO_NEXT, MsgBody: typesStr}
+}
+
+// 更新自动下一步设置
+func (p updateAutoNextNotifier) Handle(mgr *SrvMgr, payload ReqUpdateAutoNext) {
+	// Do something for this event
+	l.Log.Debug("Handle updateAutoNextNotifier called")
+
+	SetAutoNext := SetAutoNext{
+		AutoNext:   payload.AutoNext,
+		StableTime: payload.StableTime,
+	}
+
+	if err := NewFormulaRecProvider().UpdateSetAutoNext(SetAutoNext); err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_AUTO_NEXT, MsgBody: err.Error()}
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_AUTO_NEXT, MsgBody: "ok"}
+
 }

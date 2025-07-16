@@ -181,9 +181,6 @@ func (d *DbDetailRec) DeleteDetailRec(id uint) error {
 		defer sqlDB.Close()
 	}
 
-	if err != nil {
-		panic("failed to connect database")
-	}
 	var rec ScaleRec
 	rec.RecId = id
 	db.Where("rec_id=?", id).Delete((&rec))
@@ -202,10 +199,6 @@ func (d *DbDetailRec) DeleteAllDetailRec(scaleModel string, scaleSn string) erro
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
-	}
-
-	if err != nil {
-		panic("failed to connect database")
 	}
 
 	// err = db.Migrator().DropTable(&ScaleRec{})

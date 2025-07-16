@@ -83,6 +83,11 @@ response: 	{"MsgType":"resp_scale_online","MsgBody":"{\"ScaleId\":1,\"IsOnline\"
 以下是配方秤
 23. add raw type => {"Req": "add_raw_type",	"ReqData": "{\"Name\": \"type1\"}"}
 
+23.1 edit raw type => {"Req": "edit_raw_type",	"ReqData": "{\"ID\": 1, \"Name\": \"type1\"}"}
+
+23.2 delete raw type => {"Req": "delete_raw_type",	"ReqData": "1"}
+
+
 24. add formula type => {"Req": "add_formula_type",	"ReqData": "{\"Name\": \"type1\"}"}
 
 25. get raw type list  => {"Req": "get_raw_type_list",	"ReqData": ""}

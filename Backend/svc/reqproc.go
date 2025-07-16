@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	m "tmaxsrv/comm"
-	"tmaxsrv/log"
+
 	l "tmaxsrv/log"
 	"tmaxsrv/picker"
 	utils "tmaxsrv/util"
@@ -229,7 +229,7 @@ func procExportRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 func procAddRec(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	var rec ScaleRec
 	if err := json.Unmarshal([]byte(req.ReqData), &rec); err != nil {
-		log.Log.Errorf("Unmarshal ScaleRec error: %v", err)
+		l.Log.Errorf("Unmarshal ScaleRec error: %v", err)
 		resp := &ScaleRespMsg{MsgType: m.GET_RECS_RESP, MsgBody: err.Error(), ScaleId: scale.Id}
 		result, _ := json.Marshal(resp)
 		scale.client.sendCh <- result
@@ -249,12 +249,12 @@ func procDelRec(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	parts := strings.Split(req.ReqData, ",")
 	if id, err = strconv.ParseUint(parts[0], 10, 64); err != nil {
-		log.Log.Errorf(err.Error())
+		l.Log.Errorf(err.Error())
 		resp := &ScaleRespMsg{MsgType: m.DEL_REC_RESP, MsgBody: err.Error(), ScaleId: scale.Id}
 		result, _ := json.Marshal(resp)
 		scale.client.sendCh <- result
 	} else if scaleMode, err = strconv.ParseUint(parts[1], 10, 64); err != nil {
-		log.Log.Errorf(err.Error())
+		l.Log.Errorf(err.Error())
 		resp := &ScaleRespMsg{MsgType: m.DEL_REC_RESP, MsgBody: err.Error(), ScaleId: scale.Id}
 		result, _ := json.Marshal(resp)
 		scale.client.sendCh <- result

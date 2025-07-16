@@ -294,6 +294,7 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 		&FormulaDetail{},
 		&FormulaWgtRecHeader{},
 		&FormulaWgtRecDetail{},
+		&SetAutoNext{},
 	); err != nil {
 		return nil, err
 	}
@@ -303,6 +304,57 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 	info := &DbFormulaInfo{dbName: dbName}
 	// 通过实例调用方法
 	if err := info.UpdateFormulaKeyInWgtRecHeader(); err != nil {
+		return nil, err
+	}
+
+	// 检查 RawMaterialCategory 表中是否存在 CategoryID = 0 的记录，不存在则插入
+	var rawMaterialCategoryCount int64
+	db.Model(&RawMaterialCategory{}).Where("category_name = ?", "-").Count(&rawMaterialCategoryCount)
+	if rawMaterialCategoryCount == 0 {
+		err := db.Create(&RawMaterialCategory{
+			CategoryID:   0,
+			CategoryName: "-",
+		}).Error
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// 检查 FormulaCategory 表中是否存在 CategoryID = 0 的记录，不存在则插入
+	var formulaCategoryCount int64
+	db.Model(&FormulaCategory{}).Where("category_name = ?", "-").Count(&formulaCategoryCount)
+
+	if formulaCategoryCount == 0 {
+		err := db.Create(&FormulaCategory{
+			CategoryID:   0,
+			CategoryName: "-",
+		}).Error
+		if err != nil {
+			return nil, err
+		}
+	}
+	var rawMaterialCategory RawMaterialCategory
+	err = db.Where("category_name = ?", "-").First(&rawMaterialCategory).Error
+	if err == nil {
+		// 找到记录，修改 CategoryID 为 0
+		err = db.Model(&RawMaterialCategory{}).Where("category_name = ?", "-").Update("category_id", 0).Error
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var formulaCategory FormulaCategory
+	err = db.Where("category_name = ?", "-").First(&formulaCategory).Error
+	if err == nil {
+		// 找到记录，修改 CategoryID 为 0
+		err = db.Model(&formulaCategory).Where("category_name = ?", "-").Update("category_id", 0).Error
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//新增一条设置
+	if err := info.CreateSetAutoNext(); err != nil {
 		return nil, err
 	}
 
@@ -330,7 +382,7 @@ func (d *DbFormulaInfo) UpdateFormulaKeyInWgtRecHeader() error {
 	}
 
 	// 使用 gorm.Expr 实现子查询
-	subQueryExpr := gorm.Expr("(SELECT rec_id FROM formula_headers WHERE formula_id = formula_wgt_rec_headers.formula_id)")
+	subQueryExpr := gorm.Expr("(SELECT rec_id FROM formula_headers WHERE formula_id = formula_wgt_rec_headers.formula_id AND is_used = 1 AND is_latest = 1)")
 
 	// 更新 FormulaWgtRecHeader 中 formula_key 为 0 的记录
 	err = tx.Model(&FormulaWgtRecHeader{}).
@@ -419,7 +471,7 @@ func (d *DbFormulaInfo) UpdateFormulaCategory(category FormulaCategory) error {
 }
 
 // 删除配方类别
-func (d *DbFormulaInfo) DeleteFormulaCategory(id int) error {
+func (d *DbFormulaInfo) DeleteFormulaCategory(name string) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -432,7 +484,7 @@ func (d *DbFormulaInfo) DeleteFormulaCategory(id int) error {
 		defer sqlDB.Close()
 	}
 
-	return db.Delete(&FormulaCategory{}, id).Error
+	return db.Delete(&FormulaCategory{}, "category_name  = ?", name).Error
 }
 
 // 新增原料类别
@@ -522,7 +574,7 @@ func (d *DbFormulaInfo) UpdateRawMaterialCategory(category RawMaterialCategory) 
 }
 
 // 删除原料类别
-func (d *DbFormulaInfo) DeleteRawMaterialCategory(id int) error {
+func (d *DbFormulaInfo) DeleteRawMaterialCategory(name string) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -535,7 +587,7 @@ func (d *DbFormulaInfo) DeleteRawMaterialCategory(id int) error {
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
-	return db.Delete(&RawMaterialCategory{}, id).Error
+	return db.Delete(&RawMaterialCategory{}, "category_name = ?", name).Error
 }
 
 // 新增原料
@@ -1188,4 +1240,118 @@ func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
 
 	// 提交事务
 	return tx.Commit().Error
+}
+
+//配方秤中的自动下一步设置
+
+type SetAutoNext struct {
+	// 类别ID（主键）
+	RecID int `gorm:"primaryKey;autoincrement;not null"`
+	// 类别名称
+	AutoNext   bool `gorm:"not null"`
+	StableTime int  `gorm:"not null"`
+}
+
+func (d *DbFormulaInfo) CreateSetAutoNext() error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 检查 SetAutoNext 表中是否有数据
+	var count int64
+	if err := tx.Model(&SetAutoNext{}).Count(&count).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 若没有数据，则插入一条
+	if count == 0 {
+		if err := tx.Create(&SetAutoNext{
+			AutoNext:   true,
+			StableTime: 5,
+		}).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// 修改SetAutoNext
+func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if err := tx.Model(&SetAutoNext{}).Where("rec_id = ?", 1).Updates(map[string]interface{}{
+		"auto_next":   autoNext,
+		"stable_time": stableTime,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// 查询SetAutoNext
+func (d *DbFormulaInfo) GetSetAutoNext() (*SetAutoNext, error) {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	// 查询
+	var setAutoNext SetAutoNext
+	if err := tx.First(&setAutoNext).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// 提交事务
+	return &setAutoNext, tx.Commit().Error
 }

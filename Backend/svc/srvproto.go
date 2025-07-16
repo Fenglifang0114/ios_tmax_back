@@ -53,13 +53,13 @@ const (
 	REQ_GET_SCALE_SRV_LIST    ReqType = "get_scale_srv_list"
 	REQ_SET_SCALE_SRV_VAL     ReqType = "set_scale_srv_val"
 	REQ_SET_DO_SERVICE_ACTION ReqType = "do_service_action"
-	REQ_ADD_RAW_TYPE          ReqType = "add_raw_type"          //添加原始类型
-	REQ_DEL_RAW_TYPE          ReqType = "del_raw_type"          //删除原始类型
-	REQ_MODIFY_RAW_TYPE       ReqType = "modify_raw_type"       //修改原始类型
-	REQ_GET_RAW_TYPE_LIST     ReqType = "get_raw_type_list"     //获取原始类型列表
+	REQ_ADD_RAW_TYPE          ReqType = "add_raw_type"          //添加原料类型
+	REQ_DEL_RAW_TYPE          ReqType = "del_raw_type"          //删除原料类型
+	REQ_EDIT_RAW_TYPE         ReqType = "edit_raw_type"         //修改原料类型
+	REQ_GET_RAW_TYPE_LIST     ReqType = "get_raw_type_list"     //获取原料类型列表
 	REQ_ADD_FORMULA_TYPE      ReqType = "add_formula_type"      //添加配方类型
 	REQ_DEL_FORMULA_TYPE      ReqType = "del_formula_type"      //删除配方类型
-	REQ_MODIFY_FORMULA_TYPE   ReqType = "modify_formula_type"   //修改配方类型
+	REQ_EDIT_FORMULA_TYPE     ReqType = "edit_formula_type"     //修改配方类型
 	REQ_GET_FORMULA_TYPE_LIST ReqType = "get_formula_type_list" //获取配方类型列表
 	REQ_ADD_RAW_DATA          ReqType = "add_raw_data"          //添加原始数据
 	REQ_DEL_RAW_DATA          ReqType = "del_raw_data"          //删除原始数据
@@ -82,6 +82,8 @@ const (
 	REQ_DEL_WGT_REC_BY_ID    ReqType = "del_wgt_rec_by_id"    //根据称重记录recID 删除称重记录
 	REQ_EXPORT_ALL_RECS      ReqType = "export_all_recs"      //导出所有记录
 	REQ_KILL_BOOT_COMMANDER  ReqType = "kill_boot_commander"  //杀掉boot_commander进程
+	REQ_GET_AUTO_NEXT        ReqType = "get_auto_next"        //获取自动下一步设置
+	REQ_UPDATE_AUTO_NEXT     ReqType = "update_auto_next"     //更新自动下一步设置
 )
 
 type ReqAddScale struct {
@@ -186,8 +188,18 @@ type ReqAddRawType struct {
 	Name string
 }
 
+type ReqEditRawType struct {
+	Id   int
+	Name string
+}
+
 type ReqAddFormulaType struct {
 	Name string
+}
+
+type ReqUpdateAutoNext struct {
+	AutoNext   bool
+	StableTime int
 }
 
 type ReqAddRawData struct {
@@ -465,6 +477,10 @@ const (
 
 	//配方秤
 	SCALE_MGR_RESP_RAW_TYPE_ADD         ScaleMgrRespMsgType = "resp_raw_type_add"
+	SCALE_MGR_RESP_RAW_TYPE_EDIT        ScaleMgrRespMsgType = "resp_raw_type_edit"
+	SCALE_MGR_RESP_RAW_TYPE_DELETE      ScaleMgrRespMsgType = "resp_raw_type_delete"
+	SCALE_MGR_RESP_FMA_TYPE_EDIT        ScaleMgrRespMsgType = "resp_fma_type_edit"
+	SCALE_MGR_RESP_FMA_TYPE_DELETE      ScaleMgrRespMsgType = "resp_fma_type_delete"
 	SCALE_MGR_RESP_FORMULA_TYPE_ADD     ScaleMgrRespMsgType = "resp_formula_type_add"
 	SCALE_MGR_RESP_FORMULA_TYPE_LIST    ScaleMgrRespMsgType = "resp_formula_type_list"
 	SCALE_MGR_RESP_RAW_TYPE_LIST        ScaleMgrRespMsgType = "resp_raw_type_list"
@@ -489,6 +505,8 @@ const (
 	SCALE_MGR_RESP_UPDATE_UI_CONFIG     ScaleMgrRespMsgType = "resp_update_ui_config"    // without parameter
 	SCALE_MGR_RESP_EXPORT_ALL_RECS      ScaleMgrRespMsgType = "resp_export_all_recs"     // without parameter
 	SCALE_MGR_RESP_KILL_BOOT_COMMANDER  ScaleMgrRespMsgType = "resp_kill_boot_commander" // without parameter
+	SCALE_MGR_RESP_GET_AUTO_NEXT        ScaleMgrRespMsgType = "resp_get_auto_next"
+	SCALE_MGR_RESP_UPDATE_AUTO_NEXT     ScaleMgrRespMsgType = "resp_update_auto_next"
 )
 
 type PortsListMsg struct {

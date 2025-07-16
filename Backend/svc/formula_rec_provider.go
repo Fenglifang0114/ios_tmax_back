@@ -129,3 +129,34 @@ func (p *FormulaRecProvider) UpdateFormula(header FormulaHeader, details []Formu
 	return p.infoPb.UpdateFormula(header, details)
 
 }
+
+// 删除原料类型
+func (p *FormulaRecProvider) DeleteRawType(recId string) error {
+	return p.infoPb.DeleteRawMaterialCategory(recId)
+}
+
+// 修改原料类型
+func (p *FormulaRecProvider) UpdateRawType(rec RawMaterialCategory) error {
+	return p.infoPb.UpdateRawMaterialCategory(rec)
+}
+
+// 删除配方类型
+func (p *FormulaRecProvider) DeleteFmaType(name string) error {
+	return p.infoPb.DeleteFormulaCategory(name)
+
+}
+
+// 修改配方类型
+func (p *FormulaRecProvider) UpdateFmaType(rec FormulaCategory) error {
+	return p.infoPb.UpdateFormulaCategory(rec)
+}
+
+// 获取配方秤中的自动下一步设置
+func (p *FormulaRecProvider) GetSetAutoNext() (*SetAutoNext, error) {
+	return p.infoPb.GetSetAutoNext()
+}
+
+// 更新配方秤中的自动下一步设置
+func (p *FormulaRecProvider) UpdateSetAutoNext(rec SetAutoNext) error {
+	return p.infoPb.UpdateSetAutoNext(rec.AutoNext, rec.StableTime)
+}

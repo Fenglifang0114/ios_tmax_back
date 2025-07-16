@@ -196,9 +196,6 @@ func (d *DbScaleConn) DeleteScaleConn(inConn ScaleConnMedia) error {
 		defer sqlDB.Close()
 	}
 
-	if err != nil {
-		panic("failed to connect database")
-	}
 	db.Where("scale_id=?", inConn.ScaleId).Delete((&inConn))
 	return nil
 }

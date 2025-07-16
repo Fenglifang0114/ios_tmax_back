@@ -243,7 +243,7 @@ func main() {
 
 // 	// Wait for the process to complete and send the completion status to the doneChan channel
 // 	go func() {
-// 		time.Sleep(100000 * time.Second)
+// 		time.Sleep(10 * time.Second)
 // 		doneChan <- app.Wait()
 // 	}()
 

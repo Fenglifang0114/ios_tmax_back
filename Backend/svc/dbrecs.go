@@ -335,9 +335,6 @@ func (d *DbScaleRec) DeleteScaleRec(id uint) error {
 		defer sqlDB.Close()
 	}
 
-	if err != nil {
-		panic("failed to connect database")
-	}
 	var rec ScaleRec
 	rec.RecId = id
 	db.Where("rec_id=?", id).Delete((&rec))
@@ -356,10 +353,6 @@ func (d *DbScaleRec) DeleteAllScaleRec(scaleModel string, scaleSn string) error 
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
-	}
-
-	if err != nil {
-		panic("failed to connect database")
 	}
 
 	// err = db.Migrator().DropTable(&ScaleRec{})
@@ -387,10 +380,6 @@ func (d *DbScaleRec) NewDeleteAllRec() error {
 		defer sqlDB.Close()
 	}
 
-	if err != nil {
-		return err
-	}
-
 	// 使用 DELETE 语句清空 ScaleRec 表
 	err = db.Exec("DELETE FROM scale_recs").Error
 	if err != nil {
@@ -406,9 +395,8 @@ func (d *DbScaleRec) NewDeleteAllRec() error {
 	return nil
 }
 
-var details []ScaleRecDetail
-
 // PagedScaleRecInfo 封装分页结果和总数据量
+
 type PagedScaleRecInfo struct {
 	ScaleRecInfos []ScaleRecInfo `json:"scale_rec_infos"`
 	TotalCount    int64          `json:"total_count"`

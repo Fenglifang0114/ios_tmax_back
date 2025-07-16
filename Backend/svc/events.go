@@ -516,6 +516,98 @@ func (u RawTypeAdded) Trigger(mgr *SrvMgr, payload ReqAddRawType) {
 	}
 }
 
+// 修改原料类型
+var rawTypeModified RawTypeModified
+
+type RawTypeModified struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqEditRawType)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *RawTypeModified) Register(handler interface {
+	Handle(*SrvMgr, ReqEditRawType)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u RawTypeModified) Trigger(mgr *SrvMgr, payload ReqEditRawType) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除原料类型
+var rawTypeDeleted RawTypeDeleted
+
+type RawTypeDeleted struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqAddRawType)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *RawTypeDeleted) Register(handler interface {
+	Handle(*SrvMgr, ReqAddRawType)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u RawTypeDeleted) Trigger(mgr *SrvMgr, payload ReqAddRawType) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 修改配方类型
+var fmaTypeModified FmaTypeModified
+
+type FmaTypeModified struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqEditRawType)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *FmaTypeModified) Register(handler interface {
+	Handle(*SrvMgr, ReqEditRawType)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u FmaTypeModified) Trigger(mgr *SrvMgr, payload ReqEditRawType) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除配方类型
+var fmaTypeDeleted FmaTypeDeleted
+
+type FmaTypeDeleted struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqAddRawType)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *FmaTypeDeleted) Register(handler interface {
+	Handle(*SrvMgr, ReqAddRawType)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u FmaTypeDeleted) Trigger(mgr *SrvMgr, payload ReqAddRawType) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
 // 新增配方类型
 var formulaTypeAdded FormulaTypeAdded
 
@@ -967,5 +1059,48 @@ func (u *ExportAllRecs) Register(handler interface {
 func (u ExportAllRecs) Trigger(srvMgr *SrvMgr, payload ReqExportAllRecs) {
 	for _, handler := range u.handlers {
 		go handler.Handle(srvMgr, payload)
+	}
+}
+
+// 获取自动下一步设置
+var getAutoNext GetAutoNext
+
+type GetAutoNext struct {
+	handlers []interface{ Handle(srvMgr *SrvMgr) }
+}
+
+// Register adds an event handler for this event
+func (u *GetAutoNext) Register(handler interface{ Handle(payload *SrvMgr) }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetAutoNext) Trigger(payload *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(payload)
+	}
+}
+
+//更新自动下一步
+
+var updateAutoNext UpdateAutoNext
+
+type UpdateAutoNext struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqUpdateAutoNext)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *UpdateAutoNext) Register(handler interface {
+	Handle(*SrvMgr, ReqUpdateAutoNext)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u UpdateAutoNext) Trigger(mgr *SrvMgr, payload ReqUpdateAutoNext) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
 	}
 }
