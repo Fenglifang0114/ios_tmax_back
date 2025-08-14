@@ -36,8 +36,6 @@ var (
 	GET_BASIC_DATA_CMD_TMAX   []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf8, 0x00, 0xA1, 0x47, 0xD5, 0xD0, 0xa5, 0x5a}
 	PAY_BILL_ON_CMD_TMAX      []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x09, 0x01, 0x22, 0xad, 0x50, 0xe6, 0xa5, 0x5a} //20240829@FLF结账发送开启
 	ANSWER_ALIVE_CMD_TMAX     []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xFF, 0x00, 0x96, 0x88, 0xAB, 0xAA, 0xa5, 0x5a}
-	CAl_MAX_RANGE_CMD_TMAX    []byte = []byte{0x5A, 0xA5, 0x00, 0x0C, 0xE1, 0x33, 0x00, 0xFF, 0x8F, 0x17, 0xA4, 0x54, 0xA5, 0x5A}
-	CAl_ZERO_RANGE_CMD_TMAX   []byte = []byte{0x5A, 0xA5, 0x00, 0x0C, 0xE1, 0x33, 0x00, 0x01, 0x3A, 0x21, 0xF9, 0x57, 0xA5, 0x5A}
 	CAL_HEART_CMD_TMAX        []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x34, 0x00, 0x0b, 0xeb, 0x43, 0x43, 0xa5, 0x5a}
 )
 
@@ -106,9 +104,6 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 	case m.CMD_ERASE_FLASH_512:
 		addr := cmdData.Data.(int)
 		return eraseCmdTMAX_512(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
-	case m.CMD_SET_MAX_RANGE:
-		addr := cmdData.Data.(int)
-		return setMaxRangeCmdTax(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WRITE_FLASH_256:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
 		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_256_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
@@ -130,7 +125,6 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return EnWifiDhcpCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_EN_DHCP_32:
 		return EnWifiDhcp32CmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
-
 	case m.CMD_WIFI_SET_STATIC_IP:
 		fields := strings.Split(cmdData.Data.(string), ",")
 		return setWifiStaticIpCmdTMAX(fields[0], fields[1], fields[2]), CMD_TIMEOUT_MEDIUM_2000_MS, nil
@@ -171,7 +165,7 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getDelPluCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_SET_DECIMAl_VALUE:
 		return getSetDecimalValueCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
-	case m.CMD_SET_GADUATION_VALUE:
+	case m.CMD_SET_GADUATION1_VALUE:
 		return getSetGaduationValueCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WRITE_EEPROM:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
@@ -193,13 +187,50 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getSetLimitToScaleCmdTMAX(data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_OPEN_BILL_SEND:
 		return PAY_BILL_ON_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
-	case m.CMD_CAl_ZERO_RANGE:
-		return CAl_ZERO_RANGE_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
-	case m.CMD_CAl_MAX_RANGE:
-		return CAl_MAX_RANGE_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_CAl_WGT:
+		dataInt := cmdData.Data.(int)
+		return setSw15CmdTax_4Byte(CMDID_SET_CAL_WGT_TMAX, uint32(dataInt)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	case m.CMD_SEND_CAL_HEART_BEAT:
 		return CAL_HEART_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
-
+	case m.CMD_GET_DECIMAL_VALUE:
+		return composeCmd(CMDID_GET_DECIMAL_VALUE_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_MAX_RANGE1:
+		return composeCmd(CMDID_GET_MAX_RANGE1_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_MAX_RANGE2:
+		return composeCmd(CMDID_GET_MAX_RANGE2_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_MAX_RANGE1:
+		dataInt := cmdData.Data.(int)
+		return setSw15CmdTax_4Byte(CMDID_SET_MAX_RANGE1_TMAX, uint32(dataInt)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_MAX_RANGE2:
+		dataInt := cmdData.Data.(int)
+		return setSw15CmdTax_4Byte(CMDID_SET_MAX_RANGE2_TMAX, uint32(dataInt)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_GADUATION1_VALUE:
+		return composeCmd(CMDID_GET_GADUATION_VALUE1_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_GADUATION2_VALUE:
+		return composeCmd(CMDID_GET_GADUATION_VALUE2_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_GADUATION2_VALUE:
+		return getSetSw15ParameterCmdTMAX(CMDID_SET_GADUATION_VALUE2_TMAX, cmdData.Data.(string)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_ZERO_TRACKING:
+		return composeCmd(CMDID_GET_ZERO_TRACK_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_ZERO_TRACKING:
+		return getSetSw15ParameterCmdTMAX(CMDID_SET_ZERO_TRACK_TMAX, cmdData.Data.(string)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_WEIGHT_UNIT:
+		return composeCmd(CMDID_GET_WGT_UNIT_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_WEIGHT_UNIT:
+		return getSetSw15ParameterCmdTMAX(CMDID_SET_WGT_UNIT_TMAX, cmdData.Data.(string)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_GRAV_ACC:
+		return composeCmd(CMDID_GET_GRAVITY_ACCEL_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_GRAV_ACC:
+		dataInt := cmdData.Data.(int)
+		return setSw15CmdTax_4Byte(CMDID_SET_GRAVITY_ACCEL_TMAX, uint32(dataInt)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_MANUAL_ZERO:
+		return getSetSw15ParameterCmdTMAX(CMDID_SET_MANUAL_ZERO_TMAX, cmdData.Data.(string)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_MANUAL_ZERO:
+		return composeCmd(CMDID_GET_MANUAL_ZERO_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_INITIAL_ZERO:
+		return getSetSw15ParameterCmdTMAX(CMDID_SET_INIT_ZERO_TMAX, cmdData.Data.(string)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_INITIAL_ZERO:
+		return composeCmd(CMDID_GET_INIT_ZERO_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	}
 	return nil, CMD_TIMEOUT_IMMEDIATE, nil
 }
@@ -262,10 +293,30 @@ const (
 	CMDID_PAY_BILL_HEAD_TMAX  = 0xE110 // 结账头
 	CMDID_PAY_BILL_MID_TMAX   = 0xE111 // 结账中
 	CMDID_PAY_BILL_TAIL_TMAX  = 0xE112 // 结账尾
-	CMDID_SET_MAX_RANGE_TMAX  = 0xE132 // 设置量程
-	CMDID_CAL_VALUE_TMAX      = 0xE133 // 标定点
-	CMDID_SET_DECIMAL_VALUE   = 0xE212 // 设置小数点
-	CMDID_SET_GADUATION_VALUE = 0xE213 // 设置分度值
+
+	CMDID_SET_MAX_RANGE1_TMAX = 0xE300 //设置量程1
+	CMDID_GET_MAX_RANGE1_TMAX = 0xE301 //读取量程1
+	CMDID_SET_MAX_RANGE2_TMAX = 0xE305 //设置量程2
+	CMDID_GET_MAX_RANGE2_TMAX = 0xE306 //读取量程2
+
+	CMDID_SET_CAL_WGT_TMAX          = 0xE30A //设置标定重量
+	CMDID_SET_DECIMAL_VALUE_TMAX    = 0xE30F //设置小数点
+	CMDID_GET_DECIMAL_VALUE_TMAX    = 0xE310 //读取小数点
+	CMDID_SET_GADUATION_VALUE1_TMAX = 0xE314 //设置分度值1
+	CMDID_GET_GADUATION_VALUE1_TMAX = 0xE315 //读取分度值1
+	CMDID_SET_GADUATION_VALUE2_TMAX = 0xE319 //设置分度值2
+	CMDID_GET_GADUATION_VALUE2_TMAX = 0xE31A //读取分度值2
+	CMDID_SET_WGT_UNIT_TMAX         = 0xE31E //设置称重单位
+	CMDID_GET_WGT_UNIT_TMAX         = 0xE31F //读取称重单位
+	CMDID_SET_MANUAL_ZERO_TMAX      = 0xE323 //设置手动归零
+	CMDID_GET_MANUAL_ZERO_TMAX      = 0xE324 //读取手动归零
+	CMDID_SET_ZERO_TRACK_TMAX       = 0xE328 //设置零点追踪
+	CMDID_GET_ZERO_TRACK_TMAX       = 0xE329 //读取零点追踪
+	CMDID_SET_INIT_ZERO_TMAX        = 0xE32D //设置初始置零
+	CMDID_GET_INIT_ZERO_TMAX        = 0xE32E //读取初始置零
+	CMDID_SET_GRAVITY_ACCEL_TMAX    = 0xE332 //设置重力加速度
+	CMDID_GET_GRAVITY_ACCEL_TMAX    = 0xE333 //读取重力加速度
+
 )
 
 const (
@@ -538,16 +589,15 @@ func eraseCmdTMAX_512(addr uint32) []byte { // erase size will 512
 	return packet
 }
 
-// CMD:  5a a5 00 11 E1 33 00 00 00 00 0A 75 E8 A3 E3 a5 5a   //FLF
-// 设置量程
-func setMaxRangeCmdTax(value uint32) []byte { // erase size will 2K
+// 设置SW15 的参数 4个字节的
+func setSw15CmdTax_4Byte(cmdId uint16, value uint32) []byte { // erase size will 2K
 	// 构建包头
 	packet := make([]byte, CAL_VALUE_SIZE_TMAX)
 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
 	//构建数据长度  总长度-包头
 	binary.BigEndian.PutUint16(packet[2:4], CAL_VALUE_SIZE_TMAX-2)
 	// 构建命令ID与命令类型
-	binary.BigEndian.PutUint16(packet[4:6], uint16(CMDID_SET_MAX_RANGE_TMAX))
+	binary.BigEndian.PutUint16(packet[4:6], uint16(cmdId))
 	//构建保留数据 00
 	binary.BigEndian.PutUint16(packet[6:8], 0x00)
 	// 构建标定值
@@ -706,16 +756,24 @@ func getSetDecimalValueCmdTMAX(data string) []byte {
 
 	// 转换为单字节数据
 	data1 := []byte{byte(num)}
-	return composeCmd(0xe212, 0, []byte(data1))
+	return composeCmd(0xE30F, 0, []byte(data1))
+}
+
+func getSetSw15ParameterCmdTMAX(cmdID uint16, data string) []byte {
+	l.Log.Debug("compose set sw15 parameter cmd")
+	num, _ := strconv.Atoi(data)
+
+	// 转换为单字节数据
+	data1 := []byte{byte(num)}
+	return composeCmd(cmdID, 0, []byte(data1))
 }
 
 func getSetGaduationValueCmdTMAX(data string) []byte {
 	l.Log.Debug("compose set gaduation value cmd")
 	num, _ := strconv.Atoi(data)
-
 	// 转换为单字节数据
 	data1 := []byte{byte(num)}
-	return composeCmd(0xe213, 0, []byte(data1))
+	return composeCmd(0xE314, 0, []byte(data1))
 }
 
 func getModifyEepromCmdTMAX(addr uint32, data []byte) []byte {

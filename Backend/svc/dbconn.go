@@ -2,6 +2,7 @@ package svc
 
 import (
 	"errors"
+	l "tmaxsrv/log"
 
 	"github.com/gitteamer/log"
 	"gorm.io/driver/sqlite"
@@ -16,18 +17,19 @@ func NewDbScaleConn(dbName string) (*DbScaleConn, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
+
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&ScaleConnMedia{}, &SrvScaleRel{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 	return &DbScaleConn{dbName: dbName}, nil
 }
@@ -36,18 +38,18 @@ func (d *DbScaleConn) GetScaleConnList() ([]*ScaleConnMedia, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&ScaleConnMedia{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 
 	// 读取内容
@@ -63,11 +65,11 @@ func (d *DbScaleConn) InsertScaleConn(conn ScaleConnMedia) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -91,11 +93,11 @@ func (d *DbScaleConn) UpdateScaleConn(conn ScaleConnMedia) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -112,11 +114,11 @@ func (d *DbScaleConn) UpdateScaleInfo(conn ScaleConnMedia) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -133,11 +135,11 @@ func (d *DbScaleConn) UpdateScaleSn(conn ScaleConnMedia) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -160,11 +162,11 @@ func (d *DbScaleConn) UpdateScaleName(conn ScaleConnMedia) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -186,11 +188,11 @@ func (d *DbScaleConn) DeleteScaleConn(inConn ScaleConnMedia) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -204,11 +206,11 @@ func (d *DbScaleConn) InsertSrvScaleRel(rel SrvScaleRel) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -226,11 +228,11 @@ func (d *DbScaleConn) GetSrvScaleRelList() ([]*SrvScaleRel, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -246,11 +248,11 @@ func (d *DbScaleConn) UpdateSrvScaleRel(rel SrvScaleRel) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -272,11 +274,11 @@ func (d *DbScaleConn) DeleteSrvScaleRel(rel SrvScaleRel) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -291,11 +293,11 @@ func (d *DbScaleConn) DeleteSrvScaleRelByScaleId(scaleId int64) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -313,11 +315,11 @@ func (d *DbScaleConn) DeleteSrvScaleRelAll() error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()

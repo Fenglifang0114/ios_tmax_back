@@ -1104,3 +1104,280 @@ func (u UpdateAutoNext) Trigger(mgr *SrvMgr, payload ReqUpdateAutoNext) {
 		go handler.Handle(mgr, payload)
 	}
 }
+
+// 新增暂存配方记录
+var addDraftFmaWgtRec AddDraftFmaWgtRec
+
+type AddDraftFmaWgtRec struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload DrafFmaWgtRecInfo)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *AddDraftFmaWgtRec) Register(handler interface {
+	Handle(mgr *SrvMgr, payload DrafFmaWgtRecInfo)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u AddDraftFmaWgtRec) Trigger(mgr *SrvMgr, payload DrafFmaWgtRecInfo) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取暂存配方记录
+var getDraftFmaWgtRecList GetDraftFmaWgtRecList
+
+type GetDraftFmaWgtRecList struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetDraftFmaWgtRecList) Register(handler interface {
+	Handle(mgr *SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetDraftFmaWgtRecList) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
+// 删除暂存配方记录
+var deleteDraftFmaWgtRec DeleteDraftFmaWgtRec
+
+type DeleteDraftFmaWgtRec struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDeleteDraftFmaWgtRec)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *DeleteDraftFmaWgtRec) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqDeleteDraftFmaWgtRec)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u DeleteDraftFmaWgtRec) Trigger(mgr *SrvMgr, payload ReqDeleteDraftFmaWgtRec) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 更新暂存配方记录
+var updateDraftFmaWgtRec UpdateDraftFmaWgtRec
+
+type UpdateDraftFmaWgtRec struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload DrafFmaWgtRecInfo)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *UpdateDraftFmaWgtRec) Register(handler interface {
+	Handle(mgr *SrvMgr, payload DrafFmaWgtRecInfo)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u UpdateDraftFmaWgtRec) Trigger(mgr *SrvMgr, payload DrafFmaWgtRecInfo) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 新增系统用户
+var addSysUser AddSysUser
+
+type AddSysUser struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqAddSysUser)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *AddSysUser) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqAddSysUser)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u AddSysUser) Trigger(mgr *SrvMgr, payload ReqAddSysUser) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除系统用户
+var deleteSysUser DeleteSysUser
+
+type DeleteSysUser struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqSysUserIdList)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *DeleteSysUser) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqSysUserIdList)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u DeleteSysUser) Trigger(mgr *SrvMgr, payload ReqSysUserIdList) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 更新系统用户
+var updateSysUser UpdateSysUser
+
+type UpdateSysUser struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqUpdateSysUser)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *UpdateSysUser) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqUpdateSysUser)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u UpdateSysUser) Trigger(mgr *SrvMgr, payload ReqUpdateSysUser) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 禁用系统用户
+var disableSysUser DisableSysUser
+
+type DisableSysUser struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqEnabledSysUserId)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *DisableSysUser) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqEnabledSysUserId)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u DisableSysUser) Trigger(mgr *SrvMgr, payload ReqEnabledSysUserId) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 密码修改
+var changePassword ChangePassword
+
+type ChangePassword struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqChangePassword)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ChangePassword) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqChangePassword)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ChangePassword) Trigger(mgr *SrvMgr, payload ReqChangePassword) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 登录
+var login Login
+
+type Login struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqLogin)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *Login) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqLogin)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u Login) Trigger(mgr *SrvMgr, payload ReqLogin) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取所有用户
+var getAllUsers GetAllUsers
+
+type GetAllUsers struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetAllUsers) Register(handler interface {
+	Handle(mgr *SrvMgr)
+}) {
+
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetAllUsers) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
+// 获取用户详情
+var getUserDetail GetUserDetail
+
+type GetUserDetail struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqSysUserName)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetUserDetail) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqSysUserName)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetUserDetail) Trigger(mgr *SrvMgr, payload ReqSysUserName) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}

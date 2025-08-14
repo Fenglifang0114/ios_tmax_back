@@ -450,6 +450,7 @@ func excuteSimpCmd(s *Scale, cmdType m.CmdType, respType m.RespMsgType, perfTime
 	if len(perfTimes) > 0 {
 		curTimeoutMs = perfTimes[0]
 	}
+	println(fmt.Sprintf("%x", cmd))
 
 	if res, err := perfCmdNwaitResult(s, cmd, respType, timeoutMs, curTimeoutMs); err != nil {
 		return &ScaleRespMsg{}, err

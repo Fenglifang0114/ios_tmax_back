@@ -84,6 +84,21 @@ const (
 	REQ_KILL_BOOT_COMMANDER  ReqType = "kill_boot_commander"  //杀掉boot_commander进程
 	REQ_GET_AUTO_NEXT        ReqType = "get_auto_next"        //获取自动下一步设置
 	REQ_UPDATE_AUTO_NEXT     ReqType = "update_auto_next"     //更新自动下一步设置
+	//暂存配方称重记录
+	REQ_GET_DRAFT_FMA_WGT_REC_LIST ReqType = "get_draft_fma_wgt_rec_list" //获取草稿配方称重记录列表
+	REQ_UPDATE_DRAFT_FMA_WGT_REC   ReqType = "update_draft_fma_wgt_rec"   //更新草稿配方称重记录
+	REQ_DELETE_DRAFT_FMA_WGT_REC   ReqType = "delete_draft_fma_wgt_rec"   //删除草稿配方称重记录
+	REQ_CREATE_DRAFT_FMA_WGT_REC   ReqType = "create_draft_fma_wgt_rec"   //创建草稿配方称重记录
+
+	REQ_ADD_SYS_USER     ReqType = "add_sys_user"     //新增系统用户
+	REQ_DELETE_SYS_USER  ReqType = "delete_sys_user"  //删除系统用户
+	REQ_UPDATE_SYS_USER  ReqType = "update_sys_user"  //更新系统用户
+	REQ_DISABLE_SYS_USER ReqType = "disable_sys_user" //禁用系统用户
+	REQ_CHANGE_PASSWORD  ReqType = "change_password"  //修改密码
+	REQ_LOGIN            ReqType = "login"            //登录
+	REQ_GET_ALL_USERS    ReqType = "get_all_users"    //获取所有用户列表
+	REQ_GET_USER_DETAIL  ReqType = "get_user_detail"  //获取用户详情
+
 )
 
 type ReqAddScale struct {
@@ -202,6 +217,10 @@ type ReqUpdateAutoNext struct {
 	StableTime int
 }
 
+type ReqDeleteDraftFmaWgtRec struct {
+	OrderId string
+}
+
 type ReqAddRawData struct {
 	MaterialID   string
 	MaterialName string
@@ -235,6 +254,54 @@ type ReqDelFmaData struct {
 type ReqAddFormulaData struct {
 	Header ReqAddFormulaHeader
 	Detail []ReqAddFormulaDetail
+}
+
+type ReqAddSysUser struct {
+	RoleId        int
+	Username      string
+	Password      string
+	IsEnabled     bool
+	Email         string
+	Phone         string
+	InitialPageId int
+	Remark        string
+	CreatedBy     int
+	UpdatedBy     int
+	PagesId       []int
+}
+
+type ReqUpdateSysUser struct {
+	UpdateUser SysUser
+	PagesId    []int
+}
+type ReqEnabledSysUserId struct {
+	UserId    int
+	IsEnabled bool
+}
+type ReqChangePassword struct {
+	UserId      int
+	NewPassword string
+}
+
+// 登录
+type ReqLogin struct {
+	UserName string
+	Password string
+}
+
+// 用户
+type ReqSysUserName struct {
+	UserName string
+}
+
+// 用户Id
+type ReqSysUserId struct {
+	UserId int
+}
+
+// 用户Id
+type ReqSysUserIdList struct {
+	UserIds []int
 }
 
 // 配方头表
@@ -507,6 +574,21 @@ const (
 	SCALE_MGR_RESP_KILL_BOOT_COMMANDER  ScaleMgrRespMsgType = "resp_kill_boot_commander" // without parameter
 	SCALE_MGR_RESP_GET_AUTO_NEXT        ScaleMgrRespMsgType = "resp_get_auto_next"
 	SCALE_MGR_RESP_UPDATE_AUTO_NEXT     ScaleMgrRespMsgType = "resp_update_auto_next"
+
+	SCALE_MGR_RESP_GET_DRAFT_FMA_WGT_REC_LIST ScaleMgrRespMsgType = "resp_get_draft_fma_wgt_rec_list"    //获取草稿配方称重记录列表
+	SCALE_MGR_RESP_UPDATE_DRAFT_FMA_WGT_REC   ScaleMgrRespMsgType = "resp_update_draft_fma_wgt_rec_list" //更新草稿配方称重记录列表
+	SCALE_MGR_RESP_DELETE_DRAFT_FMA_WGT_REC   ScaleMgrRespMsgType = "resp_delete_draft_fma_wgt_rec_list" //删除草稿配方称重记录列表
+	SCALE_MGR_RESP_CREATE_DRAFT_FMA_WGT_REC   ScaleMgrRespMsgType = "resp_create_draft_fma_wgt_rec_list" //创建草稿配方称重记录列表
+
+	SCALE_MGR_RESP_ADD_SYS_USER     ScaleMgrRespMsgType = "resp_add_sys_user"     //新增系统用户
+	SCALE_MGR_RESP_DELETE_SYS_USER  ScaleMgrRespMsgType = "resp_delete_sys_user"  //删除系统用户
+	SCALE_MGR_RESP_UPDATE_SYS_USER  ScaleMgrRespMsgType = "resp_update_sys_user"  //更新系统用户
+	SCALE_MGR_RESP_DISABLE_SYS_USER ScaleMgrRespMsgType = "resp_disable_sys_user" //禁用系统用户
+	SCALE_MGR_RESP_CHANGE_PASSWORD  ScaleMgrRespMsgType = "resp_change_password"  //修改密码
+	SCALE_MGR_RESP_LOGIN            ScaleMgrRespMsgType = "resp_login"            //登录
+	SCALE_MGR_RESP_GET_ALL_USERS    ScaleMgrRespMsgType = "resp_get_all_users"    //获取所有用户列表
+	SCALE_MGR_RESP_GET_USER_DETAIL  ScaleMgrRespMsgType = "resp_get_user_detail"  //获取用户详情
+
 )
 
 type PortsListMsg struct {
@@ -644,20 +726,38 @@ const (
 	SREQ_GET_EEPROM_TO_BIN        SReqType = "get_eeprom_to_bin"
 	SREQ_SET_EEPROM_FROM_BIN      SReqType = "set_eeprom_from_bin"
 	SREQ_SET_EEPROM_FROM_BIN_FC   SReqType = "set_eeprom_from_bin_fc"
-	SREQ_GET_BASIC_DATA           SReqType = "get_basic_data"      //20240820@FLF
-	SREQ_SET_LIMIT_TO_SCALE       SReqType = "set_limit_to_scale"  //20240829@FLF
-	SREQ_OPEN_BILL_SEND           SReqType = "open_bill_send"      //20240903@FLF
-	SREQ_DIS_PASSTH_MODE          SReqType = "dis_passth_mode"     //20240914@FLF
-	SREQ_CLOSE_SERIAL_PORT        SReqType = "close_serial_port"   //20241209@FLF  关闭串口
-	SREQ_OPEN_SERIAL_PORT         SReqType = "open_serial_port"    //20241209@FLF  打开串口
-	SREQ_EXPORT_RECS              SReqType = "export_recs"         //20250218        // with parameter ReqScaleRec
-	SREQ_SEND_SCALE_ALIVE         SReqType = "send_scale_alive"    //20250227
-	SREQ_SET_MAX_RANGE            SReqType = "set_max_range"       //20250529
-	SREQ_CAL_ZERO_RANGE           SReqType = "cal_zero_range"      //20250529
-	SREQ_CAL_MAX_RANGE            SReqType = "cal_max_range"       //20250529
-	SREQ_SEND_CAL_HEART_BEAT      SReqType = "send_cal_heart_beat" //20250529
-	SREQ_SET_DECIMAL_VALUE        SReqType = "set_decimal_value"   //20250529
-	SREQ_SET_GADUATION_VALUE      SReqType = "set_gaduation_value" //20250529
+	SREQ_GET_BASIC_DATA           SReqType = "get_basic_data"     //20240820@FLF
+	SREQ_SET_LIMIT_TO_SCALE       SReqType = "set_limit_to_scale" //20240829@FLF
+	SREQ_OPEN_BILL_SEND           SReqType = "open_bill_send"     //20240903@FLF
+	SREQ_DIS_PASSTH_MODE          SReqType = "dis_passth_mode"    //20240914@FLF
+	SREQ_CLOSE_SERIAL_PORT        SReqType = "close_serial_port"  //20241209@FLF  关闭串口
+	SREQ_OPEN_SERIAL_PORT         SReqType = "open_serial_port"   //20241209@FLF  打开串口
+	SREQ_EXPORT_RECS              SReqType = "export_recs"        //20250218        // with parameter ReqScaleRec
+	SREQ_SEND_SCALE_ALIVE         SReqType = "send_scale_alive"   //20250227
+
+	SREQ_CAL_WGT             SReqType = "cal_weight"          //20250529
+	SREQ_SEND_CAL_HEART_BEAT SReqType = "send_cal_heart_beat" //20250529
+	SREQ_SET_DECIMAL_VALUE   SReqType = "set_decimal_value"   //20250529
+
+	SREQ_SET_MAX_RANGE1       SReqType = "set_max_range1"       //20250716
+	SREQ_SET_MAX_RANGE2       SReqType = "set_max_range2"       //20250716
+	SREQ_GET_MAX_RANGE1       SReqType = "get_max_range1"       //20250716
+	SREQ_GET_MAX_RANGE2       SReqType = "get_max_range2"       //20250716
+	SREQ_SET_GADUATION1_VALUE SReqType = "set_gaduation1_value" //20250716
+	SREQ_SET_GADUATION2_VALUE SReqType = "set_gaduation2_value" //20250716
+	SREQ_GET_GADUATION1_VALUE SReqType = "get_gaduation1_value" //20250716
+	SREQ_GET_GADUATION2_VALUE SReqType = "get_gaduation2_value" //20250716
+	SREQ_GET_DECIMAL_VALUE    SReqType = "get_decimal_value"    //20250716
+	SREQ_SET_WEIGHT_UNIT      SReqType = "set_weight_unit"      //20250716
+	SREQ_GET_WEIGHT_UNIT      SReqType = "get_weight_unit"      //20250716
+	SREQ_SET_INITIAL_ZERO     SReqType = "set_initial_zero"     //20250716
+	SREQ_GET_INITIAL_ZERO     SReqType = "get_initial_zero"     //20250716
+	SREQ_SET_MANUAL_ZERO      SReqType = "set_manual_zero"      //20250716
+	SREQ_GET_MANUAL_ZERO      SReqType = "get_manual_zero"      //20250716
+	SREQ_SET_ZERO_TRACKING    SReqType = "set_zero_tracking"    //20250716
+	SREQ_GET_ZERO_TRACKING    SReqType = "get_zero_tracking"    //20250716
+	SREQ_SET_GRAV_ACC         SReqType = "set_grav_acc"         //20250716
+	SREQ_GET_GRAV_ACC         SReqType = "get_grav_acc"         //20250716
 
 )
 

@@ -81,6 +81,11 @@
             "comment": "Universal weight unit"
         },
         {
+            "valuename": "TotalPcs",
+            "id": 21,
+            "comment": "Total Pcs"
+        },
+        {
             "valuename": "NO._P",
             "id": 30,
             "comment": "NO._P"

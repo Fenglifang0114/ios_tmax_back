@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+	l "tmaxsrv/log"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -115,18 +116,18 @@ func NewDbScaleRec(dbName string) (*DbScaleRec, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&ScaleRec{}, &ScaleRecDetail{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 	return &DbScaleRec{dbName: dbName}, nil
 }
@@ -169,11 +170,11 @@ func (d *DbScaleRec) GetScaleRecsList(model string, sn string, name string, page
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -181,7 +182,7 @@ func (d *DbScaleRec) GetScaleRecsList(model string, sn string, name string, page
 
 	// Migrate the schema
 	if err = db.AutoMigrate(&ScaleRec{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 
 	// 分页参数
@@ -260,18 +261,18 @@ func (d *DbScaleRec) GetScaleRecs(model string, sn string, start int, quantity i
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&ScaleRec{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 
 	// 读取内容
@@ -284,11 +285,11 @@ func (d *DbScaleRec) InsertScaleRec(rec ScaleRec) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -305,11 +306,11 @@ func (d *DbScaleRec) UpdateScaleRec(rec ScaleRec) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -325,11 +326,11 @@ func (d *DbScaleRec) DeleteScaleRec(id uint) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -345,11 +346,11 @@ func (d *DbScaleRec) DeleteAllScaleRec(scaleModel string, scaleSn string) error 
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -357,7 +358,7 @@ func (d *DbScaleRec) DeleteAllScaleRec(scaleModel string, scaleSn string) error 
 
 	// err = db.Migrator().DropTable(&ScaleRec{})
 	// if err != nil {
-	// 	panic("failed to drop database")
+	// 	l.Log.Debug("failed to drop database")
 	// }
 
 	var rec ScaleRec
@@ -506,11 +507,11 @@ func (d *DbScaleRec) NewInsertScaleRec(rec ScaleRec) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()

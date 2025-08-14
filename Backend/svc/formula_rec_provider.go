@@ -160,3 +160,29 @@ func (p *FormulaRecProvider) GetSetAutoNext() (*SetAutoNext, error) {
 func (p *FormulaRecProvider) UpdateSetAutoNext(rec SetAutoNext) error {
 	return p.infoPb.UpdateSetAutoNext(rec.AutoNext, rec.StableTime)
 }
+
+// 创建暂存配方称重记录
+func (p *FormulaRecProvider) CreateDraftFmaWgtRecHeader(rec DrafFmaWgtRecHeader) error {
+	return p.infoPb.CreateDraftFmaWgtRecHeader(rec)
+}
+
+// 创建暂存配方称重记录体
+func (p *FormulaRecProvider) CreateDraftFmaWgtRecDetail(rec DrafFmaWgtRecDetail) error {
+	return p.infoPb.CreateDraftFmaWgtRecDetail(rec)
+}
+
+// 更新暂存配方称重记录
+func (p *FormulaRecProvider) UpdateDraftFmaWgtRec(rec DrafFmaWgtRecInfo) error {
+	return p.infoPb.UpdateDraftFmaWgtRec(rec)
+}
+
+// 获取暂存配方称重记录
+func (p *FormulaRecProvider) GetDraftFmaWgtRec() ([]DrafFmaWgtRecInfo, error) {
+	return p.infoPb.GetAllDraftFmaWgtRecLists()
+
+}
+
+// 删除暂存配方称重记录
+func (p *FormulaRecProvider) DeleteDraftFmaWgtRec(orderId string) error {
+	return p.infoPb.DeleteDraftFmaWgtRec(orderId)
+}

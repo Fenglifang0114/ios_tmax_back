@@ -72,7 +72,6 @@ const (
 	CMD_WRITE_EEPROM
 	CMD_ERASE_FLASH
 	CMD_ERASE_FLASH_512
-	CMD_SET_MAX_RANGE
 	CMD_READ_FLASH
 	CMD_WRITE_FLASH_8
 	CMD_WRITE_FLASH_256
@@ -90,11 +89,28 @@ const (
 	CMD_GET_BASIC_DATA
 	CMD_SET_LIMIT_TO_SCALE
 	CMD_OPEN_BILL_SEND
-	CMD_CAl_ZERO_RANGE
-	CMD_CAl_MAX_RANGE
+	CMD_CAl_WGT
 	CMD_SEND_CAL_HEART_BEAT
 	CMD_SET_DECIMAl_VALUE
-	CMD_SET_GADUATION_VALUE
+	CMD_GET_DECIMAL_VALUE
+	CMD_SET_MAX_RANGE1
+	CMD_SET_MAX_RANGE2
+	CMD_GET_MAX_RANGE1
+	CMD_GET_MAX_RANGE2
+	CMD_SET_GADUATION1_VALUE
+	CMD_GET_GADUATION1_VALUE
+	CMD_GET_GADUATION2_VALUE
+	CMD_SET_GADUATION2_VALUE
+	CMD_SET_WEIGHT_UNIT
+	CMD_GET_WEIGHT_UNIT
+	CMD_GET_GRAV_ACC
+	CMD_SET_GRAV_ACC
+	CMD_SET_MANUAL_ZERO
+	CMD_GET_MANUAL_ZERO
+	CMD_SET_INITIAL_ZERO
+	CMD_GET_INITIAL_ZERO
+	CMD_GET_ZERO_TRACKING
+	CMD_SET_ZERO_TRACKING
 )
 
 type DataType int
@@ -229,10 +245,32 @@ const (
 	OPEN_SERIAL_PORT_RESP         RespMsgType = "resp_open_serial_port"
 	ANSWER_ALIVE_RESP             RespMsgType = "resp_answer_alive"
 	EXPORT_RECS_RESP              RespMsgType = "resp_export_recs"
-	SET_MAX_RANGE_RESP            RespMsgType = "resp_set_max_range"
-	CAL_VALUE_RESP                RespMsgType = "resp_cal_value"
+	SET_CAL_WGT_RESP              RespMsgType = "resp_cal_weight"
 	SET_DECIMAL_VALUE_RESP        RespMsgType = "resp_set_decimal_value"
-	SET_GADUATION_VALUE_RESP      RespMsgType = "resp_set_gaduation_value"
+	GET_DECIMAL_VALUE_RESP        RespMsgType = "resp_get_decimal_value"
+
+	SET_MAX_RANGE1_RESP RespMsgType = "resp_set_max_range1"
+	GET_MAX_RANGE1_RESP RespMsgType = "resp_get_max_range1"
+	SET_MAX_RANGE2_RESP RespMsgType = "resp_set_max_range2"
+	GET_MAX_RANGE2_RESP RespMsgType = "resp_get_max_range2"
+
+	SET_GADUATION1_VALUE_RESP RespMsgType = "resp_set_gaduation1_value"
+	GET_GADUATION1_VALUE_RESP RespMsgType = "resp_get_gaduation1_value"
+	SET_GADUATION2_VALUE_RESP RespMsgType = "resp_set_gaduation2_value"
+	GET_GADUATION2_VALUE_RESP RespMsgType = "resp_get_gaduation2_value"
+
+	SET_WEIGHT_UNIT_RESP RespMsgType = "resp_set_weight_unit"
+	GET_WEIGHT_UNIT_RESP RespMsgType = "resp_get_weight_unit"
+
+	SET_INITIAL_ZERO_RESP  RespMsgType = "resp_set_initial_zero"
+	SET_MANUAL_ZERO_RESP   RespMsgType = "resp_set_manual_zero"
+	SET_ZERO_TRACKING_RESP RespMsgType = "resp_set_zero_tracking"
+	SET_GRAV_ACC_RESP      RespMsgType = "resp_set_grav_acc"
+
+	GET_INITIAL_ZERO_RESP  RespMsgType = "resp_get_initial_zero"
+	GET_MANUAL_ZERO_RESP   RespMsgType = "resp_get_manual_zero"
+	GET_ZERO_TRACKING_RESP RespMsgType = "resp_get_zero_tracking"
+	GET_GRAV_ACC_RESP      RespMsgType = "resp_get_grav_acc"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

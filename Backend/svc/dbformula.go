@@ -295,6 +295,8 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 		&FormulaWgtRecHeader{},
 		&FormulaWgtRecDetail{},
 		&SetAutoNext{},
+		&DrafFmaWgtRecHeader{},
+		&DrafFmaWgtRecDetail{},
 	); err != nil {
 		return nil, err
 	}
@@ -1252,6 +1254,65 @@ type SetAutoNext struct {
 	StableTime int  `gorm:"not null"`
 }
 
+// 暂存配方的表头
+type DrafFmaWgtRecHeader struct {
+	// 记录编号（主键）
+	RecID int `gorm:"primaryKey;autoincrement;not null"`
+	// 配方ID
+	FormulaID string `gorm:"not null"`
+	//单号
+	OrderId string `gorm:"not null"`
+	//创建时间
+	CreatedAt time.Time `gorm:"not null"`
+	// 创建人
+	CreatedBy string `gorm:"not null"`
+	// 更新时间
+	UpdatedAt time.Time `gorm:"not null"`
+	// 更新人
+	UpdatedBy string `gorm:"not null"`
+	//状态
+	Status int `gorm:"not null"` // 状态字段，0表示草稿状态，1表示已发布状态
+	// 备注
+	Remark string
+	// 备注1
+	Remark1 string
+	// 备注2
+	Remark2 string
+}
+
+// 暂存配方的明细
+type DrafFmaWgtRecDetail struct {
+	// 记录编号（主键）
+	RecID int `gorm:"primaryKey;autoincrement;not null"`
+	// 单号
+	OrderId string `gorm:"not null"`
+	// 原料ID
+	RawMaterialID string `gorm:"not null"`
+	// 原料序号
+	Seq int `gorm:"not null"`
+	//实际重量
+	ActualWeight float64 `gorm:"not null"`
+	//实际重量单位
+	ActualWeightUnit string
+	//是否是容器
+	IsContainer bool `gorm:"not null"`
+	// 备注
+	Remark string
+	// 备注1
+	Remark1 string
+	// 备注2
+	Remark2 string
+}
+
+//暂存配方的记录
+
+type DrafFmaWgtRecInfo struct {
+	// 暂存配方称重记录头
+	Header DrafFmaWgtRecHeader `gorm:"embedded"`
+	// 暂存配方称重记录详情
+	Details []DrafFmaWgtRecDetail `gorm:"foreignKey:OrderId;references:OrderId"`
+}
+
 func (d *DbFormulaInfo) CreateSetAutoNext() error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1354,4 +1415,156 @@ func (d *DbFormulaInfo) GetSetAutoNext() (*SetAutoNext, error) {
 
 	// 提交事务
 	return &setAutoNext, tx.Commit().Error
+}
+
+//暂存配方的增删改查
+
+// 新增暂存配方称重记录头
+func (d *DbFormulaInfo) CreateDraftFmaWgtRecHeader(header DrafFmaWgtRecHeader) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	return db.Create(&header).Error
+}
+
+// 新增暂存配方称重记录详情
+func (d *DbFormulaInfo) CreateDraftFmaWgtRecDetail(detail DrafFmaWgtRecDetail) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	return db.Create(&detail).Error
+}
+
+// 查询所有的暂存配方称重记录头和明细 List
+func (d *DbFormulaInfo) GetAllDraftFmaWgtRecLists() ([]DrafFmaWgtRecInfo, error) {
+	var draftFmaWgtRecLists []DrafFmaWgtRecInfo
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	var headers []DrafFmaWgtRecHeader
+	err = db.Find(&headers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, header := range headers {
+		var details []DrafFmaWgtRecDetail
+		err = db.Where("order_id = ?", header.OrderId).Find(&details).Error
+		if err != nil {
+			return nil, err
+		}
+		draftFmaWgtRecLists = append(draftFmaWgtRecLists, DrafFmaWgtRecInfo{
+			Header:  header,
+			Details: details,
+		})
+	}
+
+	return draftFmaWgtRecLists, nil
+}
+
+// 根据order_id删除某一条记录
+func (d *DbFormulaInfo) DeleteDraftFmaWgtRec(orderId string) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	// 删除暂存配方称重记录详情
+	if err := tx.Where("order_id = ?", orderId).Delete(&DrafFmaWgtRecDetail{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	// 删除暂存配方称重记录头
+	if err := tx.Where("order_id = ?", orderId).Delete(&DrafFmaWgtRecHeader{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// 更新暂存配方称重记录头和明细
+func (d *DbFormulaInfo) UpdateDraftFmaWgtRec(rec DrafFmaWgtRecInfo) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	// 更新暂存配方称重记录头
+	if err := tx.Model(&DrafFmaWgtRecHeader{}).Where("order_id = ?", rec.Header.OrderId).Updates(map[string]interface{}{
+		"status":     rec.Header.Status,
+		"updated_at": time.Now(),
+		"updated_by": rec.Header.UpdatedBy,
+		"remark":     rec.Header.Remark,
+		"remark1":    rec.Header.Remark1,
+		"remark2":    rec.Header.Remark2,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	// 删除旧的暂存配方称重记录详情
+	if err := tx.Where("order_id = ?", rec.Header.OrderId).Delete(&DrafFmaWgtRecDetail{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	// 新增新的暂存配方称重记录详情
+	for _, detail := range rec.Details {
+		if err := tx.Create(&detail).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	// 提交事务
+	return tx.Commit().Error
 }

@@ -103,10 +103,36 @@ func init() {
 		cmd.CMDID_ERASE_INSERT_PLU_TMAX:  m.ERASE_INSERT_PLU_RESP,
 		cmd.CMDID_MODIFY_VAR_TMAX:        m.MODIFY_VAR_RESP,
 		cmd.CMDID_EN_FACTORY_MODE:        m.EN_FACTORY_MODE_RESP,
-		cmd.CMDID_SET_MAX_RANGE_TMAX:     m.SET_MAX_RANGE_RESP,
-		cmd.CMDID_CAL_VALUE_TMAX:         m.CAL_VALUE_RESP,
-		cmd.CMDID_SET_DECIMAL_VALUE:      m.SET_DECIMAL_VALUE_RESP,
-		cmd.CMDID_SET_GADUATION_VALUE:    m.SET_GADUATION_VALUE_RESP,
+
+		cmd.CMDID_SET_CAL_WGT_TMAX: m.SET_CAL_WGT_RESP,
+
+		cmd.CMDID_SET_DECIMAL_VALUE_TMAX: m.SET_DECIMAL_VALUE_RESP,
+		cmd.CMDID_GET_DECIMAL_VALUE_TMAX: m.GET_DECIMAL_VALUE_RESP,
+
+		cmd.CMDID_SET_MAX_RANGE1_TMAX: m.SET_MAX_RANGE1_RESP,
+		cmd.CMDID_GET_MAX_RANGE1_TMAX: m.GET_MAX_RANGE1_RESP,
+		cmd.CMDID_SET_MAX_RANGE2_TMAX: m.SET_MAX_RANGE2_RESP,
+		cmd.CMDID_GET_MAX_RANGE2_TMAX: m.GET_MAX_RANGE2_RESP,
+
+		cmd.CMDID_SET_GADUATION_VALUE1_TMAX: m.SET_GADUATION1_VALUE_RESP,
+		cmd.CMDID_GET_GADUATION_VALUE1_TMAX: m.GET_GADUATION1_VALUE_RESP,
+		cmd.CMDID_SET_GADUATION_VALUE2_TMAX: m.SET_GADUATION2_VALUE_RESP,
+		cmd.CMDID_GET_GADUATION_VALUE2_TMAX: m.GET_GADUATION2_VALUE_RESP,
+
+		cmd.CMDID_SET_ZERO_TRACK_TMAX: m.SET_ZERO_TRACKING_RESP,
+		cmd.CMDID_GET_ZERO_TRACK_TMAX: m.GET_ZERO_TRACKING_RESP,
+
+		cmd.CMDID_SET_INIT_ZERO_TMAX: m.SET_INITIAL_ZERO_RESP,
+		cmd.CMDID_GET_INIT_ZERO_TMAX: m.GET_INITIAL_ZERO_RESP,
+
+		cmd.CMDID_SET_MANUAL_ZERO_TMAX: m.SET_MANUAL_ZERO_RESP,
+		cmd.CMDID_GET_MANUAL_ZERO_TMAX: m.GET_MANUAL_ZERO_RESP,
+
+		cmd.CMDID_SET_GRAVITY_ACCEL_TMAX: m.SET_GRAV_ACC_RESP,
+		cmd.CMDID_GET_GRAVITY_ACCEL_TMAX: m.GET_GRAV_ACC_RESP,
+
+		cmd.CMDID_SET_WGT_UNIT_TMAX: m.SET_WEIGHT_UNIT_RESP,
+		cmd.CMDID_GET_WGT_UNIT_TMAX: m.GET_WEIGHT_UNIT_RESP,
 
 		0xff25: m.UNKNOWN_DATA,
 	}
@@ -166,10 +192,27 @@ func init() {
 		m.REV_DETAIl_TAIL_RESP:      handleRevDetailTailResp,
 		m.OPEN_BILL_SEND_RESP:       handleOpenBillSendResp,
 		m.ANSWER_ALIVE_RESP:         handleAnswerAliveResp,
-		m.SET_MAX_RANGE_RESP:        handleSetMaxRangeResp,
-		m.CAL_VALUE_RESP:            handleCalValueResp,
+		m.SET_MAX_RANGE1_RESP:       handleSetMaxRange1Resp,
+		m.SET_MAX_RANGE2_RESP:       handleSetMaxRange2Resp,
+		m.SET_CAL_WGT_RESP:          handleCalWgtResp,
 		m.SET_DECIMAL_VALUE_RESP:    handleSetDecimalValueResp,
-		m.SET_GADUATION_VALUE_RESP:  handleSetGaduationValueResp,
+		m.GET_DECIMAL_VALUE_RESP:    handleGetDecimalValueResp,
+		m.GET_MAX_RANGE1_RESP:       handleGetMaxRange1Resp,
+		m.GET_MAX_RANGE2_RESP:       handleGetMaxRange2Resp,
+		m.SET_GADUATION1_VALUE_RESP: handleSetGaduation1ValueResp,
+		m.GET_GADUATION1_VALUE_RESP: handleGetGaduation1ValueResp,
+		m.SET_GADUATION2_VALUE_RESP: handleSetGaduation2ValueResp,
+		m.GET_GADUATION2_VALUE_RESP: handleGetGaduation2ValueResp,
+		m.SET_WEIGHT_UNIT_RESP:      handleSetWeightUnitResp,
+		m.GET_WEIGHT_UNIT_RESP:      handleGetWeightUnitResp,
+		m.SET_INITIAL_ZERO_RESP:     handleSetInitialZeroResp,
+		m.SET_MANUAL_ZERO_RESP:      handleSetManualZeroResp,
+		m.SET_ZERO_TRACKING_RESP:    handleSetZeroTrackingResp,
+		m.SET_GRAV_ACC_RESP:         handleSetGravAccResp,
+		m.GET_INITIAL_ZERO_RESP:     handleGetInitialZeroResp,
+		m.GET_MANUAL_ZERO_RESP:      handleGetManualZeroResp,
+		m.GET_ZERO_TRACKING_RESP:    handleGetZeroTrackingResp,
+		m.GET_GRAV_ACC_RESP:         handleGetGravAccResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -507,13 +550,50 @@ func handleAnswerAliveResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	}
 }
 
-func handleSetMaxRangeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+func handleSetMaxRange1Resp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MAX_RANGE_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MAX_RANGE1_RESP, MsgBody: "ok"}, len(data)
 	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MAX_RANGE_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MAX_RANGE1_RESP, MsgBody: "fail"}, len(data)
 	}
 }
+func handleSetMaxRange2Resp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MAX_RANGE2_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MAX_RANGE2_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleGetMaxRange2Resp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) < 4 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_MAX_RANGE2_RESP, MsgBody: "fail"}, len(data)
+	}
+	maxRange := int(binary.BigEndian.Uint32(data[0:4]))
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_MAX_RANGE2_RESP, MsgBody: fmt.Sprintf("%d", maxRange)}, len(data)
+
+}
+
+func handleGetMaxRange1Resp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) < 4 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_MAX_RANGE1_RESP, MsgBody: "fail"}, len(data)
+	}
+	maxRange := int(binary.BigEndian.Uint32(data[0:4]))
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_MAX_RANGE1_RESP, MsgBody: fmt.Sprintf("%d", maxRange)}, len(data)
+
+}
+
+func handleGetGravAccResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) < 4 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_GRAV_ACC_RESP, MsgBody: "fail"}, len(data)
+	}
+	gravInt := int(binary.BigEndian.Uint32(data[0:4]))
+	gravDouble := float64(gravInt) / 100000
+	gravStr := strconv.FormatFloat(gravDouble, 'f', 5, 64)
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_GRAV_ACC_RESP, MsgBody: gravStr}, len(data)
+
+}
+
 func handleSetDecimalValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_DECIMAL_VALUE_RESP, MsgBody: "ok"}, len(data)
@@ -521,19 +601,173 @@ func handleSetDecimalValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_DECIMAL_VALUE_RESP, MsgBody: "fail"}, len(data)
 	}
 }
-func handleSetGaduationValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GADUATION_VALUE_RESP, MsgBody: "ok"}, len(data)
+
+func handleGetDecimalValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	msg := ScaleRespMsg{}
+	if len(data) != 1 {
+		msg.MsgType = m.GET_DECIMAL_VALUE_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+
+	//解析data[0] int值应该小于4
+	value := int(data[0])
+	if value < 4 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_DECIMAL_VALUE_RESP, MsgBody: fmt.Sprintf("%d", value)}, len(data)
 	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GADUATION_VALUE_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_DECIMAL_VALUE_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 
-func handleCalValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+func handleGetGaduation1ValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	msg := ScaleRespMsg{}
+	if len(data) != 1 {
+		msg.MsgType = m.GET_GADUATION1_VALUE_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+
+	value := int(data[0])
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_GADUATION1_VALUE_RESP, MsgBody: fmt.Sprintf("%d", value)}, len(data)
+
+}
+
+func handleGetGaduation2ValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	msg := ScaleRespMsg{}
+	if len(data) != 1 {
+		msg.MsgType = m.GET_GADUATION2_VALUE_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+
+	value := int(data[0])
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_GADUATION2_VALUE_RESP, MsgBody: fmt.Sprintf("%d", value)}, len(data)
+
+}
+
+func handleGetManualZeroResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	msg := ScaleRespMsg{}
+	if len(data) != 1 {
+		msg.MsgType = m.GET_MANUAL_ZERO_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+
+	value := int(data[0])
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_MANUAL_ZERO_RESP, MsgBody: fmt.Sprintf("%d", value)}, len(data)
+
+}
+
+func handleGetInitialZeroResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	msg := ScaleRespMsg{}
+	if len(data) != 1 {
+		msg.MsgType = m.GET_INITIAL_ZERO_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+
+	value := int(data[0])
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_INITIAL_ZERO_RESP, MsgBody: fmt.Sprintf("%d", value)}, len(data)
+}
+
+func handleGetZeroTrackingResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	msg := ScaleRespMsg{}
+	if len(data) != 1 {
+		msg.MsgType = m.GET_ZERO_TRACKING_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+
+	value := int(data[0])
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_ZERO_TRACKING_RESP, MsgBody: fmt.Sprintf("%d", value)}, len(data)
+}
+
+func handleGetWeightUnitResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	msg := ScaleRespMsg{}
+	if len(data) != 1 {
+		msg.MsgType = m.GET_WEIGHT_UNIT_RESP
+		msg.ScaleId = scaleId
+		msg.MsgBody = "fail"
+		return msg, len(data)
+	}
+
+	value := int(data[0])
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WEIGHT_UNIT_RESP, MsgBody: fmt.Sprintf("%d", value)}, len(data)
+}
+
+func handleSetGaduation1ValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CAL_VALUE_RESP, MsgBody: "ok"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GADUATION1_VALUE_RESP, MsgBody: "ok"}, len(data)
 	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CAL_VALUE_RESP, MsgBody: "fail"}, len(data)
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GADUATION1_VALUE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleSetGaduation2ValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GADUATION2_VALUE_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GADUATION2_VALUE_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleSetWeightUnitResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WEIGHT_UNIT_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WEIGHT_UNIT_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleSetInitialZeroResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_INITIAL_ZERO_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_INITIAL_ZERO_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+func handleSetManualZeroResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MANUAL_ZERO_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MANUAL_ZERO_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleSetGravAccResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GRAV_ACC_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_GRAV_ACC_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleSetZeroTrackingResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_ZERO_TRACKING_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_ZERO_TRACKING_RESP, MsgBody: "fail"}, len(data)
+	}
+}
+
+func handleCalWgtResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_CAL_WGT_RESP, MsgBody: "ok"}, len(data)
+	} else {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_CAL_WGT_RESP, MsgBody: "fail"}, len(data)
 	}
 }
 

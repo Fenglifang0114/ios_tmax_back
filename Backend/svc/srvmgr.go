@@ -65,6 +65,7 @@ type SrvMgr struct {
 	flowRatePd  *FlowRateProvider
 	uiConfig    *UiConfig
 	modeSetting *ModeSettingProvider
+	sysUserPd   *SysUserProvider
 	//服务与秤的关系
 	srvScaleRel []*SrvScaleRel
 }
@@ -99,6 +100,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	wifiPb := NewWifiRecProvider()
 	formulaPb := NewFormulaRecProvider()
 	flowRatePb := NewFlowRateProvider()
+	sysUserPb := NewSysUserProvider()
 
 	var licKey string
 
@@ -149,6 +151,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		flowRatePd:         flowRatePb,
 		uiConfig:           NewUiConfig(),
 		modeSetting:        modeSettingPb,
+		sysUserPd:          sysUserPb,
 		srvScaleRel:        make([]*SrvScaleRel, 0),
 	}
 }
@@ -655,6 +658,96 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			FormulaDeleted.Trigger(formulaDeleted, scaleMgr.srvMgr, data)
 		}
+		//获取暂存配方列表
+	case REQ_GET_DRAFT_FMA_WGT_REC_LIST:
+		getDraftFmaWgtRecList.Trigger(scaleMgr.srvMgr)
+		//删除暂存配方称重记录
+	case REQ_DELETE_DRAFT_FMA_WGT_REC:
+		jsonStr := req.ReqData
+		var data ReqDeleteDraftFmaWgtRec
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			deleteDraftFmaWgtRec.Trigger(scaleMgr.srvMgr, data)
+		}
+		//更新暂存配方称重记录
+	case REQ_UPDATE_DRAFT_FMA_WGT_REC:
+		jsonStr := req.ReqData
+		var data DrafFmaWgtRecInfo
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			updateDraftFmaWgtRec.Trigger(scaleMgr.srvMgr, data)
+		}
+		//创建暂存配方称重记录
+	case REQ_CREATE_DRAFT_FMA_WGT_REC:
+		jsonStr := req.ReqData
+		var data DrafFmaWgtRecInfo
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			addDraftFmaWgtRec.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_ADD_SYS_USER:
+		jsonStr := req.ReqData
+		var data ReqAddSysUser
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			addSysUser.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_DELETE_SYS_USER:
+		jsonStr := req.ReqData
+		var data ReqSysUserIdList
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			deleteSysUser.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_UPDATE_SYS_USER:
+		jsonStr := req.ReqData
+		var data ReqUpdateSysUser
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			updateSysUser.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_DISABLE_SYS_USER:
+		jsonStr := req.ReqData
+		var data ReqEnabledSysUserId
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			disableSysUser.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_CHANGE_PASSWORD:
+		jsonStr := req.ReqData
+		var data ReqChangePassword
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			changePassword.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_LOGIN:
+		jsonStr := req.ReqData
+		var data ReqLogin
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			login.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_GET_ALL_USERS:
+		getAllUsers.Trigger(scaleMgr.srvMgr)
+
+	case REQ_GET_USER_DETAIL:
+		jsonStr := req.ReqData
+		var data ReqSysUserName
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			getUserDetail.Trigger(scaleMgr.srvMgr, data)
+		}
+
 		//新增流速
 	case REQ_ADD_FLOW_RATE:
 		jsonStr := req.ReqData
@@ -2113,12 +2206,305 @@ func (p updateAutoNextNotifier) Handle(mgr *SrvMgr, payload ReqUpdateAutoNext) {
 		AutoNext:   payload.AutoNext,
 		StableTime: payload.StableTime,
 	}
-
 	if err := NewFormulaRecProvider().UpdateSetAutoNext(SetAutoNext); err != nil {
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_AUTO_NEXT, MsgBody: err.Error()}
 	}
-
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_AUTO_NEXT, MsgBody: "ok"}
+}
 
+// 创建暂存配方
+func (p addDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload DrafFmaWgtRecInfo) {
+	// Do something for this event
+	l.Log.Debug("Handle createDraftFmaWgtRecNotifier called")
+
+	tempHeader := DrafFmaWgtRecHeader{
+		OrderId:   payload.Header.OrderId,
+		FormulaID: payload.Header.FormulaID,
+		//创建人
+		CreatedBy: payload.Header.CreatedBy,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UpdatedBy: payload.Header.UpdatedBy,
+		Status:    0, // 草稿状态
+		Remark:    payload.Header.Remark,
+		Remark1:   payload.Header.Remark1,
+		Remark2:   payload.Header.Remark2,
+	}
+	//插入头
+	if err := NewFormulaRecProvider().CreateDraftFmaWgtRecHeader(tempHeader); err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CREATE_DRAFT_FMA_WGT_REC, MsgBody: err.Error()}
+		return
+	}
+
+	for _, detail := range payload.Details {
+		tempRec := DrafFmaWgtRecDetail{
+			OrderId:          payload.Header.OrderId,
+			RawMaterialID:    detail.RawMaterialID,
+			ActualWeight:     detail.ActualWeight,
+			ActualWeightUnit: detail.ActualWeightUnit,
+			IsContainer:      detail.IsContainer,
+			Seq:              detail.Seq,
+			Remark:           detail.Remark,
+			Remark1:          detail.Remark1,
+			Remark2:          detail.Remark2,
+		}
+
+		if err := NewFormulaRecProvider().CreateDraftFmaWgtRecDetail(tempRec); err != nil {
+			l.Log.Error(err)
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CREATE_DRAFT_FMA_WGT_REC, MsgBody: err.Error()}
+			return
+		}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CREATE_DRAFT_FMA_WGT_REC, MsgBody: "ok"}
+}
+
+// 删除暂存的配方
+func (p deleteDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqDeleteDraftFmaWgtRec) {
+	// Do something for this event
+	l.Log.Debug("Handle deleteDraftFmaWgtRecNotifier called")
+
+	if err := NewFormulaRecProvider().DeleteDraftFmaWgtRec(payload.OrderId); err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DELETE_DRAFT_FMA_WGT_REC, MsgBody: err.Error()}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DELETE_DRAFT_FMA_WGT_REC, MsgBody: "ok"}
+}
+
+// 更新暂存配方
+func (p updateDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload DrafFmaWgtRecInfo) {
+	// Do something for this event
+	l.Log.Debug("Handle updateDraftFmaWgtRecNotifier called")
+
+	if err := NewFormulaRecProvider().UpdateDraftFmaWgtRec(payload); err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_DRAFT_FMA_WGT_REC, MsgBody: err.Error()}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_DRAFT_FMA_WGT_REC, MsgBody: "ok"}
+}
+
+// 获取暂存配方列表
+func (p getDraftFmaWgtRecListNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getDraftFmaWgtRecListNotifier called")
+
+	recs, err := NewFormulaRecProvider().GetDraftFmaWgtRec()
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_DRAFT_FMA_WGT_REC_LIST, MsgBody: err.Error()}
+		return
+	}
+	var typesStr string
+	if typesStr, err = json.MarshalToString(recs); err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_DRAFT_FMA_WGT_REC_LIST, MsgBody: err.Error()}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_DRAFT_FMA_WGT_REC_LIST, MsgBody: typesStr}
+}
+
+// 新增用户
+func (p addSysUserNotifier) Handle(mgr *SrvMgr, payload ReqAddSysUser) {
+	// Do something for this event
+	l.Log.Debug("Handle addSysUserNotifier called")
+
+	userInfo := SysUser{
+		CreatedBy:     payload.CreatedBy,
+		UpdatedBy:     payload.UpdatedBy,
+		RoleId:        payload.RoleId,
+		UserName:      payload.Username,
+		Password:      payload.Password,
+		Email:         payload.Email,
+		Phone:         payload.Phone,
+		InitialPageId: payload.InitialPageId,
+		Remark:        payload.Remark,
+	}
+	err := mSrvMgr.sysUserPd.AddUser(&userInfo)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_SYS_USER, MsgBody: "fail,add user failed"}
+		return
+	}
+
+	newUser, err := mSrvMgr.sysUserPd.GetUserInfo(payload.Username)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_SYS_USER, MsgBody: "fail,add user failed"}
+		return
+	}
+
+	pagesId := payload.PagesId
+	err = mSrvMgr.sysUserPd.UpdateUserPageId(newUser.UserId, pagesId)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_SYS_USER, MsgBody: "fail,add user failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_SYS_USER, MsgBody: "ok"}
+}
+
+// 删除用户
+func (p deleteSysUserNotifier) Handle(mgr *SrvMgr, payload ReqSysUserIdList) {
+	// Do something for this event
+	l.Log.Debug("Handle deleteSysUserNotifier called")
+
+	if err := mSrvMgr.sysUserPd.DeleteUser((payload.UserIds)); err != nil {
+
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DELETE_SYS_USER, MsgBody: "fail,delete user failed"}
+		return
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DELETE_SYS_USER, MsgBody: "ok"}
+}
+
+// 更新用户
+func (p updateSysUserNotifier) Handle(mgr *SrvMgr, payload ReqUpdateSysUser) {
+	// Do something for this event
+	l.Log.Debug("Handle updateSysUserNotifier called")
+	// 检查用户是否存在
+	user, err := mSrvMgr.sysUserPd.GetUserInfo(payload.UpdateUser.UserName)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,user not exist"}
+		return
+	}
+	userInfo := SysUser{
+		UserId:        user.UserId,
+		CreatedBy:     user.CreatedBy,
+		Password:      payload.UpdateUser.Password,
+		IsEnabled:     payload.UpdateUser.IsEnabled,
+		CreatedTime:   user.CreatedTime,
+		UpdatedTime:   time.Now(),
+		UserName:      payload.UpdateUser.UserName,
+		RoleId:        payload.UpdateUser.RoleId,
+		Email:         payload.UpdateUser.Email,
+		Phone:         payload.UpdateUser.Phone,
+		InitialPageId: payload.UpdateUser.InitialPageId,
+		Remark:        payload.UpdateUser.Remark,
+		UpdatedBy:     payload.UpdateUser.UpdatedBy,
+	}
+	// 密码是否更新
+	pswUpdated := false
+	if payload.UpdateUser.Password != user.Password {
+		pswUpdated = true
+	}
+	err = mSrvMgr.sysUserPd.UpdateUser(&userInfo, pswUpdated)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,update user failed"}
+		return
+	}
+
+	// 清除用户所有页面权限
+	err = mSrvMgr.sysUserPd.ClearAllPagePermissions(userInfo.UserId)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,update user failed"}
+		return
+	}
+
+	// 更新用户页面权限
+	pagesId := payload.PagesId
+	err = mSrvMgr.sysUserPd.UpdateUserPageId(userInfo.UserId, pagesId)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,update user failed"}
+		return
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "ok"}
+
+}
+
+// 禁用用户
+func (p disableSysUserNotifier) Handle(mgr *SrvMgr, payload ReqEnabledSysUserId) {
+	// Do something for this event
+	l.Log.Debug("Handle disableSysUserNotifier called")
+
+	err := mSrvMgr.sysUserPd.DisableUser(payload.UserId, payload.IsEnabled)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DISABLE_SYS_USER, MsgBody: "fail,disable user failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DISABLE_SYS_USER, MsgBody: "ok"}
+
+}
+
+// 密码修改
+func (p changePasswordNotifier) Handle(mgr *SrvMgr, payload ReqChangePassword) {
+	// Do something for this event
+	l.Log.Debug("Handle changePasswordNotifier called")
+
+	err := mSrvMgr.sysUserPd.UpdateUserPassword(payload.UserId, payload.NewPassword)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHANGE_PASSWORD, MsgBody: "fail,change password failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHANGE_PASSWORD, MsgBody: "ok"}
+}
+
+// 登录
+func (p loginNotifier) Handle(mgr *SrvMgr, payload ReqLogin) {
+	// Do something for this event
+	l.Log.Debug("Handle loginNotifier called")
+	res, err := mSrvMgr.sysUserPd.Login(payload.UserName, payload.Password)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "fail,login failed"}
+		return
+	}
+	if res {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "ok"}
+	} else {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "fail,login failed"}
+	}
+}
+
+// 获取所有用户列表
+func (p getAllUsersNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getAllUsersNotifier called")
+	users, err := mSrvMgr.sysUserPd.GetAllUsers()
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_USERS, MsgBody: "fail,get all users failed"}
+
+		return
+	}
+	// 转换为字符串
+	usersStr, err := json.Marshal(users)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_USERS, MsgBody: "fail,get all users failed"}
+		return
+	}
+	// 发送消息
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_USERS, MsgBody: string(usersStr)}
+}
+
+// 获取用户详细信息
+func (p getUserDetailNotifier) Handle(mgr *SrvMgr, payload ReqSysUserName) {
+	// Do something for this event
+	l.Log.Debug("Handle getUserDetailNotifier called")
+	userPerm, err := mSrvMgr.sysUserPd.GetUserDetail(payload.UserName)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_USER_DETAIL, MsgBody: "fail,get user detail failed"}
+		return
+	}
+	// 转换为字符串
+	userStr, err := json.Marshal(userPerm)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_USER_DETAIL, MsgBody: "fail,get user detail failed"}
+		return
+	}
+	// 发送消息
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_USER_DETAIL, MsgBody: string(userStr)}
 }

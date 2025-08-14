@@ -465,7 +465,6 @@ func (s *Scale) procScaleRespMsg() {
 	quit := false
 	if s.MySerial != nil {
 		for {
-
 			if quit {
 				break
 			}
@@ -4213,64 +4212,88 @@ func sendRespMsgClient(s *Scale, msg *ScaleRespMsg) {
 }
 
 // 设置最大量程
-func ReqSetMaxRange(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+func ReqSetMaxRange1(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 	num, err := strconv.Atoi(reqData)
 	if err != nil {
-		return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, "fail, data error", c.Id}, nil
+		return &ScaleRespMsg{m.SET_MAX_RANGE1_RESP, "fail, data error", c.Id}, nil
 	}
-	reg, err, res := openFactory(c)
+	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return reg, err
+		return &ScaleRespMsg{m.SET_MAX_RANGE1_RESP, err.Error(), c.Id}, nil
 	}
 	composer := c.composer
-	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_SET_MAX_RANGE, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
+	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_SET_MAX_RANGE1, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_MAX_RANGE1_RESP, fmt.Errorf("fail"), c.Id}, nil
 	}
-	if res, err := perfCmdNwaitResult(c, cmd, m.SET_MAX_RANGE_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, fmt.Errorf("fail"), c.Id}, nil
-	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	return perfCmdNwaitResult(c, cmd, m.SET_MAX_RANGE1_RESP, timeoutMs)
+}
+func ReqSetMaxRange2(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+	num, err := strconv.Atoi(reqData)
+	if err != nil {
+		return &ScaleRespMsg{m.SET_MAX_RANGE2_RESP, "fail, data error", c.Id}, nil
 	}
 
-	return &ScaleRespMsg{m.SET_MAX_RANGE_RESP, "ok", c.Id}, nil
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_MAX_RANGE2_RESP, err.Error(), c.Id}, nil
+	}
+	composer := c.composer
+	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_SET_MAX_RANGE2, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_MAX_RANGE2_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_MAX_RANGE2_RESP, timeoutMs)
 }
 
-// 设置零点内码
-func ReqCalZeroRange(c *Scale, req SRequest) (*ScaleRespMsg, error) {
-
-	reg, err, res := openFactory(c)
+// 获取最大量程1
+func ReqGetMaxRange1(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return reg, err
+		return &ScaleRespMsg{m.GET_MAX_RANGE1_RESP, err.Error(), c.Id}, nil
 	}
-	reqMsg, _ := excuteSimpCmd(c, m.CMD_CAl_ZERO_RANGE, m.CAL_VALUE_RESP)
-	if reqMsg.MsgBody != "ok" {
-		return &ScaleRespMsg{m.CAL_VALUE_RESP, "fail", c.Id}, nil
-	}
-	return &ScaleRespMsg{m.CAL_VALUE_RESP, "ok", c.Id}, nil
+
+	return excuteSimpCmd(c, m.CMD_GET_MAX_RANGE1, m.GET_MAX_RANGE1_RESP)
 }
 
-// 标定最大量程内码
-func ReqCalMaxRange(c *Scale, req SRequest) (*ScaleRespMsg, error) {
-
-	reg, err, res := openFactory(c)
+// 获取最大量程2
+func ReqGetMaxRange2(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return reg, err
+		return &ScaleRespMsg{m.GET_MAX_RANGE2_RESP, err.Error(), c.Id}, nil
 	}
-	reqMsg, _ := excuteSimpCmd(c, m.CMD_CAl_MAX_RANGE, m.CAL_VALUE_RESP)
-	if reqMsg.MsgBody != "ok" {
-		return &ScaleRespMsg{m.CAL_VALUE_RESP, "fail", c.Id}, nil
+	return excuteSimpCmd(c, m.CMD_GET_MAX_RANGE2, m.GET_MAX_RANGE2_RESP)
+}
+
+// 标定重量
+func ReqCalWeight(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_CAL_WGT_RESP, err.Error(), c.Id}, nil
 	}
-	return &ScaleRespMsg{m.CAL_VALUE_RESP, "ok", c.Id}, nil
+	reqData := req.ReqData
+	num, err := strconv.Atoi(reqData)
+	if err != nil {
+		return &ScaleRespMsg{m.SET_CAL_WGT_RESP, "fail, data error", c.Id}, nil
+	}
+	composer := c.composer
+	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_CAl_WGT, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_CAL_WGT_RESP, fmt.Errorf("fail"), c.Id}, nil
+
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_CAL_WGT_RESP, timeoutMs)
+
 }
 
 // 标定时发送的心跳
 func ReqSendCalHeart(c *Scale, req SRequest) (*ScaleRespMsg, error) {
-
 	excuteSimpCmd(c, m.CMD_SEND_CAL_HEART_BEAT, m.UNKNOWN_DATA, 1)
-
 	return &ScaleRespMsg{}, nil
 }
 
@@ -4278,41 +4301,214 @@ func ReqSendCalHeart(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 func ReqSetDecimalValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 
-	reg, err, res := openFactory(c)
+	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return reg, err
+		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, err.Error(), c.Id}, nil
 	}
 
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_DECIMAl_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+
+	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
 		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
 	}
-	if res, err := perfCmdNwaitResult(c, cmd, m.SET_DECIMAL_VALUE_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
-	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
-	}
-
-	return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, "ok", c.Id}, nil
+	return perfCmdNwaitResult(c, cmd, m.SET_DECIMAL_VALUE_RESP, timeoutMs)
 }
 
-// 设置小数点位数
-func ReqSetGaduationValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+// 设置分度值
+func ReqSetGaduation1Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 
-	reg, err, res := openFactory(c)
+	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return reg, err
+		return &ScaleRespMsg{m.SET_GADUATION1_VALUE_RESP, err.Error(), c.Id}, nil
+	}
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GADUATION1_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_GADUATION1_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_GADUATION1_VALUE_RESP, timeoutMs)
+}
+
+// 获取重量单位
+func ReqGetWeightUnit(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_WEIGHT_UNIT_RESP, err.Error(), c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_WEIGHT_UNIT, m.GET_WEIGHT_UNIT_RESP)
+
+}
+
+// 设置重量单位
+func ReqSetWeightUnit(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_WEIGHT_UNIT_RESP, err.Error(), c.Id}, nil
+	}
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WEIGHT_UNIT, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_WEIGHT_UNIT_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_WEIGHT_UNIT_RESP, timeoutMs)
+
+}
+
+// 设置分度值2
+func ReqSetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_GADUATION2_VALUE_RESP, err.Error(), c.Id}, nil
 	}
 
-	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GADUATION_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GADUATION2_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+
+	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_GADUATION_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_GADUATION2_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
 	}
-	if res, err := perfCmdNwaitResult(c, cmd, m.SET_GADUATION_VALUE_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{m.SET_GADUATION_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
-	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.SET_GADUATION_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+	return perfCmdNwaitResult(c, cmd, m.SET_GADUATION2_VALUE_RESP, timeoutMs)
+
+}
+
+// 获取分度值2
+func ReqGetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_GADUATION2_VALUE_RESP, err.Error(), c.Id}, nil
 	}
-	return &ScaleRespMsg{m.SET_GADUATION_VALUE_RESP, "ok", c.Id}, nil
+	return excuteSimpCmd(c, m.CMD_GET_GADUATION2_VALUE, m.GET_GADUATION2_VALUE_RESP)
+}
+
+// 获取分度值1
+func ReqGetGaduation1Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_GADUATION1_VALUE_RESP, err.Error(), c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_GADUATION1_VALUE, m.GET_GADUATION1_VALUE_RESP)
+}
+
+// 获取小数点位数
+func ReqGetDecimalValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_DECIMAL_VALUE_RESP, err.Error(), c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_DECIMAL_VALUE, m.GET_DECIMAL_VALUE_RESP)
+}
+
+// 设置初始置零
+func ReqSetInitialZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_INITIAL_ZERO_RESP, err.Error(), c.Id}, nil
+	}
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_INITIAL_ZERO, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_INITIAL_ZERO_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_INITIAL_ZERO_RESP, timeoutMs)
+
+}
+
+// 获取零点内码
+func ReqGetInitialZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_INITIAL_ZERO_RESP, err.Error(), c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_INITIAL_ZERO, m.GET_INITIAL_ZERO_RESP)
+}
+
+// 设置手动零点
+func ReqSetManualZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_MANUAL_ZERO_RESP, err.Error(), c.Id}, nil
+	}
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_MANUAL_ZERO, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_MANUAL_ZERO_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_MANUAL_ZERO_RESP, timeoutMs)
+}
+
+// 获取手动零点
+func ReqGetManualZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_MANUAL_ZERO_RESP, err.Error(), c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_MANUAL_ZERO, m.GET_MANUAL_ZERO_RESP)
+}
+
+// 设置零点跟踪
+func ReqSetZeroTracking(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_ZERO_TRACKING_RESP, err.Error(), c.Id}, nil
+	}
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_ZERO_TRACKING, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_ZERO_TRACKING_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_ZERO_TRACKING_RESP, timeoutMs)
+}
+
+// 获取零点跟踪
+func ReqGetZeroTracking(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_ZERO_TRACKING_RESP, err.Error(), c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_ZERO_TRACKING, m.GET_ZERO_TRACKING_RESP)
+}
+
+// 设置重力加速度
+func ReqSetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	reqData := req.ReqData
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_GRAV_ACC_RESP, err.Error(), c.Id}, nil
+	}
+	num, err := strconv.Atoi(reqData)
+	if err != nil {
+		return &ScaleRespMsg{m.SET_GRAV_ACC_RESP, "fail, data error", c.Id}, nil
+	}
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GRAV_ACC, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_GRAV_ACC_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_GRAV_ACC_RESP, timeoutMs)
+}
+
+// 获取重力加速度
+func ReqGetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_GRAV_ACC_RESP, err.Error(), c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_GRAV_ACC, m.GET_GRAV_ACC_RESP)
 }

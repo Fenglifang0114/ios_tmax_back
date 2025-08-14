@@ -2,6 +2,7 @@ package svc
 
 import (
 	"errors"
+	l "tmaxsrv/log"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -30,18 +31,18 @@ func NewDbModeSetting(dbName string) (*DbModeSetting, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&ModeSetting{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 
 	return &DbModeSetting{dbName: dbName}, nil
@@ -51,18 +52,18 @@ func (d *DbModeSetting) GetModeSetting(scaleMode uint) ([]ModeSetting, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&ModeSetting{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 
 	// 读取内容
@@ -75,11 +76,11 @@ func (d *DbModeSetting) UpdateModeSetting(setting ModeSetting) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()

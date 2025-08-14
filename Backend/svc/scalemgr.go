@@ -206,6 +206,42 @@ func init() {
 	createGetAutoNextNotifier := getAutoNextNotifier{}
 	getAutoNext.Register(createGetAutoNextNotifier)
 
+	createDraftFmaWgtRecNotifier := addDraftFmaWgtRecNotifier{}
+	addDraftFmaWgtRec.Register(createDraftFmaWgtRecNotifier)
+
+	createDeleteDraftFmaWgtRecNotifier := deleteDraftFmaWgtRecNotifier{}
+	deleteDraftFmaWgtRec.Register(createDeleteDraftFmaWgtRecNotifier)
+
+	createUpdateDraftFmaWgtRecNotifier := updateDraftFmaWgtRecNotifier{}
+	updateDraftFmaWgtRec.Register(createUpdateDraftFmaWgtRecNotifier)
+
+	createGetDraftFmaWgtRecListNotifier := getDraftFmaWgtRecListNotifier{}
+	getDraftFmaWgtRecList.Register(createGetDraftFmaWgtRecListNotifier)
+
+	createAddSysUserNotifier := addSysUserNotifier{}
+	addSysUser.Register(createAddSysUserNotifier)
+
+	createDeleteSysUserNotifier := deleteSysUserNotifier{}
+	deleteSysUser.Register(createDeleteSysUserNotifier)
+
+	createUpdateSysUserNotifier := updateSysUserNotifier{}
+	updateSysUser.Register(createUpdateSysUserNotifier)
+
+	createDisableSysUserNotifier := disableSysUserNotifier{}
+	disableSysUser.Register(createDisableSysUserNotifier)
+
+	createChangePasswordNotifier := changePasswordNotifier{}
+	changePassword.Register(createChangePasswordNotifier)
+
+	createLoginNotifier := loginNotifier{}
+	login.Register(createLoginNotifier)
+
+	createGetAllUsersNotifier := getAllUsersNotifier{}
+	getAllUsers.Register(createGetAllUsersNotifier)
+
+	createGetUserDetailNotifier := getUserDetailNotifier{}
+	getUserDetail.Register(createGetUserDetailNotifier)
+
 }
 
 type portListedNotifier struct{}
@@ -311,6 +347,30 @@ type exportAllRecsNotifier struct{}
 type getAutoNextNotifier struct{}
 
 type updateAutoNextNotifier struct{}
+
+type addDraftFmaWgtRecNotifier struct{}
+
+type deleteDraftFmaWgtRecNotifier struct{}
+
+type updateDraftFmaWgtRecNotifier struct{}
+
+type getDraftFmaWgtRecListNotifier struct{}
+
+type addSysUserNotifier struct{}
+
+type deleteSysUserNotifier struct{}
+
+type updateSysUserNotifier struct{}
+
+type disableSysUserNotifier struct{}
+
+type changePasswordNotifier struct{}
+
+type loginNotifier struct{}
+
+type getAllUsersNotifier struct{}
+
+type getUserDetailNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event

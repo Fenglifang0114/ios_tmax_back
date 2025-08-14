@@ -50,7 +50,7 @@ func GetFormatLines(fileNames string) ([]string, bool) {
 
 	f, err := os.Open(fileNames)
 	if err != nil {
-		panic("open file error")
+		log.Println("open file error")
 	}
 	defer f.Close() // 打开文件出错处理
 	if nil == err {

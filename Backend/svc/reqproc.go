@@ -284,28 +284,90 @@ func procDownPrnFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqDownPrnFmt(scale, req)
 }
 
-func procSetMaxRange(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqSetMaxRange(scale, req)
+func procSetMaxRange1(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetMaxRange1(scale, req)
 }
+func procSetMaxRange2(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetMaxRange2(scale, req)
+}
+func procGetMaxRange1(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetMaxRange1(scale, req)
+}
+func procGetMaxRange2(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetMaxRange2(scale, req)
+}
+
 
 func procSetDecimalValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetDecimalValue(scale, req)
 }
 
-func procSetGaduationValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqSetGaduationValue(scale, req)
+func procSetGaduation1Value(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetGaduation1Value(scale, req)
 }
 
-func procCalMaxRange(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqCalMaxRange(scale, req)
+func procSetGaduation2Value(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetGaduation2Value(scale, req)
+}
+
+func procGetGaduation1Value(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetGaduation1Value(scale, req)
+}
+
+func procGetGaduation2Value(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetGaduation2Value(scale, req)
+}
+
+func procGetDecimalValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetDecimalValue(scale, req)
+}
+
+func procGetWeightUnit(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetWeightUnit(scale, req)
+}
+
+func procSetWeightUnit(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetWeightUnit(scale, req)
+}
+
+func procSetInitialZero(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetInitialZero(scale, req)
+}
+
+func procGetInitialZero(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetInitialZero(scale, req)
+}
+
+func procSetManualZero(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetManualZero(scale, req)
+}
+
+func procGetManualZero(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetManualZero(scale, req)
+}
+
+func procSetZeroTracking(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetZeroTracking(scale, req)
+}
+
+func procGetZeroTracking(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetZeroTracking(scale, req)
+}
+
+func procSetGravAcc(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetGravAcc(scale, req)
+}
+
+func procGetGravAcc(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetGravAcc(scale, req)
+}
+
+func procCalWeight(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqCalWeight(scale, req)
 }
 
 func procSendCalHeart(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSendCalHeart(scale, req)
-}
-
-func procCalZeroRange(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqCalZeroRange(scale, req)
 }
 
 func procDownDefaultPrnFmt(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -682,12 +744,29 @@ func init() {
 		SREQ_OPEN_SERIAL_PORT:         procOpenSerialPort,
 		SREQ_EXPORT_RECS:              procExportRecs,
 		SREQ_SEND_SCALE_ALIVE:         procSendScaleAlive,
-		SREQ_SET_MAX_RANGE:            procSetMaxRange,
-		SREQ_CAL_ZERO_RANGE:           procCalZeroRange,
-		SREQ_CAL_MAX_RANGE:            procCalMaxRange,
-		SREQ_SEND_CAL_HEART_BEAT:      procSendCalHeart,
-		SREQ_SET_DECIMAL_VALUE:        procSetDecimalValue,
-		SREQ_SET_GADUATION_VALUE:      procSetGaduationValue,
+		SREQ_SET_MAX_RANGE1:           procSetMaxRange1,
+		SREQ_SET_MAX_RANGE2:           procSetMaxRange2,
+		SREQ_GET_MAX_RANGE1:           procGetMaxRange1,
+		SREQ_GET_MAX_RANGE2:           procGetMaxRange2,
+
+		SREQ_CAL_WGT:              procCalWeight,
+		SREQ_SEND_CAL_HEART_BEAT:  procSendCalHeart,
+		SREQ_SET_DECIMAL_VALUE:    procSetDecimalValue,
+		SREQ_SET_GADUATION1_VALUE: procSetGaduation1Value,
+		SREQ_SET_GADUATION2_VALUE: procSetGaduation2Value,
+		SREQ_GET_GADUATION1_VALUE: procGetGaduation1Value,
+		SREQ_GET_GADUATION2_VALUE: procGetGaduation2Value,
+		SREQ_GET_DECIMAL_VALUE:    procGetDecimalValue,
+		SREQ_SET_WEIGHT_UNIT:      procSetWeightUnit,
+		SREQ_GET_WEIGHT_UNIT:      procGetWeightUnit,
+		SREQ_SET_INITIAL_ZERO:     procSetInitialZero,
+		SREQ_GET_INITIAL_ZERO:     procGetInitialZero,
+		SREQ_SET_MANUAL_ZERO:      procSetManualZero,
+		SREQ_GET_MANUAL_ZERO:      procGetManualZero,
+		SREQ_SET_ZERO_TRACKING:    procSetZeroTracking,
+		SREQ_GET_ZERO_TRACKING:    procGetZeroTracking,
+		SREQ_SET_GRAV_ACC:         procSetGravAcc,
+		SREQ_GET_GRAV_ACC:         procGetGravAcc,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

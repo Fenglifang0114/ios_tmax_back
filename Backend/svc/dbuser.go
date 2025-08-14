@@ -3,6 +3,7 @@ package svc
 import (
 	"errors"
 	"time"
+	l "tmaxsrv/log"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -26,18 +27,18 @@ func NewDbUserRec(dbName string) (*DbUserRec, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&UserRec{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 	return &DbUserRec{dbName: dbName}, nil
 }
@@ -46,18 +47,18 @@ func (d *DbUserRec) GetUserRecsList() ([]UserRec, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&UserRec{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 
 	// 读取内容
@@ -70,18 +71,18 @@ func (d *DbUserRec) GetUserRecs(start int, quantity int) ([]UserRec, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
 	if err = db.AutoMigrate(&UserRec{}); err != nil {
-		panic("failed to migrate database of scale connection")
+		l.Log.Debug("failed to migrate database of scale connection")
 	}
 
 	// 读取内容
@@ -94,11 +95,11 @@ func (d *DbUserRec) InsertUserRec(rec UserRec) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -115,11 +116,11 @@ func (d *DbUserRec) UpdateUserRec(rec UserRec) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -140,11 +141,11 @@ func (d *DbUserRec) DeleteUserRec(id uint) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()

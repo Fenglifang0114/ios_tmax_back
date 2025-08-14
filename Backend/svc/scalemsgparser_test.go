@@ -209,3 +209,117 @@ func Test_handleScalePassthData(t *testing.T) {
 		})
 	}
 }
+
+func Test_handleGetWeightUnitResp(t *testing.T) {
+	type args struct {
+		scaleId int64
+		data    []byte
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  ScaleRespMsg
+		want1 int
+	}{
+		{
+			name: "Test_handleGetWeightUnitResp_kg",
+			args: args{
+				scaleId: 1,
+				data:    []byte{0x00},
+			},
+			want: ScaleRespMsg{
+				MsgType: comm.GET_WEIGHT_UNIT_RESP, // 假设消息类型为 GET_WEIGHT_UNIT_RESP
+				MsgBody: "0",
+				ScaleId: 1,
+			},
+			want1: 1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := handleGetWeightUnitResp(tt.args.scaleId, tt.args.data)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("handleGetWeightUnitResp() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("handleGetWeightUnitResp() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func Test_handleGetGravAccResp(t *testing.T) {
+	type args struct {
+		scaleId int64
+		data    []byte
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  ScaleRespMsg
+		want1 int
+	}{
+		{
+			name: "Test_handleGetGravAccResp",
+			args: args{
+				scaleId: 1,
+				data:    []byte{0x00, 0x0E, 0xF2, 0xB8},
+			},
+			want: ScaleRespMsg{
+				MsgType: comm.GET_GRAV_ACC_RESP, // 假设消息类型为 GET_WEIGHT_UNIT_RESP
+				MsgBody: "9.79640",
+				ScaleId: 1,
+			},
+			want1: 4,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := handleGetGravAccResp(tt.args.scaleId, tt.args.data)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("handleGetGravAccResp() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("handleGetGravAccResp() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func Test_handleGetMaxRange1Resp(t *testing.T) {
+	type args struct {
+		scaleId int64
+		data    []byte
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  ScaleRespMsg
+		want1 int
+	}{
+		{
+			name: "Test_handleGetMaxRange1Resp",
+			args: args{
+				scaleId: 1,
+				data:    []byte{0x00, 0x0E, 0xF2, 0xB8},
+			},
+			want: ScaleRespMsg{
+				MsgType: comm.GET_MAX_RANGE1_RESP, // 假设消息类型为 GET_WEIGHT_UNIT_RESP
+				MsgBody: "979640",
+				ScaleId: 1,
+			},
+			want1: 4,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := handleGetMaxRange1Resp(tt.args.scaleId, tt.args.data)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("handleGetMaxRange1Resp() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("handleGetMaxRange1Resp() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}

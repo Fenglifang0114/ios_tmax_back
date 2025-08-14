@@ -3,6 +3,7 @@ package svc
 import (
 	"errors"
 	"time"
+	l "tmaxsrv/log"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -59,11 +60,11 @@ func NewDbDetailRec(dbName string) (*DbDetailRec, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -71,7 +72,7 @@ func NewDbDetailRec(dbName string) (*DbDetailRec, error) {
 	// Migrate the schema
 
 	if err = db.AutoMigrate(&DetailRec{}, &DetailTotal{}); err != nil {
-		panic("failed to migrate database of detail recs")
+		l.Log.Debug("failed to migrate database of detail recs")
 	}
 	return &DbDetailRec{dbName: dbName}, nil
 }
@@ -111,11 +112,11 @@ func (d *DbDetailRec) InsertDetailRec(rec DetailRec) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -151,11 +152,11 @@ func (d *DbDetailRec) UpdateDetailRec(rec ScaleRec) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -171,11 +172,11 @@ func (d *DbDetailRec) DeleteDetailRec(id uint) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -191,11 +192,11 @@ func (d *DbDetailRec) DeleteAllDetailRec(scaleModel string, scaleSn string) erro
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		panic("failed to connect database")
+		l.Log.Debug("failed to connect database")
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
@@ -203,7 +204,7 @@ func (d *DbDetailRec) DeleteAllDetailRec(scaleModel string, scaleSn string) erro
 
 	// err = db.Migrator().DropTable(&ScaleRec{})
 	// if err != nil {
-	// 	panic("failed to drop database")
+	// 	l.Log.Debug("failed to drop database")
 	// }
 
 	var rec ScaleRec

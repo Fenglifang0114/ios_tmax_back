@@ -132,12 +132,26 @@ response:{"MsgType":"resp_formula_type_list","MsgBody":"[{\"CategoryID\":1,\"Cat
 
 44. del wgt rec => {"Req": "del_wgt_rec",	"ReqData": ""}
 
-45. del wgt rec by id => {"Req": "del_wgt_rec_by_id",	"ReqData": ""}
+45. del wgt rec by id => {"Req": "del_wgt_rec_by_id",	"ReqData": ""} 
+
+46. add sys user => {"Req": "add_sys_user", "ReqData": ""}
+
+47. delete sys user => {"Req": "delete_sys_user", "ReqData": ""}  //删除系统用户
+
+48. update sys user => {"Req": "update_sys_user", "ReqData": ""}  //更新系统用户
+
+49. disable sys user => {"Req": "disable_sys_user", "ReqData": ""} //禁用系统用户
+
+50. change password => {"Req": "change_password", "ReqData": ""}  //修改密码
+
+51. login => {"Req": "login", "ReqData": ""}            //登录
+
+52. get all users => {"Req": "get_all_users", "ReqData": ""}    //获取所有用户列表
+
+53. get user detail => {"Req": "get_user_detail", "ReqData": ""}  //获取用户详情
 
  
-
  
-
 
 
 
@@ -517,15 +531,15 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"MsgType":"resp_close_serial_port","MsgBody":"fail","ScaleId":1
 }
 
-46. set max range =>{
-	"Req": "set_max_range",
+46. set max range1 =>{
+	"Req": "set_max_range1",
 	"ReqData": ""
 }
  {
-	"MsgType":"resp_set_max_range","MsgBody":"ok","ScaleId":1
+	"MsgType":"resp_set_max_range1","MsgBody":"ok","ScaleId":1
 }
 {
-	"MsgType":"resp_set_max_range","MsgBody":"fail","ScaleId":1
+	"MsgType":"resp_set_max_range1","MsgBody":"fail","ScaleId":1
 }
 
 47. 设置标定点内码 =>{
@@ -555,22 +569,92 @@ response: {"MsgType":"resp_set_output_format","MsgBody":"ok", "ScaleId":1}
 	"ReqData": ""
 }
  {
-	"MsgType":"resp_set_decimal_value","MsgBody":"ok","ScaleId":1
+	"MsgType":"","MsgBody":"ok","ScaleId":1
 }
 {
 	"MsgType":"resp_set_decimal_value","MsgBody":"fail","ScaleId":1
 }
 
-50. 设置分度值 =>{
-	"Req": "set_gaduation_value",
+50. 设置分度值1 =>{
+	"Req": "set_gaduation1_value",
 	"ReqData": ""
 }
  {
-	"MsgType":"resp_set_gaduation_value","MsgBody":"ok","ScaleId":1
+	"MsgType":"resp_set_gaduation1_value","MsgBody":"ok","ScaleId":1
 }
 {
-	"MsgType":"resp_set_gaduation_value","MsgBody":"fail","ScaleId":1
+	"MsgType":"resp_set_gaduation1_value","MsgBody":"fail","ScaleId":1
 }
+
+51. 设置分度值2 =>{
+	"Req": "set_gaduation2_value",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_gaduation2_value","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_gaduation2_value","MsgBody":"fail","ScaleId":1
+}
+
+52. 设置重量单位 =>{
+	"Req": "set_weight_unit",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_weight_unit","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_weight_unit","MsgBody":"fail","ScaleId":1
+}
+
+53. 设置初始置零 =>{
+	"Req": "set_initial_zero",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_initial_zero","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_initial_zero","MsgBody":"fail","ScaleId":1
+}
+
+54. 设置分手动置零 =>{
+	"Req": "set_manual_zero",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_manual_zero","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_manual_zero","MsgBody":"fail","ScaleId":1
+}
+
+
+55. 设置零点追踪 =>{
+	"Req": "set_zero_tracking",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_zero_tracking","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_zero_tracking","MsgBody":"fail","ScaleId":1
+}
+
+
+56. 设置重力加速度 =>{
+	"Req": "set_set_grav_acc",
+	"ReqData": ""
+}
+ {
+	"MsgType":"resp_set_set_grav_acc","MsgBody":"ok","ScaleId":1
+}
+{
+	"MsgType":"resp_set_set_grav_acc","MsgBody":"fail","ScaleId":1
+}
+
+ 
 
 	
 
