@@ -2,7 +2,6 @@ package svc
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -22,22 +21,10 @@ const (
 	TACKE_OUT_MODE     = 3
 )
 
+// 带校验的openblt升级
 func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 
-	_, err, res := openFactory(c)
-	if err != nil || !res {
-		l.Log.Debug(err)
-
-	}
-	reqMsg, _ := excuteSimpCmd(c, m.CMD_REBOOT, m.REBOOT_RESP, 1)
-	if reqMsg.MsgBody != "ok" {
-		//to do nothing
-		excuteSimpCmd(c, m.CMD_REBOOT, m.UNKNOWN_DATA, 1)
-	}
-	//小天平烧录专用下面的
-	// time.Sleep(1000 * time.Millisecond) // wait for scale reboot
-	// var err error
-
+	var err error
 	pickerFn := c.MySerial.pickerFn
 	c.MySerial.Close()
 
@@ -47,7 +34,7 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	print(bootCommanderPath)
 	bootCommanderPath = filepath.Join(bootCommanderPath, "BootCommander.exe")
 	go util.RunCommand(output, done, bootCommanderPath, "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
-	// var err error
+
 	isFinish := false
 	isStartUpdate := false
 	var cmdOutput string
@@ -65,15 +52,7 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 			cmdOutput += line
 			fmt.Println(line) // Print each line of output as it is received
 			l.Log.Debug(line)
-			// send progress notification to UI
-			if isStartUpdate {
-				// check percentage and send progress notification to UI
-				// percentage := getPercentage(cmdOutput)
 
-				// respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: percentage, ScaleId: c.Id}
-				// result, _ := json.Marshal(respMsg)
-				// c.client.sendCh <- result
-			}
 			if !isStartUpdate && strings.Contains(cmdOutput, "Erasing") {
 				isStartUpdate = true
 				// inform UI update firmware is
@@ -120,7 +99,88 @@ func (c *Scale) UpdateFirmware(name string) (*ScaleRespMsg, error) {
 	if c.MySerial, err = NewSerial(c.Pcnf, pickerFn, true); err != nil {
 		l.Log.Error(err.Error())
 	}
-	os.Remove(name)
+	// os.Remove(name)
+	return respMsg, nil
+}
+
+// 不带校验的openblt升级 比如小天平
+func (c *Scale) UpdateFirmwareOld(name string) (*ScaleRespMsg, error) {
+
+	pickerFn := c.MySerial.pickerFn
+	c.MySerial.Close()
+	output := make(chan string)
+	done := make(chan error)
+	bootCommanderPath := m.GetExePath()
+	print(bootCommanderPath)
+	bootCommanderPath = filepath.Join(bootCommanderPath, "oldBoot") //在oldBoot文件夹下
+	bootCommanderPath = filepath.Join(bootCommanderPath, "BootCommander.exe")
+	go util.RunCommand(output, done, bootCommanderPath, "-t=xcp_rs232", "-d="+c.Pcnf.DevPath, "-b=57600", name)
+	var err error
+	isFinish := false
+	isStartUpdate := false
+	var cmdOutput string
+	var percentage float32 = 0.0
+	var updateTimeMs float32 = 0.0
+	var respMsg *ScaleRespMsg
+	respOk := &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "ok", ScaleId: c.Id}
+	respFail := &ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_RESP, MsgBody: "fail", ScaleId: c.Id}
+	for {
+		if isFinish {
+			break
+		}
+		select {
+		case line := <-output:
+			cmdOutput += line
+			fmt.Println(line) // Print each line of output as it is received
+			l.Log.Debug(line)
+
+			if !isStartUpdate && strings.Contains(cmdOutput, "Erasing") {
+				isStartUpdate = true
+				// inform UI update firmware is
+				re := regexp.MustCompile(`Erasing (\d+) bytes`)
+				match := re.FindStringSubmatch(cmdOutput)
+				if len(match) > 1 {
+					number := match[1]
+					updateTimeInt, _ := strconv.Atoi(number)
+					updateTimeMs = float32(updateTimeInt) / 2.6
+					fmt.Println(number) // 输出: 64980
+				}
+
+				respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: "started", ScaleId: c.Id}
+				result, _ := json.Marshal(respMsg)
+				c.client.sendCh <- result
+			}
+		case err = <-done:
+			if strings.Contains(cmdOutput, "Finishing programming session...[OK]") {
+				respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(100), ScaleId: c.Id}
+				result, _ := json.Marshal(respMsg100)
+				c.client.sendCh <- result
+				time.Sleep(500 * time.Millisecond)
+				respMsg = respOk
+			} else {
+				respMsg = respFail
+			}
+			if err != nil {
+				fmt.Println("Error:", err)
+			} else {
+				fmt.Println("Command completed")
+			}
+			isFinish = true
+		case <-time.After(time.Duration(250) * time.Millisecond):
+			if isStartUpdate {
+				percentage = percentage + 25000.0/updateTimeMs
+				percentageInt := int(percentage)
+				respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(percentageInt), ScaleId: c.Id}
+				result, _ := json.Marshal(respMsg)
+				c.client.sendCh <- result
+			}
+
+		}
+	}
+	if c.MySerial, err = NewSerial(c.Pcnf, pickerFn, true); err != nil {
+		l.Log.Error(err.Error())
+	}
+	// os.Remove(name)
 	return respMsg, nil
 }
 
@@ -375,56 +435,59 @@ func (c *Scale) AddRec(rec ScaleRec) error {
 	// rec.ScaleModel = c.Model
 	// rec.ScaleSn = c.Sn
 	scaleModeInt, _ := strconv.Atoi(rec.ScaleMode)
-	if scaleModeInt == NORMAL_WEIGHT_MODE {
+	switch scaleModeInt {
+	case NORMAL_WEIGHT_MODE:
 		return c.scaleMgr.recPb.InsertRec(rec)
-	} else if scaleModeInt == CHECK_WEIGHT_MODE {
+	case CHECK_WEIGHT_MODE:
 		return c.scaleMgr.recCheckWeigherPb.InsertRec(rec)
-	} else if scaleModeInt == TACKE_IN_MODE {
+	case TACKE_IN_MODE:
 		return c.scaleMgr.recTakeInPb.InsertRec(rec)
-	} else if scaleModeInt == TACKE_OUT_MODE {
+	case TACKE_OUT_MODE:
 		return c.scaleMgr.recTakeOutPb.InsertRec(rec)
+	default:
+		return c.scaleMgr.recPb.InsertRec(rec)
 	}
-	return c.scaleMgr.recPb.InsertRec(rec)
 }
 
 func (c *Scale) DelRec(recId uint, scaleMode uint, modelName string, scaleSn string) error {
-	if scaleMode == NORMAL_WEIGHT_MODE {
-		if recId == 999999999 {
+	switch scaleMode {
+	case NORMAL_WEIGHT_MODE:
+		switch recId {
+		case 999999999:
 			return c.scaleMgr.recPb.DeleteAllRec(modelName, scaleSn)
-		} else {
+		default:
 			return c.scaleMgr.recPb.DeleteRec(recId)
-
 		}
-	} else if scaleMode == CHECK_WEIGHT_MODE {
-		if recId == 999999999 {
+	case CHECK_WEIGHT_MODE:
+		switch recId {
+		case 999999999:
 			return c.scaleMgr.recCheckWeigherPb.DeleteAllRec(modelName, scaleSn)
-		} else {
+		default:
 			return c.scaleMgr.recCheckWeigherPb.DeleteRec(recId)
-
 		}
-	} else if scaleMode == TACKE_IN_MODE {
-		if recId == 999999999 {
+	case TACKE_IN_MODE:
+		switch recId {
+		case 999999999:
 			return c.scaleMgr.recTakeInPb.DeleteAllRec(modelName, scaleSn)
-		} else {
+		default:
 			return c.scaleMgr.recTakeInPb.DeleteRec(recId)
-
 		}
-	} else if scaleMode == TACKE_OUT_MODE {
-		if recId == 999999999 {
+	case TACKE_OUT_MODE:
+		switch recId {
+		case 999999999:
 			return c.scaleMgr.recTakeOutPb.DeleteAllRec(modelName, scaleSn)
-		} else {
+		default:
 			return c.scaleMgr.recTakeOutPb.DeleteRec(recId)
 		}
-
+	default:
+		return nil
 	}
-	return nil
-
 }
 
 // 重启
 func Reboot(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("send reboot cmd to scale")
-	return excuteSimpCmd(s, m.CMD_REBOOT, m.REBOOT_RESP)
+	return excuteSimpCmd(s, m.CMD_REBOOT, m.REBOOT_RESP, 1)
 }
 
 // 打开工厂模式
@@ -631,13 +694,13 @@ func GetIpMode32(s *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_MODE_32, m.GET_IP_MODE_RESP)
 }
 
-func perfCmd(c *Scale, cmd []byte) bool {
-	if err := writeScale(c, cmd); err != nil {
-		l.Log.Error(err.Error())
-		return false
-	}
-	return true
-}
+// func perfCmd(c *Scale, cmd []byte) bool {
+// 	if err := writeScale(c, cmd); err != nil {
+// 		l.Log.Error(err.Error())
+// 		return false
+// 	}
+// 	return true
+// }
 
 func (c *Scale) AddPluDownRec(rec PluRec) error {
 	return c.scaleMgr.pluFilePb.InsertRec(rec) //@FLF20240107
@@ -747,22 +810,22 @@ func writeScale(c *Scale, data []byte) error {
 // A goroutine running write is started for each scale. The
 // application ensures that there is at most one writer to a scale by
 // executing all writes from this goroutine.
-func (c *Scale) write() {
-	for {
-		select {
-		case message, ok := <-c.toScaleMsgCh:
-			if !ok {
-				// The hub closed the channel.
-				return
-			}
-			// send message to scale
-			c.MySerial.Write([]byte(message))
-		default:
-			time.Sleep(time.Microsecond * 100)
-			continue
-		}
-	}
-}
+// func (c *Scale) write() {
+// 	for {
+// 		select {
+// 		case message, ok := <-c.toScaleMsgCh:
+// 			if !ok {
+// 				// The hub closed the channel.
+// 				return
+// 			}
+// 			// send message to scale
+// 			c.MySerial.Write([]byte(message))
+// 		default:
+// 			time.Sleep(time.Microsecond * 100)
+// 			continue
+// 		}
+// 	}
+// }
 
 func GetToScaleCmd(scaleCat m.ScaleCat, cmdType SReqType) []byte {
 	switch scaleCat {

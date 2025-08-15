@@ -807,10 +807,11 @@ type ReqPluData struct {
 }
 
 type ReqFirmwareInfo struct {
-	ModelName string `json:"modelName"`
-	BinKey    string `json:"binKey"`
-	SrecKey   string `json:"srecKey"`
-	Version   string `json:"version"`
+	ModelName         string `json:"modelName"`
+	BinKey            string `json:"binKey"`
+	SrecKey           string `json:"srecKey"`
+	Version           string `json:"version"`
+	BootloaderVersion string `json:"bootloaderVersion"`
 }
 
 type ReqSerialFileList struct {

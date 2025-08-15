@@ -197,7 +197,7 @@ func (tnet *TNet) read() {
 // }
 
 func (tnet *TNet) readScale() (int, error) {
-	if tnet.isAlive == false {
+	if !tnet.isAlive {
 		time.Sleep(1 * time.Second)
 		return 0, nil //关闭了会报错
 	}
@@ -252,21 +252,21 @@ func (tnet *TNet) ChangePickFunc(pickerFn picker.PickerFunc) {
 	//TODO:  修改网络信息  待写
 }
 
-func (tnet *TNet) monitorConnection() {
-	ticker := time.NewTicker(2 * time.Second)
-	for range ticker.C {
-		if tnet.conn == nil || !tnet.isAlive {
-			// 尝试重连
-			var err error
-			tnet.conn, err = tnet.reconnect()
-			if err != nil {
-				log.Log.Printf("Reconnection failed: %v", err)
-			}
-		} else {
-			fmt.Println("Connection is alive")
-		}
-	}
-}
+// func (tnet *TNet) monitorConnection() {
+// 	ticker := time.NewTicker(2 * time.Second)
+// 	for range ticker.C {
+// 		if tnet.conn == nil || !tnet.isAlive {
+// 			// 尝试重连
+// 			var err error
+// 			tnet.conn, err = tnet.reconnect()
+// 			if err != nil {
+// 				log.Log.Printf("Reconnection failed: %v", err)
+// 			}
+// 		} else {
+// 			fmt.Println("Connection is alive")
+// 		}
+// 	}
+// }
 
 func (tnet *TNet) reconnect() (*net.TCPConn, error) {
 

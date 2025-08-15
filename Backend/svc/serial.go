@@ -247,22 +247,22 @@ func comInfo2SerialMode(pcnf ComInfo) *serial.Mode {
 	var mode serial.Mode
 	mode.BaudRate = pcnf.Baud
 	mode.DataBits = pcnf.DataBits
-	if pcnf.Parity == 0 {
-		mode.Parity = serial.NoParity
-	} else if pcnf.Parity == 1 {
+	// 将Parity的if-else转换为switch
+	switch pcnf.Parity {
+	case 1:
 		mode.Parity = serial.EvenParity
-	} else if pcnf.Parity == 2 {
+	case 2:
 		mode.Parity = serial.OddParity
-	} else {
+	default:
 		mode.Parity = serial.NoParity
 	}
-	if pcnf.StopBits == 0 {
-		mode.StopBits = serial.OneStopBit
-	} else if pcnf.StopBits == 1 {
+	// 将StopBits的if-else转换为switch
+	switch pcnf.StopBits {
+	case 1:
 		mode.StopBits = serial.OnePointFiveStopBits
-	} else if pcnf.StopBits == 2 {
+	case 2:
 		mode.StopBits = serial.TwoStopBits
-	} else {
+	default:
 		mode.StopBits = serial.OneStopBit
 	}
 	return &mode

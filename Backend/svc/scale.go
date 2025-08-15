@@ -14,7 +14,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,27 +29,9 @@ import (
 )
 
 const (
-	// 	FLASH_ADDR_TMAX                = 0x08003000           //FLF
-	// 	PACKET_HEAD_TMAX               = 0x5AA5
-	// 	CMD_IDENTIFY_TMAX              = 0xA0
-	// 	CMD_TYPE_TMAX                  = 0xB0
-	// 	PACKET_TAIL_TMAX               = 0xA55A
-
 	DATA_LENGTH_512_TMAX = 512
 	DATA_LENGTH_256_TMAX = 256
 	DATA_LENGTH_8_TMAX   = 8
-
-// FILE_CHUNK_SIZE_TMAX           = 272
-// OPEN_FAC_CHUNK_SIZE_TMAX       = 6
-// CLOSE_FAC_CHUNK_SIZE_TMAX      = 6
-// EN_PASSTH_CHUNK_SIZE_TMAX      = 6
-// DIS_PASSTH_CHUNK_SIZE_TMAX     = 6
-// MODIFY_BT_NAME_CHUNK_SIZE_TMAX = 24
-// REC_CHUNK_SIZE_TMAX            = 11
-// EARSE_CHUNK_SIZE_TMAX          = 0x10
-// CMD_ERASE_TMAX                 = 0xA2
-// CMD_ERASE_SIZE_TMAX            = 0x800
-// CMD_FLASH_TMAX                 = 0xB0
 )
 
 var GlastWantRespMsgType m.RespMsgType = m.NO_RESP
@@ -102,7 +83,7 @@ type APInfo struct {
 	Ssid        string `json:"ssid"`
 	Rssi        int    `json:"rssi"`
 	Mac         string `json:"mac"`
-	encryptType string `json:"security"`
+	EncryptType string `json:"security"`
 }
 
 type WifiInfo struct {
@@ -198,7 +179,9 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 	var scale *Scale
 	var detailInfo DetailList
 	var packDetailMid []PackDetailMidData
-	if conn.TMedia == MEDIA_COM {
+
+	switch conn.TMedia {
+	case MEDIA_COM:
 		// open COM connection
 		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &pcnf); err != nil {
 			l.Log.Errorf("error unmarshalling: %v", err)
@@ -215,7 +198,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 			packDetailMid: packDetailMid,
 		}
 
-	} else if conn.TMedia == MEDIA_NET {
+	case MEDIA_NET:
 		//TODO:add new info
 		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &ncnf); err != nil {
 			l.Log.Errorf("error unmarshalling: %v", err)
@@ -263,10 +246,11 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 
 	scale.scaleMgr = scaleMgr
 	scale.EnterAt = time.Now()
-	if conn.TMedia == MEDIA_COM {
+	switch conn.TMedia {
+	case MEDIA_COM:
 		scale.MySerial = sport
 		go scale.keepSerialPortState()
-	} else if conn.TMedia == MEDIA_NET {
+	case MEDIA_NET:
 		scale.MyNet = net
 		go scale.keepNetState()
 		// scale.keepNetState()
@@ -354,7 +338,7 @@ func (s *Scale) keepNetState() {
 			}
 			s.MyNet.isAlive = false
 		} else if s.MyNet != nil && s.MyNet.conn != nil {
-			err, scaleModel, sn := getModelNameSn(s)
+			scaleModel, sn, err := getModelNameSn(s)
 			if err == nil {
 				req := ReqModifyScaleSn{
 					ScaleId:    s.Id,
@@ -402,7 +386,7 @@ func (s *Scale) keepNetOnline() {
 
 		if s.MyNet.conn != nil && s.MyNet.isAlive {
 			if !hasUpdated {
-				err, scaleModel, sn := getModelNameSn(s)
+				scaleModel, sn, err := getModelNameSn(s)
 				if err == nil {
 					req := ReqModifyScaleSn{
 						ScaleId:    s.Id,
@@ -629,7 +613,8 @@ func (s *Scale) procToScaleMsg() {
 func (s *Scale) ModifyMedia(conf MediaConf) bool {
 	mu.Lock()
 	defer mu.Unlock()
-	if conf.Type == MEDIA_COM {
+	switch conf.Type {
+	case MEDIA_COM:
 		var pcnf ComInfo
 		var err error
 		// open COM connection
@@ -652,7 +637,7 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 			l.Log.Error(err.Error())
 		}
 		s.Pcnf = pcnf
-	} else if conf.Type == MEDIA_NET {
+	case MEDIA_NET:
 		//TODO: 要做修改IP    202406
 
 		var ncnf NetInfo
@@ -677,10 +662,12 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 		}
 		s.Ncnf = ncnf
 
-	} else if conf.Type == MEDIA_BT {
+	case MEDIA_BT:
 		//TODO: 要做修改蓝牙    202406
 		return false
-	} else {
+	default:
+		return false
+
 	}
 	go s.procScaleRespMsg()
 	go s.procToScaleMsg()
@@ -738,6 +725,7 @@ func enablePassthrough(s *Scale, respType m.RespMsgType) (*ScaleRespMsg, error) 
 	// 	return &ScaleRespMsg{respType, "fail", s.Id}, nil
 	// }
 	// time.Sleep(100 * time.Millisecond)
+	println(respType)
 	msg, err := EnPassthrough(s)
 
 	return msg, err
@@ -1031,7 +1019,8 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	composer := s.composer
 	fn := composer.ComposeCmd
 	for i := 0; i < len(modifyData); i++ {
-		if modifyData[i].Type == "string" {
+		switch modifyData[i].Type {
+		case "string":
 			packetData := stringToLittleEndianBytes(modifyData[i].Value, modifyData[i].Size)
 			packDataHexStr := hex.EncodeToString(packetData)
 			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
@@ -1045,7 +1034,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			} else if res.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 			}
-		} else if modifyData[i].Type == "int" {
+		case "int":
 			if modifyData[i].Size == 1 {
 				num, err := strconv.Atoi(modifyData[i].Value)
 				if err != nil {
@@ -1092,8 +1081,9 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				}
 			}
 
-		} else if modifyData[i].Type == "double" {
-			if modifyData[i].Size == 8 {
+		case "double":
+			switch modifyData[i].Size {
+			case 8:
 				packetData := StringToFloat64Bytes(modifyData[i].Value)
 				packDataHexStr := hex.EncodeToString(packetData)
 				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
@@ -1106,7 +1096,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				} else if res.MsgBody != "ok" {
 					return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 				}
-			} else if modifyData[i].Size == 4 {
+			case 4:
 				packetData := StringToFloat32Bytes(modifyData[i].Value)
 				packDataHexStr := hex.EncodeToString(packetData)
 				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
@@ -1369,15 +1359,16 @@ func ReqDownFactoryInfoTmax(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			packetData := fillStrBySize(modifyData[i].Value, modifyData[i].Size)
 			packDataHexStr := hex.EncodeToString(packetData)
 			var addr = tmax_Addr
-			if modifyData[i].Id == FCX_MODEL_NAME_ID {
+			switch modifyData[i].Id {
+			case FCX_MODEL_NAME_ID:
 				addr = tmaxNameAddr
 				modelNameSnStr = modelNameSnStr + modifyData[i].Value
-			} else if modifyData[i].Id == FCX_SN_ID {
+			case FCX_SN_ID:
 				addr = tmaxSnAddr
 				modelNameSnStr = modelNameSnStr + modifyData[i].Value
-			} else if modifyData[i].Id == FCX_MD5_ID {
+			case FCX_MD5_ID:
 				addr = tmaxMd5Addr
-			} else {
+			default:
 				return &ScaleRespMsg{}, fmt.Errorf("write flase fail")
 			}
 			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
@@ -1484,15 +1475,16 @@ func ReqDownFactoryInfoFc(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			packetData := fillStrBySize(modifyData[i].Value, modifyData[i].Size)
 			packDataHexStr := hex.EncodeToString(packetData)
 			var addr = 0
-			if modifyData[i].Id == FCX_MODEL_NAME_ID {
+			switch modifyData[i].Id {
+			case FCX_MODEL_NAME_ID:
 				addr = FCX_MODEL_NAME_ADDR
 				modelNameSnStr = modelNameSnStr + modifyData[i].Value
-			} else if modifyData[i].Id == FCX_SN_ID {
+			case FCX_SN_ID:
 				addr = FCX_SN_ADDR
 				modelNameSnStr = modelNameSnStr + modifyData[i].Value
-			} else if modifyData[i].Id == FCX_MD5_ID {
+			case FCX_MD5_ID:
 				addr = FCX_MD5_ADDR
-			} else {
+			default:
 				return &ScaleRespMsg{}, fmt.Errorf("write flase fail")
 			}
 			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
@@ -1567,7 +1559,8 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	composer := s.composer
 	fn := composer.ComposeCmd
 	for i := 0; i < len(modifyData); i++ {
-		if modifyData[i].Type == "string" {
+		switch modifyData[i].Type {
+		case "string":
 			packetData := stringToLittleEndianBytes(modifyData[i].CurrValue, modifyData[i].Size)
 			packDataHexStr := hex.EncodeToString(packetData)
 			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_EEPROM, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", modifyData[i].Addr, packDataHexStr)})
@@ -1582,7 +1575,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			} else if res.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 			}
-		} else if modifyData[i].Type == "int" {
+		case "int":
 			if modifyData[i].Size == 1 {
 				num, err := strconv.Atoi(modifyData[i].CurrValue)
 				if err != nil {
@@ -1629,7 +1622,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				}
 			}
 
-		} else if modifyData[i].Type == "double" {
+		case "double":
 			if modifyData[i].Size == 8 {
 				packetData := StringToFloat64Bytes(modifyData[i].CurrValue)
 				packDataHexStr := hex.EncodeToString(packetData)
@@ -1849,7 +1842,7 @@ func ReqModifyVarValue(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		valueBytes := []byte(tmpData.Value)
 		if sendArray != nil && len(sendArray)+len(valueBytes) > 200 {
 			packDataHexStr := hex.EncodeToString(sendArray)
-			cmd, timeoutMs, err := fn(composer, m.CMD_MODIFY_VAR_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s", packDataHexStr)})
+			cmd, timeoutMs, err := fn(composer, m.CMD_MODIFY_VAR_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: packDataHexStr})
 			if err != nil {
 				return &ScaleRespMsg{m.MODIFY_VAR_RESP, "fail", s.Id}, err
 			}
@@ -1871,7 +1864,8 @@ func ReqModifyVarValue(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			sendArray = append(sendArray, valueBytes...)
 			if i == len(headerList.ListData)-1 {
 				packDataHexStr := hex.EncodeToString(sendArray)
-				cmd, timeoutMs, err := fn(composer, m.CMD_MODIFY_VAR_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%s", packDataHexStr)})
+				cmd, timeoutMs, err := fn(composer, m.CMD_MODIFY_VAR_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: packDataHexStr})
+
 				if err != nil {
 					return &ScaleRespMsg{m.MODIFY_VAR_RESP, "fail", s.Id}, err
 				}
@@ -1934,17 +1928,19 @@ func intToLittleEndianBytes(dataStr string, size int) ([]byte, error) {
 		return []byte{}, nil
 	}
 	result := make([]byte, size)
-	if size == 2 {
+	switch size {
+	case 2:
 		binary.LittleEndian.PutUint16(result, uint16(num))
 		return result, nil
-	} else if size == 4 {
+	case 4:
 		binary.LittleEndian.PutUint32(result, uint32(num))
 		return result, nil
-	} else if size == 8 {
+	case 8:
 		binary.LittleEndian.PutUint64(result, uint64(num))
 		return result, nil
+	default:
+		return result, nil
 	}
-	return result, nil
 
 }
 
@@ -2566,21 +2562,21 @@ func getFileData(zipFilePath []string) ([]string, bool) {
 // 	return true
 // }
 
-func getFileNum(fNameStr string) (int, bool) {
-	re := regexp.MustCompile(`(\d+)`) // 使用正则表达式提取数字部分
-	match := re.FindStringSubmatch(fNameStr)
+// func getFileNum(fNameStr string) (int, bool) {
+// 	re := regexp.MustCompile(`(\d+)`) // 使用正则表达式提取数字部分
+// 	match := re.FindStringSubmatch(fNameStr)
 
-	if len(match) > 1 {
-		numStr := match[1]               // 提取到的数字部分
-		num, err := strconv.Atoi(numStr) // 将字符串转换为int类型
-		if err == nil {
-			return num, true
-		} else {
-			return 0, false
-		}
-	}
-	return 0, false
-}
+// 	if len(match) > 1 {
+// 		numStr := match[1]               // 提取到的数字部分
+// 		num, err := strconv.Atoi(numStr) // 将字符串转换为int类型
+// 		if err == nil {
+// 			return num, true
+// 		} else {
+// 			return 0, false
+// 		}
+// 	}
+// 	return 0, false
+// }
 
 func decryptByte(encryptedBytes []byte) []byte {
 	var decryptedBytes []byte
@@ -2866,33 +2862,33 @@ func mergeByteSlices(slice1, slice2 []byte) []byte {
 }
 
 // 获取modelName 和sn
-func getModelNameSn(c *Scale) (error, string, string) {
+func getModelNameSn(c *Scale) (string, string, error) {
 	composer := c.composer
 	fn := composer.ComposeCmd
 	var dataStruct FIFromScale
 
 	cmd, timeoutMs, err := fn(composer, m.CMD_GET_FACTORY_INFO, m.CmdData{})
 	if err != nil {
-		return err, "", ""
+		return "", "", err
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.GET_FACTORY_INFO_RESP, timeoutMs); err != nil {
-		return err, "", ""
+		return "", "", err
 	} else if res.MsgBody == "" {
-		return err, "", ""
+		return "", "", err
 	} else {
 		msgBodyStr, ok := res.MsgBody.(string)
 		if !ok {
-			return err, "", ""
+			return "", "", err
 		}
 		err := json.UnmarshalFromString(msgBodyStr, &dataStruct)
 		if err != nil {
-			return err, "", ""
+			return "", "", err
 		}
 	}
 	if dataStruct.ModelName == "" || dataStruct.ScaleSn == "" {
-		return err, "", ""
+		return "", "", err
 	}
-	return err, dataStruct.ModelName, dataStruct.ScaleSn
+	return dataStruct.ModelName, dataStruct.ScaleSn, nil
 }
 
 // 从zip中获取bin和机种名
@@ -2918,25 +2914,32 @@ func getZipInfo(fileName string) ([]byte, string, error) {
 }
 
 // 从zip中获取srec 和机种
-func getZipInfoSrec(fileName string) ([]byte, string, error) {
+func getZipInfoSrec(fileName string) ([]byte, string, string, error) {
+
 	readSrecData, txtData := unzipAndReadFilesSrec(fileName)
 	if readSrecData == nil || txtData == nil {
-		return nil, "", fmt.Errorf("file error")
+		return nil, "", "", fmt.Errorf("file error")
 	}
 	var firmwareInfo ReqFirmwareInfo
 	if err := json.UnmarshalFromString(string(txtData), &firmwareInfo); err != nil {
-		return nil, "", fmt.Errorf("file error")
+		return nil, "", "", fmt.Errorf("file error")
 	}
 	readMd5 := firmwareInfo.SrecKey
 
 	tempByte := mergeByteSlices(readSrecData, []byte(MD5SEED))
 	calMd5Str := bytesToMd5(tempByte)
 	if strings.Trim(readMd5, " ") != calMd5Str {
-		return nil, "", fmt.Errorf("file error")
+		return nil, "", "", fmt.Errorf("file error")
 	}
-	modelName := firmwareInfo.ModelName
-	return readSrecData, modelName, nil
+
+	return readSrecData, firmwareInfo.ModelName, firmwareInfo.BootloaderVersion, nil
 }
+
+const (
+	BOOTLOADER_OLD  = "boot_no_crc"
+	BOOTLOADER_NEW  = "boot_with_crc"
+	BOOTLOADER_TMAX = "new_tmax_boot"
+)
 
 // 更新srec之前要先验证 机种是否匹配
 func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -2948,29 +2951,45 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
 	}
 
-	readSrecData, modelName, err := getZipInfoSrec(parts[0])
+	readSrecData, modelName, bootloaderVersion, err := getZipInfoSrec(parts[0])
+
 	if err != nil || len(readSrecData) == 0 {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
 	}
-	// parts[1] = "1" 小天平烧录专用
-	if parts[1] == "0" {
-		err, scaleName, _ := getModelNameSn(c)
-		if err != nil {
-			return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,check connection.", c.Id}, nil
-		}
-		if scaleName != modelName {
-			return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,the model does not match.", c.Id}, nil
-		}
-	}
+	println(modelName)
+	//现在都是强制更新，不问机种名序列号
+	// if parts[1] == "0" {
+	// 	err, scaleName, _ := getModelNameSn(c)
+	// 	if err != nil {
+	// 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,check connection.", c.Id}, nil
+	// 	}
+	// 	if scaleName != modelName {
+	// 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,the model does not match.", c.Id}, nil
+	// 	}
+	// }
 	binData := decryptByte(readSrecData)
 	tmpFile, err := os.CreateTemp("", "update_*.srec")
 	if err != nil {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,write file error.", c.Id}, nil
 	}
-	defer tmpFile.Close()
-	writeStringToFile(string(binData), tmpFile.Name())
-	return c.UpdateFirmware(tmpFile.Name())
+	defer func() {
+		tmpFile.Close()
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			l.Log.Printf("删除临时文件失败: %v, 路径: %s", err, tmpFile.Name())
+		}
+	}()
 
+	writeStringToFile(string(binData), tmpFile.Name())
+	switch bootloaderVersion {
+	case BOOTLOADER_NEW:
+		return c.UpdateFirmware(tmpFile.Name()) //带有CRC的boot升级，bootcommander
+	case BOOTLOADER_OLD:
+		return c.UpdateFirmwareOld(tmpFile.Name()) //不带CRC的boot升级，bootcommander
+	case BOOTLOADER_TMAX:
+		return c.TmaxUpdateFirmware(tmpFile.Name()) //Tmax升级，串口自己升级
+	default:
+		return c.UpdateFirmware(tmpFile.Name()) //带有CRC的boot升级，bootcommander
+	}
 }
 
 func writeStringToFile(str string, filePath string) {
@@ -3098,7 +3117,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
 	}
 
-	err, scaleName, _ := getModelNameSn(c)
+	scaleName, _, err := getModelNameSn(c)
 	if err != nil {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,check connection")
 	}
@@ -3219,6 +3238,8 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	l.Log.Info("send bin ok")
 
+	// 重启
+	Reboot(c)
 	return &ScaleRespMsg{m.DOWN_FIRMWARE_WIFI_RESP, "ok", c.Id}, nil
 }
 
@@ -3381,11 +3402,7 @@ func getPluFilePath(currPath string) string {
 }
 
 func getCurrPath() string {
-	// file, _ := exec.LookPath(os.Args[0])
-	// path, _ := filepath.Abs(file)
-	// index := strings.LastIndex(path, string(os.PathSeparator))
-	// currentPath := path[:index]
-	// currentPath = filepath.Join(currentPath, m.SRV_DATA_PATH)
+
 	currentPath :=
 		m.GetSrvDataPath()
 	pluBackPath := filepath.Join(currentPath, m.PLU_BACK_PATH)
@@ -3451,6 +3468,7 @@ func ReqSetScaleTime(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{}, fmt.Errorf("set time fail")
 	}
+
 	return &ScaleRespMsg{m.SET_SCALE_TIME_RESP, "ok", c.Id}, nil
 }
 
@@ -3481,27 +3499,27 @@ func ReqDelPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return &ScaleRespMsg{m.DEL_PLU_RESP, "ok", c.Id}, nil
 }
 
-func deleteFile(fileName string) error {
-	currentDir, err := os.Getwd()
-	if err != nil {
-		l.Log.Debug("failed get current path")
-		return nil
-	}
-	// 拼接文件的完整路径
-	fullPath := filepath.Join(currentDir, fileName)
-	// 检查文件是否存在
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		l.Log.Debug("file does not exist ")
-		return nil
-	}
-	// 删除文件
-	err = os.Remove(fullPath)
-	if err != nil {
-		l.Log.Debug("delete file failed")
-		return err
-	}
-	return nil
-}
+// func deleteFile(fileName string) error {
+// 	currentDir, err := os.Getwd()
+// 	if err != nil {
+// 		l.Log.Debug("failed get current path")
+// 		return nil
+// 	}
+// 	// 拼接文件的完整路径
+// 	fullPath := filepath.Join(currentDir, fileName)
+// 	// 检查文件是否存在
+// 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+// 		l.Log.Debug("file does not exist ")
+// 		return nil
+// 	}
+// 	// 删除文件
+// 	err = os.Remove(fullPath)
+// 	if err != nil {
+// 		l.Log.Debug("delete file failed")
+// 		return err
+// 	}
+// 	return nil
+// }
 
 // 获取OL UL的异常数据
 func ReqGetWeightErr(c *Scale) (*ScaleRespMsg, error) {
@@ -3693,11 +3711,12 @@ func ReqGetOneEepromInfo(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if len(addrBytes) >= 256 {
 					if eepromSize == 1 {
 						dataVal = int(addrBytes[eepromAddr])
-						if dataVal == 0 {
+						switch dataVal {
+						case 0:
 							return &ScaleRespMsg{m.GET_ONE_EEPROM_INFO_RESP, "ok,off", c.Id}, nil
-						} else if dataVal == 1 {
+						case 1:
 							return &ScaleRespMsg{m.GET_ONE_EEPROM_INFO_RESP, "ok,wifi", c.Id}, nil
-						} else if dataVal == 2 {
+						case 2:
 							return &ScaleRespMsg{m.GET_ONE_EEPROM_INFO_RESP, "ok,bt", c.Id}, nil
 						}
 					}
@@ -3841,7 +3860,7 @@ func ReqGetAllEepromInfo(c *Scale) (*ScaleRespMsg, error) {
 			return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
 		}
 	}
-	eepromResp, res = paserEepromData(dataBuffer, eepromResp, 0)
+	eepromResp, _ = paserEepromData(dataBuffer, eepromResp, 0)
 	eepromStr, _ = json.MarshalToString(eepromResp.EepromData)
 	return &ScaleRespMsg{m.GET_ALL_EEPROM_INFO_RESP, eepromStr, c.Id}, nil
 
@@ -3861,8 +3880,10 @@ func paserEepromData(eepromBytes []byte, eepromResp EepromDataResp, startAddr in
 
 		if dataAddr >= startAddr && (dataAddr-startAddr) < len(eepromBytes) && len(eepromBytes) > dataAddr+dataSize {
 
-			if dataType == "int" {
-				if dataSize == 1 {
+			switch dataType {
+			case "int":
+				switch dataSize {
+				case 1:
 					if eepromBytes[dataAddr] == 0xff {
 						eepromResp.EepromData[i].Permission = 0
 						eepromResp.EepromData[i].CurrValue = ""
@@ -3871,75 +3892,166 @@ func paserEepromData(eepromBytes []byte, eepromResp EepromDataResp, startAddr in
 						eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
 					}
 
-				} else if dataSize == 2 {
+				case 2:
 					if eepromBytes[dataAddr] == 0xff {
 						eepromResp.EepromData[i].Permission = 0
 						eepromResp.EepromData[i].CurrValue = ""
 					} else {
-						dataInt := binary.LittleEndian.Uint16(eepromBytes[dataAddr:(dataAddr + 2)])
+						dataInt := binary.LittleEndian.Uint16(eepromBytes[dataAddr : dataAddr+2])
 						eepromResp.EepromData[i].CurrValue = strconv.Itoa(int(dataInt))
 					}
 
-				} else if dataSize == 4 {
-					if eepromBytes[dataAddr] == 0xff && eepromResp.EepromData[i].SubType != "ip" {
+				case 4:
+					if eepromBytes[dataAddr] == 0xff && dataSubType != "ip" {
 						eepromResp.EepromData[i].Permission = 0
 						eepromResp.EepromData[i].CurrValue = ""
 					} else {
 						if dataSubType == "ip" {
 							dataInt1 := int(eepromBytes[dataAddr])
-							dataInt2 := int(eepromBytes[(dataAddr + 1)])
-							dataInt3 := int(eepromBytes[(dataAddr + 2)])
-							dataInt4 := int(eepromBytes[(dataAddr + 3)])
-							eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt1) + "." + strconv.Itoa(dataInt2) + "." + strconv.Itoa(dataInt3) + "." + strconv.Itoa(dataInt4)
-
+							dataInt2 := int(eepromBytes[dataAddr+1])
+							dataInt3 := int(eepromBytes[dataAddr+2])
+							dataInt4 := int(eepromBytes[dataAddr+3])
+							eepromResp.EepromData[i].CurrValue = fmt.Sprintf("%d.%d.%d.%d", dataInt1, dataInt2, dataInt3, dataInt4)
 						} else {
-							dataInt := int(binary.LittleEndian.Uint32(eepromBytes[dataAddr:(dataAddr + 4)]))
+							dataInt := int(binary.LittleEndian.Uint32(eepromBytes[dataAddr : dataAddr+4]))
 							eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
 						}
 					}
-				} else if dataSize == 8 {
+
+				case 8:
 					if eepromBytes[dataAddr] == 0xff {
 						eepromResp.EepromData[i].Permission = 0
 						eepromResp.EepromData[i].CurrValue = ""
 					} else {
-						dataInt := int(binary.LittleEndian.Uint64(eepromBytes[dataAddr:(dataAddr + 8)]))
+						dataInt := int(binary.LittleEndian.Uint64(eepromBytes[dataAddr : dataAddr+8]))
 						eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
 					}
 				}
 
-			} else if dataType == "double" {
-
-				if dataSize == 8 {
-					dataInt64 := int64(binary.LittleEndian.Uint64(eepromBytes[dataAddr:(dataAddr + 8)]))
+			case "double":
+				switch dataSize {
+				case 8:
+					dataInt64 := int64(binary.LittleEndian.Uint64(eepromBytes[dataAddr : dataAddr+8]))
 					dataDouble := math.Float64frombits(uint64(dataInt64))
 					fmt.Printf("Converted data value: %f\n", dataDouble)
 					fmt.Printf("8 Data 结果: %f\n", dataDouble)
 					eepromResp.EepromData[i].CurrValue = strconv.FormatFloat(dataDouble, 'f', 4, 64)
-				} else if dataSize == 4 {
-					dataUint32 := (binary.LittleEndian.Uint32(eepromBytes[dataAddr:(dataAddr + 4)]))
+
+				case 4:
+					dataUint32 := binary.LittleEndian.Uint32(eepromBytes[dataAddr : dataAddr+4])
 					fmt.Printf("4 Data in hexadecimal: %x\n", dataUint32)
 					dataDouble := math.Float32frombits(dataUint32)
 					eepromResp.EepromData[i].CurrValue = strconv.FormatFloat(float64(dataDouble), 'f', 2, 32)
 				}
 
-			} else if dataType == "string" {
+			case "string":
 				if eepromBytes[dataAddr] == 0xff {
 					eepromResp.EepromData[i].Permission = 0
 					eepromResp.EepromData[i].CurrValue = ""
 				} else {
-					dataStr := string(eepromBytes[dataAddr:(dataAddr + dataSize)])
+					dataStr := string(eepromBytes[dataAddr : dataAddr+dataSize])
 					eepromResp.EepromData[i].CurrValue = dataStr
 				}
-
 			}
-
 		}
-
 	}
 
 	return eepromResp, true
-
 }
+
+// func paserEepromData(eepromBytes []byte, eepromResp EepromDataResp, startAddr int) (EepromDataResp, bool) {
+// 	var dataAddr int
+// 	var dataSize int
+// 	var dataType string
+// 	var dataSubType string
+
+// 	for i := 0; i < len(eepromResp.EepromData); i++ {
+// 		dataAddr = eepromResp.EepromData[i].Addr
+// 		dataSize = eepromResp.EepromData[i].Size
+// 		dataType = eepromResp.EepromData[i].Type
+// 		dataSubType = eepromResp.EepromData[i].SubType
+
+// 		if dataAddr >= startAddr && (dataAddr-startAddr) < len(eepromBytes) && len(eepromBytes) > dataAddr+dataSize {
+
+// 			if dataType == "int" {
+// 				if dataSize == 1 {
+// 					if eepromBytes[dataAddr] == 0xff {
+// 						eepromResp.EepromData[i].Permission = 0
+// 						eepromResp.EepromData[i].CurrValue = ""
+// 					} else {
+// 						dataInt := int(eepromBytes[dataAddr])
+// 						eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
+// 					}
+
+// 				} else if dataSize == 2 {
+// 					if eepromBytes[dataAddr] == 0xff {
+// 						eepromResp.EepromData[i].Permission = 0
+// 						eepromResp.EepromData[i].CurrValue = ""
+// 					} else {
+// 						dataInt := binary.LittleEndian.Uint16(eepromBytes[dataAddr:(dataAddr + 2)])
+// 						eepromResp.EepromData[i].CurrValue = strconv.Itoa(int(dataInt))
+// 					}
+
+// 				} else if dataSize == 4 {
+// 					if eepromBytes[dataAddr] == 0xff && eepromResp.EepromData[i].SubType != "ip" {
+// 						eepromResp.EepromData[i].Permission = 0
+// 						eepromResp.EepromData[i].CurrValue = ""
+// 					} else {
+// 						if dataSubType == "ip" {
+// 							dataInt1 := int(eepromBytes[dataAddr])
+// 							dataInt2 := int(eepromBytes[(dataAddr + 1)])
+// 							dataInt3 := int(eepromBytes[(dataAddr + 2)])
+// 							dataInt4 := int(eepromBytes[(dataAddr + 3)])
+// 							eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt1) + "." + strconv.Itoa(dataInt2) + "." + strconv.Itoa(dataInt3) + "." + strconv.Itoa(dataInt4)
+
+// 						} else {
+// 							dataInt := int(binary.LittleEndian.Uint32(eepromBytes[dataAddr:(dataAddr + 4)]))
+// 							eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
+// 						}
+// 					}
+// 				} else if dataSize == 8 {
+// 					if eepromBytes[dataAddr] == 0xff {
+// 						eepromResp.EepromData[i].Permission = 0
+// 						eepromResp.EepromData[i].CurrValue = ""
+// 					} else {
+// 						dataInt := int(binary.LittleEndian.Uint64(eepromBytes[dataAddr:(dataAddr + 8)]))
+// 						eepromResp.EepromData[i].CurrValue = strconv.Itoa(dataInt)
+// 					}
+// 				}
+
+// 			} else if dataType == "double" {
+
+// 				if dataSize == 8 {
+// 					dataInt64 := int64(binary.LittleEndian.Uint64(eepromBytes[dataAddr:(dataAddr + 8)]))
+// 					dataDouble := math.Float64frombits(uint64(dataInt64))
+// 					fmt.Printf("Converted data value: %f\n", dataDouble)
+// 					fmt.Printf("8 Data 结果: %f\n", dataDouble)
+// 					eepromResp.EepromData[i].CurrValue = strconv.FormatFloat(dataDouble, 'f', 4, 64)
+// 				} else if dataSize == 4 {
+// 					dataUint32 := (binary.LittleEndian.Uint32(eepromBytes[dataAddr:(dataAddr + 4)]))
+// 					fmt.Printf("4 Data in hexadecimal: %x\n", dataUint32)
+// 					dataDouble := math.Float32frombits(dataUint32)
+// 					eepromResp.EepromData[i].CurrValue = strconv.FormatFloat(float64(dataDouble), 'f', 2, 32)
+// 				}
+
+// 			} else if dataType == "string" {
+// 				if eepromBytes[dataAddr] == 0xff {
+// 					eepromResp.EepromData[i].Permission = 0
+// 					eepromResp.EepromData[i].CurrValue = ""
+// 				} else {
+// 					dataStr := string(eepromBytes[dataAddr:(dataAddr + dataSize)])
+// 					eepromResp.EepromData[i].CurrValue = dataStr
+// 				}
+
+// 			}
+
+// 		}
+
+// 	}
+
+// 	return eepromResp, true
+
+// }
 
 type SerialOutputInfo struct {
 	Id   [1]byte // 序号
@@ -4016,7 +4128,7 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			if csvFmtContent, err := os.ReadFile(filePathStr); err != nil {
 				return &ScaleRespMsg{}, err
 			} else {
-				if bufferData, res := ParserSerialOutputFile(string(csvFmtContent)); res == false {
+				if bufferData, res := ParserSerialOutputFile(string(csvFmtContent)); !res {
 					return &ScaleRespMsg{}, err
 				} else {
 					fileDataInfoList[fileId-1].Data = bufferData.Bytes()
@@ -4119,13 +4231,14 @@ func retreiveRespMsgT2200(scaleId int64, data []byte) (*ScaleRespMsg, error) {
 	var err error
 	respMsg := &ScaleRespMsg{MsgType: GlastWantRespMsgType, MsgBody: "", ScaleId: scaleId}
 	if len(data) == 1 {
-		if data[0] == 0x06 {
+		switch data[0] {
+		case 0x06:
 			respMsg.MsgBody = "ok"
 			err = nil
-		} else if data[0] == 0x15 {
+		case 0x15:
 			respMsg.MsgBody = "fail"
 			err = nil
-		} else {
+		default:
 			return respMsg, fmt.Errorf("unknown response")
 		}
 	} else { // weight data, same as C51 scale
@@ -4208,7 +4321,7 @@ func sendRespMsgClient(s *Scale, msg *ScaleRespMsg) {
 	} else {
 		l.Log.Error("fromScaleMsgCh full")
 	}
-	return
+
 }
 
 // 设置最大量程

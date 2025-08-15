@@ -1,7 +1,6 @@
 package svc
 
 import (
-	"fmt"
 	"log"
 	"unsafe"
 )
@@ -10,7 +9,7 @@ import (
 // If b is not exactly 1 byte in length, PutUint8 will log.Println.
 func PutUint8(b []byte, v uint8) {
 	if l := len(b); l != 1 {
-		log.Println(fmt.Sprintf("PutUint8: unexpected byte slice length: %d", l))
+		log.Printf("PutUint8: unexpected byte slice length: %d", l)
 	}
 
 	b[0] = v
@@ -20,7 +19,8 @@ func PutUint8(b []byte, v uint8) {
 // If b is not exactly 2 bytes in length, PutUint16 will log.Println.
 func PutUint16(b []byte, v uint16) {
 	if l := len(b); l != 2 {
-		log.Println(fmt.Sprintf("PutUint16: unexpected byte slice length: %d", l))
+		log.Printf("PutUint16: unexpected byte slice length: %d", l)
+
 	}
 
 	*(*uint16)(unsafe.Pointer(&b[0])) = v
@@ -30,7 +30,8 @@ func PutUint16(b []byte, v uint16) {
 // If b is not exactly 4 bytes in length, PutUint32 will log.Println.
 func PutUint32(b []byte, v uint32) {
 	if l := len(b); l != 4 {
-		log.Println(fmt.Sprintf("PutUint32: unexpected byte slice length: %d", l))
+		log.Printf("PutUint32: unexpected byte slice length: %d", l)
+
 	}
 
 	*(*uint32)(unsafe.Pointer(&b[0])) = v
@@ -40,7 +41,7 @@ func PutUint32(b []byte, v uint32) {
 // If b is not exactly 8 bytes in length, PutUint64 will log.Println.
 func PutUint64(b []byte, v uint64) {
 	if l := len(b); l != 8 {
-		log.Println(fmt.Sprintf("PutUint64: unexpected byte slice length: %d", l))
+		log.Printf("PutUint64: unexpected byte slice length: %d", l)
 	}
 
 	*(*uint64)(unsafe.Pointer(&b[0])) = v
@@ -50,7 +51,9 @@ func PutUint64(b []byte, v uint64) {
 // If b is not exactly 4 bytes in length, PutInt32 will log.Println.
 func PutInt32(b []byte, v int32) {
 	if l := len(b); l != 4 {
-		log.Println(fmt.Sprintf("PutInt32: unexpected byte slice length: %d", l))
+
+		log.Printf("PutInt32: unexpected byte slice length: %d", l)
+
 	}
 
 	*(*int32)(unsafe.Pointer(&b[0])) = v
@@ -60,7 +63,9 @@ func PutInt32(b []byte, v int32) {
 // If b is not exactly 1 byte in length, Uint8 will log.Println.
 func Uint8(b []byte) uint8 {
 	if l := len(b); l != 1 {
-		log.Println(fmt.Sprintf("Uint8: unexpected byte slice length: %d", l))
+
+		log.Printf("Uint8: unexpected byte slice length: %d", l)
+
 	}
 
 	return b[0]
@@ -70,7 +75,9 @@ func Uint8(b []byte) uint8 {
 // If b is not exactly 2 bytes in length, Uint16 will log.Println.
 func Uint16(b []byte) uint16 {
 	if l := len(b); l != 2 {
-		log.Println(fmt.Sprintf("Uint16: unexpected byte slice length: %d", l))
+
+		log.Printf("Uint16: unexpected byte slice length: %d", l)
+
 	}
 
 	return *(*uint16)(unsafe.Pointer(&b[0]))
@@ -80,7 +87,8 @@ func Uint16(b []byte) uint16 {
 // If b is not exactly 4 bytes in length, Uint32 will log.Println.
 func Uint32(b []byte) uint32 {
 	if l := len(b); l != 4 {
-		log.Println(fmt.Sprintf("Uint32: unexpected byte slice length: %d", l))
+		log.Printf("Uint32: unexpected byte slice length: %d", l)
+
 	}
 
 	return *(*uint32)(unsafe.Pointer(&b[0]))
@@ -90,7 +98,8 @@ func Uint32(b []byte) uint32 {
 // If b is not exactly 8 bytes in length, Uint64 will log.Println.
 func Uint64(b []byte) uint64 {
 	if l := len(b); l != 8 {
-		log.Println(fmt.Sprintf("Uint64: unexpected byte slice length: %d", l))
+		log.Printf("Uint64: unexpected byte slice length: %d", l)
+
 	}
 
 	return *(*uint64)(unsafe.Pointer(&b[0]))
@@ -100,7 +109,8 @@ func Uint64(b []byte) uint64 {
 // If b is not exactly 4 bytes in length, Int32 will log.Println.
 func Int32(b []byte) int32 {
 	if l := len(b); l != 4 {
-		log.Println(fmt.Sprintf("Int32: unexpected byte slice length: %d", l))
+		log.Printf("Int32: unexpected byte slice length: %d", l)
+
 	}
 
 	return *(*int32)(unsafe.Pointer(&b[0]))

@@ -1209,37 +1209,37 @@ func (sm *ServiceManager) Stop() error {
 	return nil
 }
 
-func isServiceRunning(serviceName string) (bool, error) {
-	m, err := mgr.Connect()
-	if err != nil {
-		return false, err
-	}
-	defer m.Disconnect()
+// func isServiceRunning(serviceName string) (bool, error) {
+// 	m, err := mgr.Connect()
+// 	if err != nil {
+// 		return false, err
+// 	}
+// 	defer m.Disconnect()
 
-	s, err := m.OpenService(serviceName)
-	if err != nil {
-		return false, err
-	}
-	defer s.Close()
+// 	s, err := m.OpenService(serviceName)
+// 	if err != nil {
+// 		return false, err
+// 	}
+// 	defer s.Close()
 
-	status, err := s.Query()
-	if err != nil {
-		return false, err
-	}
+// 	status, err := s.Query()
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	return status.State == svc.Running, nil
-}
+// 	return status.State == svc.Running, nil
+// }
 
 func IsServiceInstalled(serviceName string) bool {
 	m, err := mgr.Connect()
 	if err != nil {
-		fmt.Errorf("%v", err)
+		log.Printf("%v", err)
 	}
 	defer m.Disconnect()
 
 	services, err := m.ListServices()
 	if err != nil {
-		fmt.Errorf("%v", err)
+		log.Printf("%v", err)
 	}
 
 	for _, s := range services {
@@ -1650,7 +1650,7 @@ func (p addFormulaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqFormulaWgtRec) 
 	//插入体
 	for _, detail := range fmaInfo.Details {
 		//先找到payload中对应的detail
-		newFmaDetail := FormulaWgtRecDetail{}
+		// newFmaDetail := FormulaWgtRecDetail{}
 		//先找出是不是容器
 
 		//不是容器
@@ -1662,7 +1662,7 @@ func (p addFormulaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqFormulaWgtRec) 
 			rawWgt = detail.FormulaDetail.MaterialWeight
 		}
 		detailRec := getDetailRecFromPayload(payload, detail.FormulaDetail.Sequence)
-		newFmaDetail = FormulaWgtRecDetail{
+		newFmaDetail := FormulaWgtRecDetail{
 			RecordID:           payload.RecHeader.RecordID,
 			MaterialID:         detailRec.MaterialID,
 			MaterialName:       detail.RawMaterialTypeName.RawMaterial.MaterialName,

@@ -233,6 +233,7 @@ func extractMessageTMAX(scaleId int64, bufs *util.CircularBuffer, msgType m.Resp
 }
 
 func extractScalePassthDataTMAX(s *Scale, bufs *util.CircularBuffer, msgType m.RespMsgType) ScaleRespMsg {
+	println(msgType)
 	data := bufs.PeekAll()
 	resp, shouldRemoveLen := handleScalePassthData(s.Id, data, s.IsScalePassthHex)
 	bufs.DequeueN(shouldRemoveLen)
@@ -954,10 +955,10 @@ func handleDownFirmwareWifiResp(scaleId int64, data []byte) (ScaleRespMsg, int) 
 	return ScaleRespMsg{}, 0
 }
 
-func handleGetAllEepromInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// TODO: Implement function
-	return ScaleRespMsg{}, 0
-}
+// func handleGetAllEepromInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+// 	// TODO: Implement function
+// 	return ScaleRespMsg{}, 0
+// }
 
 func handleDelPluResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if data[0] == 0x06 {
@@ -995,14 +996,14 @@ func handleOpenBillSendResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	// TODO: Implement function
 }
 
-func handleEnUserContResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	if data[0] == 0x06 {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.OPEN_BILL_SEND_RESP, MsgBody: "ok"}, len(data)
-	} else {
-		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.OPEN_BILL_SEND_RESP, MsgBody: "fail"}, len(data)
-	}
-	// TODO: Implement function
-}
+// func handleEnUserContResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+// 	if data[0] == 0x06 {
+// 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.OPEN_BILL_SEND_RESP, MsgBody: "ok"}, len(data)
+// 	} else {
+// 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.OPEN_BILL_SEND_RESP, MsgBody: "fail"}, len(data)
+// 	}
+// 	// TODO: Implement function
+// }
 
 type DetailHeadData struct {
 	SettleAccountTimes string
@@ -1408,12 +1409,12 @@ func handleScalePassthData(scaleId int64, data []byte, isHexMode bool) (ScaleRes
 
 // var okBytes = []byte("\r\nOK\r\n")
 
-var okBytes = []byte("\r\n\r\nOK\r\n") //20240718  更换wifi模块
+// var okBytes = []byte("\r\n\r\nOK\r\n") //20240718  更换wifi模块
 
-func containsOK(response []byte) bool {
-	println(string(response))
-	return bytes.Contains(response, okBytes)
-}
+// func containsOK(response []byte) bool {
+// 	println(string(response))
+// 	return bytes.Contains(response, okBytes)
+// }
 
 type CWLAPResponse struct {
 	NetworkType int
@@ -1432,7 +1433,7 @@ func convertResponseToInfo(seqNo int, response CWLAPResponse) APInfo {
 	info.Ssid = response.SSID
 	info.Rssi = getRssiLevel(response.RSSI)
 	info.Mac = response.BSSID
-	info.encryptType = getEncryptType(response.Security)
+	info.EncryptType = getEncryptType(response.Security)
 
 	return info
 }
@@ -1812,7 +1813,7 @@ func extractIPInfo(response string) (IPInfo, error) {
 
 	// 检查是否成功提取了所有值
 	if info.IP == "" || info.Gateway == "" || info.Netmask == "" {
-		return info, fmt.Errorf("Failed to extract IP information")
+		return info, fmt.Errorf("failed to extract IP information")
 	}
 
 	return info, nil
@@ -1830,11 +1831,12 @@ func extractIPMode(response string) (bool, error) {
 		for _, line := range lines {
 			if strings.HasPrefix(line, "+CWDHCP_CUR:") {
 				modeNo := line[len("+CWDHCP_CUR:"):]
-				if modeNo == "2" || modeNo == "3" {
+				switch modeNo {
+				case "2", "3":
 					mode = true
-				} else if modeNo == "0" || modeNo == "1" {
+				case "0", "1":
 					mode = false
-				} else {
+				default:
 					mode = false
 					err = fmt.Errorf("invalid response")
 				}
@@ -1846,14 +1848,17 @@ func extractIPMode(response string) (bool, error) {
 		for _, line := range lines {
 			if strings.HasPrefix(line, "+CWDHCP:") {
 				modeNo := line[len("+CWDHCP:"):]
-				if modeNo == "3" {
+
+				switch modeNo {
+				case "3":
 					mode = true
-				} else if modeNo == "0" || modeNo == "1" || modeNo == "2" {
+				case "0", "1", "2":
 					mode = false
-				} else {
+				default:
 					mode = false
 					err = fmt.Errorf("invalid response")
 				}
+
 				break
 			}
 		}

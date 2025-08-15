@@ -1,7 +1,6 @@
 package svc
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -31,28 +30,28 @@ func TestNewDbScaleConn(t *testing.T) {
 	}
 }
 
-func TestDbScaleConn_GetScaleConnList(t *testing.T) {
-	tests := []struct {
-		name    string
-		d       *DbScaleConn
-		want    []ScaleConnMedia
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.d.GetScaleConnList()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DbScaleConn.GetScaleConnList() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DbScaleConn.GetScaleConnList() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+// func TestDbScaleConn_GetScaleConnList(t *testing.T) {
+// 	tests := []struct {
+// 		name    string
+// 		d       *DbScaleConn
+// 		want    []ScaleConnMedia
+// 		wantErr bool
+// 	}{
+// 		// TODO: Add test cases.
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			got, err := tt.d.GetScaleConnList()
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("DbScaleConn.GetScaleConnList() error = %v, wantErr %v", err, tt.wantErr)
+// 				return
+// 			}
+// 			if !reflect.DeepEqual(got, tt.want) {
+// 				t.Errorf("DbScaleConn.GetScaleConnList() = %v, want %v", got, tt.want)
+// 			}
+// 		})
+// 	}
+// }
 
 func TestDbScaleConn_InsertScaleConn(t *testing.T) {
 	db, _ := NewDbScaleConn("test.db")

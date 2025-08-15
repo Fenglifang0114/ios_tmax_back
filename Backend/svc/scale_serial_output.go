@@ -187,13 +187,14 @@ func procJsonDataFunction(jsonDataStruct JSONData) []FunctionMap {
 		}
 
 		funcTypeByte := []byte{funcType} // 将funcType转换为字节数组0
-		if function.Type == "free" {
+		switch function.Type {
+		case "free":
 			funcData = append(funcData, funcTypeByte...)
 			functionMapList = append(functionMapList, FunctionMap{
 				ID:       function.ID,
 				FuncData: funcData,
 			})
-		} else if function.Type == "integer" {
+		case "integer":
 			funcAlignment, exists := alignmentMap[function.Alignment] // 查找typeMap中对应的字节
 			if !exists {
 				fmt.Println("未知的对齐方式:", function.Type)
@@ -211,7 +212,7 @@ func procJsonDataFunction(jsonDataStruct JSONData) []FunctionMap {
 				ID:       function.ID,
 				FuncData: funcData,
 			})
-		} else if function.Type == "float" {
+		case "float":
 			funcAlignment, exists := alignmentMap[function.Alignment] // 查找typeMap中对应的字节
 			if !exists {
 				fmt.Println("未知的对齐方式:", function.Type)
@@ -234,7 +235,7 @@ func procJsonDataFunction(jsonDataStruct JSONData) []FunctionMap {
 				ID:       function.ID,
 				FuncData: funcData,
 			})
-		} else if function.Type == "bool" {
+		case "bool":
 			funcIsTrueByte := []byte(function.IsTrue)
 			funcIsFalseByte := []byte(function.IsFalse)
 			totalLen := byte(len(funcIsTrueByte)) + byte(len(funcIsFalseByte))
@@ -249,7 +250,7 @@ func procJsonDataFunction(jsonDataStruct JSONData) []FunctionMap {
 				ID:       function.ID,
 				FuncData: funcData,
 			})
-		} else if function.Type == "string" {
+		case "string":
 			funcAlignment, exists := alignmentMap[function.Alignment] // 查找typeMap中对应的字节
 			if !exists {
 				fmt.Println("未知的对齐方式:", function.Type)

@@ -297,7 +297,6 @@ func procGetMaxRange2(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetMaxRange2(scale, req)
 }
 
-
 func procSetDecimalValue(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetDecimalValue(scale, req)
 }
@@ -437,9 +436,9 @@ func procGetApList(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetApList(scale)
 }
 
-func procGetWeightErr(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqGetWeightErr(scale)
-}
+// func procGetWeightErr(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+// 	return ReqGetWeightErr(scale)
+// }
 
 func procRescanAp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return &ScaleRespMsg{ScaleId: scale.Id, MsgType: m.RESCAN_AP_LIST_RESP, MsgBody: "ok"}, nil

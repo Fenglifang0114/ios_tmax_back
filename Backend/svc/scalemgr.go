@@ -25,7 +25,7 @@ type ScaleMgr struct {
 	recTakeOutPb      *ScaleRecTakeOutProvider
 	medias            []*ScaleConnMedia // scale connections meida
 	detailPb          *DetailRecProvider
-	formulaPb         *FormulaRecProvider
+	// formulaPb         *FormulaRecProvider
 }
 
 func NewScaleMgr() *ScaleMgr {
@@ -642,7 +642,8 @@ func (s *ScaleMgr) ModifyMediaList(scaleId int64, conf MediaConf) error {
 		}
 	}
 	if !isFound {
-		return fmt.Errorf("Not found the scale conf")
+		return fmt.Errorf("not found the scale conf")
+
 	}
 
 	return nil
@@ -659,7 +660,7 @@ func (s *ScaleMgr) ModifyScaleInfo(scaleId int64, modelName string, sn string) e
 		}
 	}
 	if !isFound {
-		return fmt.Errorf("Not found the scale conf")
+		return fmt.Errorf("not found the scale conf")
 	}
 
 	return nil
@@ -675,7 +676,7 @@ func (s *ScaleMgr) ModifyScaleName(scaleId int64, name string) error {
 		}
 	}
 	if !isFound {
-		return fmt.Errorf("Not found the scale conf")
+		return fmt.Errorf("not found the scale conf")
 	}
 
 	return nil
@@ -935,7 +936,7 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 				return err
 			}
 			if reqNetInfo.Ip == netInfo.Ip && reqNetInfo.Port == netInfo.Port {
-				return fmt.Errorf("This IP address already exists")
+				return fmt.Errorf("this IP address already exists")
 			}
 		}
 	}

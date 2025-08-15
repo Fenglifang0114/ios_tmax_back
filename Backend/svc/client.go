@@ -3,7 +3,6 @@ package svc
 import (
 	"bytes"
 	"math/big"
-	"net/http"
 	"sync"
 	"time"
 
@@ -34,13 +33,13 @@ var (
 	space   = []byte{' '}
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024000,
-	WriteBufferSize: 1024000,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
+// var upgrader = websocket.Upgrader{
+// 	ReadBufferSize:  1024000,
+// 	WriteBufferSize: 1024000,
+// 	CheckOrigin: func(r *http.Request) bool {
+// 		return true
+// 	},
+// }
 
 type User struct {
 	ID      string
