@@ -394,6 +394,16 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			ProductAdded.Trigger(productAdded, scaleMgr.srvMgr, data)
 		}
+	case REQ_ADD_ONE_PRODUCT:
+		jsonStr := req.ReqData
+		var data AddProduct
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			ProductAddedOne.Trigger(productAddedOne, scaleMgr.srvMgr, data)
+
+		}
+
 	case REQ_DEL_PRODUCT:
 		jsonStr := req.ReqData
 		var data ReqDelProduct
@@ -404,9 +414,22 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		}
 	case REQ_DEL_ALL_PRODUCT:
 		productDeletedAll.Trigger(scaleMgr.srvMgr)
+	case REQ_GET_LAST_PRODUCT_REC:
+
+		getLastProductRec.Trigger(scaleMgr.srvMgr)
+
+	case REQ_UPDATE_ENABLED_PLU:
+		jsonStr := req.ReqData
+		var data ReqUpdateEnabledPlu
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			updateEnabledPlu.Trigger(scaleMgr.srvMgr, data)
+		}
+
 	case REQ_MODIFY_PRODUCT:
 		jsonStr := req.ReqData
-		var data ReqAddProductList
+		var data AddProduct
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
 			l.Log.Error(err)
 		} else {
@@ -924,71 +947,125 @@ func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
 			Pretare:     product.Pretare,
 			LimitHigh:   product.LimitHigh,
 			LimitLow:    product.LimitLow,
+			CreateBy:    product.CreateBy,
+			UpdateBy:    product.CreateBy,
 		}
 		recList = append(recList, rec)
 
-		// if err := mgr.productPd.InsertRec(rec); err != nil {
-		// 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: err.Error()}
-		// 	return
-		// }
 	}
 	if err := mgr.productPd.Insert100Rec(recList); err != nil {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: err.Error()}
 		return
 	}
 	// send result back to requestee
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: "OK"}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: "ok"}
+}
+
+func (p addOneProductNotifier) Handle(mgr *SrvMgr, payload AddProduct) {
+	// Do something for this event
+	l.Log.Debug("Handle addOneProductNotifier called")
+
+	product := ProductRec{
+		Plu:         payload.Plu,
+		ProductCode: payload.ProductCode,
+		ItemCode:    payload.ItemCode,
+		Category:    payload.Category,
+		ProductName: payload.ProductName,
+		GeneralUnit: payload.GeneralUnit,
+		TaxType:     payload.TaxType,
+		Price:       payload.Price,
+		UnitWeight:  payload.UnitWeight,
+		Pretare:     payload.Pretare,
+		LimitHigh:   payload.LimitHigh,
+		LimitLow:    payload.LimitLow,
+		CreateBy:    payload.CreateBy,
+		UpdateBy:    payload.UpdateBy,
+	}
+
+	if err := mgr.productPd.InsertRec(product); err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD_ONE, MsgBody: "failed to add product"}
+		return
+	}
+	// send result back to requestee
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD_ONE, MsgBody: "ok"}
 }
 
 func (p delProductNotifier) Handle(mgr *SrvMgr, payload ReqDelProduct) {
 	// Do something for this event
 	l.Log.Debug("Handle delProductNotifier called")
-	if err := NewProductRecProvider().DeleteRec(uint(payload.RecId)); err != nil {
+	if err := mgr.productPd.DeleteRec((payload.RecId)); err != nil {
 		// TODO: error handling
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: "failed to delete product"}
+		return
 	}
 	// send ports list back to requestee
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: ""}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: "ok"}
 }
 
 func (p delAllProductNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
-	res := "OK"
+
 	l.Log.Debug("Handle delProductNotifier called")
-	if err := NewProductRecProvider().DeleteAllRec(); err != nil {
-		res = ""
+	if err := mgr.productPd.DeleteAllRec(); err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: "failed to delete all products"}
+		return
 	}
 	// send ports list back to requestee
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: res}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: "ok"}
 }
 
-func (p modifyProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
+func (p updateEnabledPluNotifier) Handle(mgr *SrvMgr, payload ReqUpdateEnabledPlu) {
+	// Do something for this event
+	l.Log.Debug("Handle updateEnabledPluNotifier called")
 
-	var recList []ProductRec
-	for _, product := range payload {
-		rec := ProductRec{
-			Plu:         product.Plu,
-			ProductCode: product.ProductCode,
-			ItemCode:    product.ItemCode,
-			Category:    product.Category,
-			ProductName: product.ProductName,
-			GeneralUnit: product.GeneralUnit,
-			TaxType:     product.TaxType,
-			Price:       product.Price,
-			UnitWeight:  product.UnitWeight,
-			Pretare:     product.Pretare,
-			LimitHigh:   product.LimitHigh,
-			LimitLow:    product.LimitLow,
-		}
-		recList = append(recList, rec)
+	pluList := payload.PluList
+	enabled := payload.Enabled
+	updateBy := payload.UpdateBy
+
+	if err := mgr.productPd.UpdateProductRecEnabled(pluList, enabled, updateBy); err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_ENABLED_PLU, MsgBody: "failed to update enabled plu"}
+		return
+	}
+	// send ports list back to requestee
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_ENABLED_PLU, MsgBody: "ok"}
+}
+
+func (p modifyProductNotifier) Handle(mgr *SrvMgr, payload AddProduct) {
+
+	product := ProductRec{
+		RecId:       payload.RecId,
+		Plu:         payload.Plu,
+		ProductCode: payload.ProductCode,
+		ItemCode:    payload.ItemCode,
+		Category:    payload.Category,
+		ProductName: payload.ProductName,
+		GeneralUnit: payload.GeneralUnit,
+		TaxType:     payload.TaxType,
+		Price:       payload.Price,
+		UnitWeight:  payload.UnitWeight,
+		Pretare:     payload.Pretare,
+		LimitHigh:   payload.LimitHigh,
+		LimitLow:    payload.LimitLow,
+		UpdateBy:    payload.UpdateBy,
 	}
 
-	if err := mgr.productPd.BatchModifyRec(recList); err != nil {
+	if err := mgr.productPd.ModifyRec(product); err != nil {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_MODIFY, MsgBody: err.Error()}
 		return
 	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_MODIFY, MsgBody: "ok"}
+}
 
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_MODIFY, MsgBody: "OK"}
-
+func (p getLastProductRecNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getLastProductRecNotifier called")
+	lastRec, err := mgr.productPd.GetLastProductRec()
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_LAST_PRODUCT_REC, MsgBody: "failed to get last product record"}
+		return
+	}
+	lastRecStr, _ := json.MarshalToString(lastRec)
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_LAST_PRODUCT_REC, MsgBody: lastRecStr}
 }
 
 func (p userListedNotifier) Handle(mgr *SrvMgr) {
@@ -2316,6 +2393,7 @@ func (p addSysUserNotifier) Handle(mgr *SrvMgr, payload ReqAddSysUser) {
 		UpdatedBy:     payload.UpdatedBy,
 		RoleId:        payload.RoleId,
 		UserName:      payload.Username,
+		NickName:      payload.NickName,
 		Password:      payload.Password,
 		Email:         payload.Email,
 		Phone:         payload.Phone,
@@ -2366,7 +2444,7 @@ func (p updateSysUserNotifier) Handle(mgr *SrvMgr, payload ReqUpdateSysUser) {
 	// Do something for this event
 	l.Log.Debug("Handle updateSysUserNotifier called")
 	// 检查用户是否存在
-	user, err := mSrvMgr.sysUserPd.GetUserInfo(payload.UpdateUser.UserName)
+	user, err := mSrvMgr.sysUserPd.GetUserInfoById(payload.UpdateUser.UserId)
 	if err != nil {
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,user not exist"}
@@ -2380,6 +2458,7 @@ func (p updateSysUserNotifier) Handle(mgr *SrvMgr, payload ReqUpdateSysUser) {
 		CreatedTime:   user.CreatedTime,
 		UpdatedTime:   time.Now(),
 		UserName:      payload.UpdateUser.UserName,
+		NickName:      payload.UpdateUser.NickName,
 		RoleId:        payload.UpdateUser.RoleId,
 		Email:         payload.UpdateUser.Email,
 		Phone:         payload.UpdateUser.Phone,

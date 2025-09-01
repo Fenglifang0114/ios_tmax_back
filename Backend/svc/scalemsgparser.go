@@ -1921,15 +1921,26 @@ func handleGetIpModeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 
 func handleModifyBtNameResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	if bytes.Contains(data, []byte(MODIFY_BT_OK_RESP)) {
+	// if bytes.Contains(data, []byte(MODIFY_BT_OK_RESP)) {
+	if bytes.Contains(data, []byte("OK")) {
 		return ScaleRespMsg{m.MODIFY_BT_NAME_RESP, "ok", scaleId}, len(data)
-	} else {
+	} else if bytes.Contains(data, []byte("ERROR")) {
 		return ScaleRespMsg{m.MODIFY_BT_NAME_RESP, "fail", scaleId}, len(data)
+	} else {
+		return ScaleRespMsg{}, 0
+		// return ScaleRespMsg{m.MODIFY_BT_NAME_RESP, "fail", scaleId}, len(data)
 	}
 }
 
 func handleSendDataToBTResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	return ScaleRespMsg{m.SEND_DATA_TO_BT_RESP, string(data), scaleId}, len(data)
+	if bytes.Contains(data, []byte("OK")) {
+		return ScaleRespMsg{m.SEND_DATA_TO_BT_RESP, string(data), scaleId}, len(data)
+	} else if bytes.Contains(data, []byte("ERROR")) {
+		return ScaleRespMsg{m.SEND_DATA_TO_BT_RESP, "fail", scaleId}, len(data)
+	} else {
+		return ScaleRespMsg{}, 0
+	}
+
 }
 
 func handleSendDataToWifiResp(scaleId int64, data []byte) (ScaleRespMsg, int) {

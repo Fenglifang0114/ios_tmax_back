@@ -32,6 +32,16 @@ func (p *SysUserProvider) GetUserInfo(userName string) (*SysUser, error) {
 	return user, err
 }
 
+// 获取用户信息
+func (p *SysUserProvider) GetUserInfoById(userId int) (*SysUser, error) {
+	user, err := p.infoPb.GetUserByUserId(userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, err
+}
+
 // 新增用户
 func (p *SysUserProvider) AddUser(user *SysUser) error {
 	return p.infoPb.CreateUser(user)

@@ -29,7 +29,8 @@ type SysRole struct {
 // 用户表
 type SysUser struct {
 	UserId        int    `gorm:"primaryKey;not null;autoincrement;"`
-	UserName      string `gorm:"not null;unique"`
+	UserName      string `gorm:"not null;unique"`         //账户名 用于登录
+	NickName      string `gorm:"not null;default:'name'"` // 昵称 或者姓名
 	RoleId        int    `gorm:"not null;"`
 	Password      string `gorm:"not null"`
 	IsEnabled     bool   `gorm:"not null;default:true;"`
@@ -145,9 +146,10 @@ func initAdmin(sysUser *DbSysUser) error {
 	// 初始化管理员账号
 	admin := &SysUser{
 		UserName:      "Super Admin",
+		NickName:      "Super Admin",
 		Password:      "123456",
 		RoleId:        1,
-		Email:         "admin@tscale.com",
+		Email:         "admin@admin.com",
 		Phone:         "18888888888",
 		InitialPageId: 9999, //设置界面
 		Remark:        "super admin",
@@ -248,6 +250,28 @@ func (d *DbSysUser) GetUserByUsername(userName string) (*SysUser, error) {
 	return &user, nil
 }
 
+// 获取用户信息(通过用户名)
+func (d *DbSysUser) GetUserByUserId(userId int) (*SysUser, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var user SysUser
+	result := db.First(&user, "user_id = ?", userId)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
 // 更新用户
 
 func (d *DbSysUser) UpdateUser(user *SysUser, pswUpdated bool) error {
@@ -305,6 +329,9 @@ func (d *DbSysUser) DeleteUser(userID []int) error {
 		defer sqlDB.Close()
 	}
 	for _, id := range userID {
+		if id == 0 {
+			continue
+		}
 		if err = db.Delete(&SysUser{}, "user_id = ?", id).Error; err != nil {
 			return err
 		}
@@ -496,6 +523,7 @@ func (d *DbSysUser) Login(userName string, password string) (bool, error) {
 type userRolePermission struct {
 	UserID        int    `json:"userId"`
 	UserName      string `json:"userName"`
+	NickName      string `json:"nickName"`
 	Password      string `json:"password"`
 	Email         string `json:"email"`
 	Phone         string `json:"phone"`
@@ -551,6 +579,7 @@ func (d *DbSysUser) GetUserRolePermission(userName string) (userRolePermission, 
 	user := userRolePermission{
 		UserID:        sysUser.UserId,
 		UserName:      sysUser.UserName,
+		NickName:      sysUser.NickName,
 		Password:      sysUser.Password,
 		Email:         sysUser.Email,
 		Phone:         sysUser.Phone,

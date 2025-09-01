@@ -28,7 +28,8 @@ func (p *ProductRecProvider) InsertRec(rec ProductRec) error {
 	return p.recPb.InsertProductRec(rec)
 }
 
-func (p *ProductRecProvider) DeleteRec(recId uint) error {
+func (p *ProductRecProvider) DeleteRec(recId []int) error {
+
 	return p.recPb.DeleteProductRec(recId)
 }
 
@@ -46,4 +47,11 @@ func (p *ProductRecProvider) Insert100Rec(rec []ProductRec) error {
 
 func (p *ProductRecProvider) BatchModifyRec(rec []ProductRec) error {
 	return p.recPb.BatchUpdateProductRec(rec)
+}
+
+func (p *ProductRecProvider) UpdateProductRecEnabled(rec []int, enabled bool, updateBy int) error {
+	return p.recPb.UpdateProductRecEnabled(rec, enabled, updateBy)
+}
+func (p *ProductRecProvider) GetLastProductRec() (ProductRec, error) {
+	return p.recPb.GetLastProductRec()
 }

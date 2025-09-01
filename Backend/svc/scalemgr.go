@@ -76,14 +76,23 @@ func init() {
 	createAddProductNotifier := addProductNotifier{}
 	productAdded.Register(createAddProductNotifier)
 
+	createAddOneProductNotifier := addOneProductNotifier{}
+	productAddedOne.Register(createAddOneProductNotifier)
+
 	createDelProductNotifier := delProductNotifier{}
 	productDeleted.Register(createDelProductNotifier)
 
 	createDelAllProductNotifier := delAllProductNotifier{}
 	productDeletedAll.Register(createDelAllProductNotifier)
 
+	createupdateEnabledPluNotifier := updateEnabledPluNotifier{}
+	updateEnabledPlu.Register(createupdateEnabledPluNotifier)
+
 	createModifyProductNotifier := modifyProductNotifier{}
 	productModified.Register(createModifyProductNotifier)
+
+	createGetLastProductRecNotifier := getLastProductRecNotifier{}
+	getLastProductRec.Register(createGetLastProductRecNotifier)
 
 	createUserListNotifier := userListedNotifier{}
 	usersListed.Register(createUserListNotifier)
@@ -266,11 +275,17 @@ type productListedNotifier struct{}
 
 type addProductNotifier struct{}
 
+type addOneProductNotifier struct{}
+
 type delProductNotifier struct{}
 
 type delAllProductNotifier struct{}
 
+type updateEnabledPluNotifier struct{}
+
 type modifyProductNotifier struct{}
+
+type getLastProductRecNotifier struct{}
 
 type userListedNotifier struct{}
 

@@ -236,6 +236,8 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 }
 
 var GET_AT_VERSION_CMD []byte = []byte("AT+GMR\r\n") //查看wifi 模块的版本信息会包含 ESP32 等信息
+// var GET_AT_VERSION_CMD []byte = []byte("AT+BLENAME?\r\n") //查看wifi 模块的版本信息会包含 ESP32 等信息
+
 var GET_AP_LIST_CMD []byte = []byte("AT+CWLAP\r\n")
 var CONNECT_AP_CMD []byte = []byte("AT+CWJAP_DEF=\"%s\",\"%s\"\r\n")         // ssid, password, bssid
 var CONNECT_AP_CMD_32 []byte = []byte("AT+CWJAP=\"%s\",\"%s\"\r\n")          // ssid, password, bssid
@@ -623,7 +625,9 @@ func MyStringToBytes(str string) []byte {
 func modifyBTNameCmdTMAX(name string) []byte {
 	l.Log.Debug("compose modify BT name cmd")
 	// MODIFY_BT_NAME_CHUNK_SIZE should include all data except BT name
-	data := "TTM:REN-" + name + "\r\n\x00"
+	// data := "TTM:REN-" + name + "\r\n\x00"//旧的蓝牙
+	data := "AT+BLENAME=" + "\"" + name + "\"" + "\r\n\x00"
+
 	bytes := MyStringToBytes(data)
 	return composeCmd(0xf201, 0, bytes)
 }

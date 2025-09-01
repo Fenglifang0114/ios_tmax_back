@@ -14,7 +14,7 @@ type DbProductRec struct {
 }
 
 type ProductRec struct {
-	RecId       uint `gorm:"primaryKey;autoincrement;not null"`
+	RecId       int `gorm:"primaryKey;autoincrement;not null"`
 	Plu         string
 	ProductCode string
 	ItemCode    string
@@ -28,6 +28,10 @@ type ProductRec struct {
 	LimitHigh   string
 	LimitLow    string
 	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CreateBy    int  `gorm:"default:1"`
+	UpdateBy    int  `gorm:"default:1"`
+	Enabled     bool `gorm:"default:true"`
 }
 
 func NewDbProductRec(dbName string) (*DbProductRec, error) {
@@ -47,6 +51,10 @@ func NewDbProductRec(dbName string) (*DbProductRec, error) {
 	if err = db.AutoMigrate(&ProductRec{}); err != nil {
 		l.Log.Debug("failed to migrate database of scale connection")
 	}
+
+	// // 更新Enabled为null的记录，设置UpdatedAt与创建时间一致，CreateBy和UpdateBy为1，Enabled为true
+	db.Exec("UPDATE product_recs SET updated_at = created_at, create_by = 1, update_by = 1, enabled = true WHERE updated_at IS NULL")
+
 	return &DbProductRec{dbName: dbName}, nil
 }
 
@@ -154,17 +162,60 @@ func (d *DbProductRec) UpdateProductRec(rec ProductRec) error {
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
+	//找出原来的记录
 	var oldRec ProductRec
-	if err := db.Where("rec_id = ?", rec.RecId).First(&oldRec).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("@UpdateProductRec failed, mybe record not existing")
-		} else {
-			return errors.New("@UpdateProductRec failed, mybe record not existing")
-		}
+	db.Where("rec_id = ?", rec.RecId).First(&oldRec)
+	if oldRec.RecId == 0 {
+		return errors.New("record not found")
 	}
-	db.Save(&rec)
-	// rowAffected := db.Model(&rec).Where("rec_id=?", rec.RecId).Updates(&rec).RowsAffected  这个不生效
+
+	result := db.Model(&ProductRec{}).Where("rec_id = ?", rec.RecId).Updates(map[string]interface{}{
+		"plu":          rec.Plu,
+		"product_code": rec.ProductCode,
+		"item_code":    rec.ItemCode,
+		"category":     rec.Category,
+		"product_name": rec.ProductName,
+		"general_unit": rec.GeneralUnit,
+		"tax_type":     rec.TaxType,
+		"price":        rec.Price,
+		"unit_weight":  rec.UnitWeight,
+		"pretare":      rec.Pretare,
+		"limit_high":   rec.LimitHigh,
+		"limit_low":    rec.LimitLow,
+		"update_by":    rec.UpdateBy,
+		"enabled":      oldRec.Enabled,
+		"updated_at":   time.Now(),
+		"created_at":   oldRec.CreatedAt,
+		"create_by":    oldRec.CreateBy,
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("no record updated")
+	}
+
 	return nil
+}
+
+// 获取recId最大的记录，也就是最后一个新增的记录
+func (d *DbProductRec) GetLastProductRec() (ProductRec, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	var lastRec ProductRec
+	db.Order("rec_id desc").First(&lastRec)
+	return lastRec, nil
 }
 
 // 批量更新数据
@@ -214,7 +265,7 @@ func (d *DbProductRec) BatchUpdateProductRec(multiRec []ProductRec) error {
 	// 提交事务
 	return tx.Commit().Error
 }
-func (d *DbProductRec) DeleteProductRec(id uint) error {
+func (d *DbProductRec) DeleteProductRec(id []int) error {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -228,9 +279,12 @@ func (d *DbProductRec) DeleteProductRec(id uint) error {
 		defer sqlDB.Close()
 	}
 
-	var rec ProductRec
-	rec.RecId = id
-	db.Where("rec_id=?", id).Delete((&rec))
+	// 使用Where方法指定删除条件，然后调用Delete方法删除对应记录
+	result := db.Where("rec_id IN ?", id).Delete(&ProductRec{})
+	if result.Error != nil {
+		return result.Error
+	}
+
 	return nil
 }
 
@@ -255,4 +309,32 @@ func (d *DbProductRec) DeleteAllProductRecs() error {
 	}
 
 	return nil
+}
+
+// 批量启用或者停用PLU
+func (d *DbProductRec) UpdateProductRecEnabled(pluList []int, enabled bool, updateBy int) error {
+
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 批量更新
+	result := db.Model(&ProductRec{}).Where("rec_id IN ?", pluList).Updates(map[string]interface{}{
+
+		"enabled":   enabled,
+		"update_by": updateBy,
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+
 }

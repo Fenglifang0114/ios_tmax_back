@@ -731,6 +731,24 @@ func enablePassthrough(s *Scale, respType m.RespMsgType) (*ScaleRespMsg, error) 
 	return msg, err
 }
 
+//20250829备份
+// func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
+// 	reg, err, res1 := openFactory(s)
+// 	if err != nil || !res1 {
+// 		reg.MsgType = m.MODIFY_BT_NAME_RESP
+// 		return reg, err
+
+// 	}
+// 	defer DisPassthrough(s)
+
+// 	msg, err := enablePassthrough(s, m.MODIFY_BT_NAME_RESP)
+// 	if msg.MsgBody != "ok" {
+// 		msg.MsgType = m.MODIFY_BT_NAME_RESP
+// 		return msg, err
+// 	}
+// 	return s.ModifyBTName(name)
+// }
+
 func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
 	reg, err, res1 := openFactory(s)
 	if err != nil || !res1 {
@@ -744,6 +762,7 @@ func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
 		msg.MsgType = m.MODIFY_BT_NAME_RESP
 		return msg, err
 	}
+
 	return s.ModifyBTName(name)
 }
 
@@ -2009,6 +2028,7 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 
 	reqMsg, _ := excuteSimpCmd(c, m.CMD_CHECK_FAC_MODE, m.EN_FAC_MODE_RESP)
 	if reqMsg.MsgBody == "ok" {
+		sendScaleOnlineToUi(c, true)
 		return &ScaleRespMsg{}, nil, true
 	}
 
@@ -2031,6 +2051,7 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 		if err != nil {
 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
 		}
+		sendScaleOnlineToUi(c, true)
 	}
 	if dataStruct.ModelName == "" || dataStruct.ScaleSn == "" {
 		// return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
@@ -2138,7 +2159,11 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 		if prnfmt.ParserFmtToFile(tempStr, reqData.PrinterModel, eraseLen) {
 			// 读取bin文件
-			data, err := os.ReadFile("formatBin.bin")
+			exePath, _ := os.Executable()
+			exeDir := filepath.Dir(exePath)
+			// 拼接文件路径
+			filePath := filepath.Join(exeDir, "formatBin.bin")
+			data, err := os.ReadFile(filePath)
 			if err != nil {
 				l.Log.Fatal(err)
 			}
@@ -2274,7 +2299,11 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	fn := composer.ComposeCmd
 	if prnfmt.ParserDefFmtToFile(strFileDataArray, reqData.PrinterModel, prnFmtMaxLenth) {
 		// 读取bin文件
-		data, err := os.ReadFile("formatBin.bin")
+		exePath, _ := os.Executable()
+		exeDir := filepath.Dir(exePath)
+		// 拼接文件路径
+		filePath := filepath.Join(exeDir, "formatBin.bin")
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			l.Log.Fatal(err)
 		}
@@ -2657,10 +2686,13 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if !bytes.Equal(headBytes, insertHeadBytes) {
 		return &ScaleRespMsg{}, fmt.Errorf("plu head is inconsistent,fail")
 	}
+	exePath, _ := os.Executable()
+	exeDir := filepath.Dir(exePath)
+	filePath := filepath.Join(exeDir, "plu.bin")
 
 	if resParser {
 		// 读取bin文件
-		data, err := os.ReadFile("plu.bin")
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			l.Log.Fatal(err)
 		}
@@ -3265,10 +3297,13 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	var file = reqData.FilePath
 	var nameMaxLen = reqData.NameMaxLen
+	exePath, _ := os.Executable()
+	exeDir := filepath.Dir(exePath)
+	filePath := filepath.Join(exeDir, "plu.bin")
 
 	if ParserPluFile(string(file), nameMaxLen) {
 		// 读取bin文件
-		data, err := os.ReadFile("plu.bin")
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			l.Log.Fatal(err)
 		}

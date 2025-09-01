@@ -174,26 +174,71 @@ func (u ProductAdded) Trigger(mgr *SrvMgr, payload ReqAddProductList) {
 	}
 }
 
+var productAddedOne ProductAddedOne
+
+type ProductAddedOne struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload AddProduct)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ProductAddedOne) Register(handler interface {
+	Handle(*SrvMgr, AddProduct)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ProductAddedOne) Trigger(mgr *SrvMgr, payload AddProduct) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
 var productModified ProductModified
 
 type ProductModified struct {
 	handlers []interface {
-		Handle(mgr *SrvMgr, payload ReqAddProductList)
+		Handle(mgr *SrvMgr, payload AddProduct)
 	}
 }
 
 // Register adds an event handler for this event
 func (u *ProductModified) Register(handler interface {
-	Handle(mgr *SrvMgr, payload ReqAddProductList)
+	Handle(mgr *SrvMgr, payload AddProduct)
 },
 ) {
 	u.handlers = append(u.handlers, handler)
 }
 
 // Trigger sends out an event with the payload
-func (u ProductModified) Trigger(mgr *SrvMgr, payload ReqAddProductList) {
+func (u ProductModified) Trigger(mgr *SrvMgr, payload AddProduct) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
+	}
+}
+
+var getLastProductRec GetLastProductRec
+
+type GetLastProductRec struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetLastProductRec) Register(handler interface {
+	Handle(mgr *SrvMgr)
+},
+) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetLastProductRec) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
 	}
 }
 
@@ -241,6 +286,29 @@ func (u *ProductDeletedAll) Register(handler interface {
 func (u ProductDeletedAll) Trigger(mgr *SrvMgr) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr)
+	}
+}
+
+var updateEnabledPlu UpdateEnabledPlu
+
+type UpdateEnabledPlu struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqUpdateEnabledPlu)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *UpdateEnabledPlu) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqUpdateEnabledPlu)
+},
+) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u UpdateEnabledPlu) Trigger(mgr *SrvMgr, payload ReqUpdateEnabledPlu) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
 	}
 }
 

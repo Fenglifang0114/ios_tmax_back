@@ -28,10 +28,14 @@ const (
 	REQ_MODIFY_SCALE      ReqType = "modify_scale"      // with ReqModifyScale parameter
 	REQ_MODIFY_SCALE_NAME ReqType = "modify_scale_name" // with ReqModifyScale parameter
 
-	REQ_ADD_PRODUCT     ReqType = "add_product"     // with ReqAddScale parameter
-	REQ_DEL_PRODUCT     ReqType = "del_product"     // with ReqDelScale parameter
-	REQ_DEL_ALL_PRODUCT ReqType = "del_all_product" // with ReqDelScale parameter
-	REQ_MODIFY_PRODUCT  ReqType = "modify_product"  // with ReqModifyScale parameter
+	REQ_ADD_PRODUCT     ReqType = "add_product"     // with ReqAddProduct parameter
+	REQ_ADD_ONE_PRODUCT ReqType = "add_one_product" // with ReqAddOneProduct parameter
+
+	REQ_DEL_PRODUCT          ReqType = "del_product"          // with ReqDelScale parameter
+	REQ_DEL_ALL_PRODUCT      ReqType = "del_all_product"      // with ReqDelScale parameter
+	REQ_GET_LAST_PRODUCT_REC ReqType = "get_last_product_rec" // without parameter
+	REQ_UPDATE_ENABLED_PLU   ReqType = "update_enabled_plu"   // with ReqUpdateEnabledPlu parameter
+	REQ_MODIFY_PRODUCT       ReqType = "modify_product"       // with ReqModifyScale parameter
 
 	REQ_ADD_USER    ReqType = "add_user"    // with ReqAddScale parameter
 	REQ_DEL_USER    ReqType = "del_user"    // with ReqDelScale parameter
@@ -141,6 +145,7 @@ type ReqModifyScaleSn struct {
 type ReqAddProductList []AddProduct
 
 type AddProduct struct {
+	RecId       int
 	Plu         string
 	ProductCode string
 	ItemCode    string
@@ -153,10 +158,18 @@ type AddProduct struct {
 	Pretare     string
 	LimitHigh   string
 	LimitLow    string
+	CreateBy    int
+	UpdateBy    int
 }
 
 type ReqDelProduct struct {
-	RecId int64
+	RecId []int
+}
+
+type ReqUpdateEnabledPlu struct {
+	PluList  []int
+	Enabled  bool
+	UpdateBy int
 }
 
 type ReqModifyProduct struct {
@@ -259,6 +272,7 @@ type ReqAddFormulaData struct {
 type ReqAddSysUser struct {
 	RoleId        int
 	Username      string
+	NickName      string
 	Password      string
 	IsEnabled     bool
 	Email         string
@@ -513,20 +527,23 @@ type ScaleMgrRespMsgType string
 
 // 处理公用的回应
 const (
-	SCALE_MGR_RESP_PORTS_LIST       ScaleMgrRespMsgType = "resp_ports_list"       // with response of PortsListMsg
-	SCALE_MGR_RESP_SCALES_LIST      ScaleMgrRespMsgType = "resp_scales_list"      // with response of ScalesListMsg
-	SCALE_MGR_RESP_SCALE_ADD        ScaleMgrRespMsgType = "resp_scale_add"        // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_SCALE_DEL        ScaleMgrRespMsgType = "resp_scale_del"        // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_SCALE_MODIFY     ScaleMgrRespMsgType = "resp_scale_modify"     // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_PRODUCTS_LIST    ScaleMgrRespMsgType = "resp_product_list"     // with response of ScalesListMsg
-	SCALE_MGR_RESP_PRODUCT_ADD      ScaleMgrRespMsgType = "resp_product_add"      // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_PRODUCT_DEL      ScaleMgrRespMsgType = "resp_product_del"      // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_PRODUCT_MODIFY   ScaleMgrRespMsgType = "resp_product_modify"   // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_USERS_LIST       ScaleMgrRespMsgType = "resp_user_list"        // with response of ScalesListMsg
-	SCALE_MGR_RESP_USER_ADD         ScaleMgrRespMsgType = "resp_user_add"         // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_USER_DEL         ScaleMgrRespMsgType = "resp_user_del"         // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_USER_MODIFY      ScaleMgrRespMsgType = "resp_user_modify"      // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_QUIT_APPLICATION ScaleMgrRespMsgType = "resp_quit_application" // without data
+	SCALE_MGR_RESP_PORTS_LIST           ScaleMgrRespMsgType = "resp_ports_list"           // with response of PortsListMsg
+	SCALE_MGR_RESP_SCALES_LIST          ScaleMgrRespMsgType = "resp_scales_list"          // with response of ScalesListMsg
+	SCALE_MGR_RESP_SCALE_ADD            ScaleMgrRespMsgType = "resp_scale_add"            // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_SCALE_DEL            ScaleMgrRespMsgType = "resp_scale_del"            // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_SCALE_MODIFY         ScaleMgrRespMsgType = "resp_scale_modify"         // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_PRODUCTS_LIST        ScaleMgrRespMsgType = "resp_product_list"         // with response of ScalesListMsg
+	SCALE_MGR_RESP_PRODUCT_ADD          ScaleMgrRespMsgType = "resp_product_add"          // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_PRODUCT_ADD_ONE      ScaleMgrRespMsgType = "resp_product_add_one"      // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_PRODUCT_DEL          ScaleMgrRespMsgType = "resp_product_del"          // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_UPDATE_ENABLED_PLU   ScaleMgrRespMsgType = "resp_update_enabled_plu"   // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_GET_LAST_PRODUCT_REC ScaleMgrRespMsgType = "resp_get_last_product_rec" // with response of ScalesListMsg
+	SCALE_MGR_RESP_PRODUCT_MODIFY       ScaleMgrRespMsgType = "resp_product_modify"       // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_USERS_LIST           ScaleMgrRespMsgType = "resp_user_list"            // with response of ScalesListMsg
+	SCALE_MGR_RESP_USER_ADD             ScaleMgrRespMsgType = "resp_user_add"             // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_USER_DEL             ScaleMgrRespMsgType = "resp_user_del"             // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_USER_MODIFY          ScaleMgrRespMsgType = "resp_user_modify"          // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_QUIT_APPLICATION     ScaleMgrRespMsgType = "resp_quit_application"     // without data
 	// SCALE_MGR_RESP_GET_UI_CONFIG     ScaleMgrRespMsgType = "resp_get_ui_config"     // with response of UI configuration
 	// SCALE_MGR_RESP_UPDATE_UI_CONFIG  ScaleMgrRespMsgType = "resp_update_ui_config"  // without parameter
 	SCALE_MGR_RESP_GET_LICENSE       ScaleMgrRespMsgType = "resp_get_license"       // with response of true or false

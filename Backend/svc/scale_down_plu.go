@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 
 	"github.com/xuri/excelize/v2"
@@ -193,8 +194,11 @@ func ParserPluFile(excelFileName string, nameMaxLen int) bool {
 		// 写入isUSED，1字节  0xFF plu有效   0x00 plu无效
 		buf.WriteByte(0xFF)
 	}
+	exePath, _ := os.Executable()
+	exeDir := filepath.Dir(exePath)
+	filePath := filepath.Join(exeDir, "plu.bin")
 
-	err = os.WriteFile("plu.bin", buf.Bytes(), 0644)
+	err = os.WriteFile(filePath, buf.Bytes(), 0644)
 	if err != nil {
 		fmt.Println("Write file error:", err)
 		return false
@@ -500,7 +504,11 @@ func ParserInsertPlu(excelFileName string, nameMaxLen int) ([]byte, []byte, bool
 		buf.WriteByte(0xFF)
 	}
 
-	err = os.WriteFile("plu.bin", buf.Bytes(), 0644)
+	exePath, _ := os.Executable()
+	exeDir := filepath.Dir(exePath)
+	filePath := filepath.Join(exeDir, "plu.bin")
+
+	err = os.WriteFile(filePath, buf.Bytes(), 0644)
 	if err != nil {
 		fmt.Println("Write file error:", err)
 		return pluNumBuf.Bytes(), insertHeadBuf.Bytes(), false

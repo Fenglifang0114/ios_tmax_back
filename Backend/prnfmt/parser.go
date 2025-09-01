@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -294,7 +295,13 @@ func binaryData(tempInfo printInfo) *bytes.Buffer {
 
 // 创建bin文件
 func creatFile(fileName string, tempBuf *bytes.Buffer) bool {
-	fp, err := os.Create(fileName)
+	//先找到exe运行的路径
+	exePath, _ := os.Executable()
+	exeDir := filepath.Dir(exePath)
+	// 拼接文件路径
+	filePath := filepath.Join(exeDir, fileName)
+
+	fp, err := os.Create(filePath)
 	if err != nil {
 		fmt.Println(err)
 		return false
