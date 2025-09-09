@@ -186,6 +186,24 @@ func (c *Scale) UpdateFirmwareOld(name string) (*ScaleRespMsg, error) {
 
 func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
 	l.Log.Debug("check serial port")
+	if c.ScaleCat == m.SCALE_C51 {
+		if !c.Conn.IsOnline {
+			return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: "fail", ScaleId: c.Id}, nil
+
+		}
+		var factoryInfo FIFromScale
+		req := ReqModifyScaleSn{
+			ScaleId:    c.Id,
+			ScaleModel: "DC500",
+			Sn:         "",
+		}
+		c.scaleMgr.UpdateScaleSn(req)
+
+		factoryInfo.ModelName = "DC500"
+		factoryInfo.ScaleSn = ""
+		msgBody, _ := json.MarshalToString(factoryInfo)
+		return &ScaleRespMsg{MsgType: m.CHECK_SERIAL_PORT_RESP, MsgBody: msgBody, ScaleId: c.Id}, nil
+	}
 
 	reqMsg, _ := excuteSimpCmd(c, m.CMD_GET_FACTORY_INFO, m.GET_FACTORY_INFO_RESP)
 	if reqMsg.MsgBody == nil {
@@ -289,9 +307,13 @@ func (c *Scale) ReadWeight() (*ScaleRespMsg, error) {
 }
 
 func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
+
 	l.Log.Debug("register weight data")
 	c.isSendUnolicitedData = true
 	c.isScalePassth = false //TODO:
+	if c.ScaleCat == m.SCALE_C51 {
+		return &ScaleRespMsg{MsgType: m.UNREG_WEIGHT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+	}
 	msg, err, res := openFactory(c)
 	if err != nil || !res {
 		l.Log.Debug(err)
@@ -313,8 +335,12 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 // }
 
 func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
+
 	c.isSendUnolicitedData = false
 	c.isScalePassth = false
+	if c.ScaleCat == m.SCALE_C51 {
+		return &ScaleRespMsg{MsgType: m.UNREG_WEIGHT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+	}
 	msg, err := perfCmdNwaitResult(c, mcmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, mcmd.CMD_TIMEOUT_SHORT_1500_MS)
 
 	if str, ok := msg.MsgBody.(string); ok && strings.Contains(str, "ok") {
@@ -333,6 +359,9 @@ func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 }
 
 func (c *Scale) OpenScalePassth() (*ScaleRespMsg, error) { //FLF
+	if c.ScaleCat == m.SCALE_C51 {
+		return &ScaleRespMsg{MsgType: m.UNREG_WEIGHT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+	}
 	l.Log.Debug("register weight data")
 	c.isSendUnolicitedData = true
 	// _, err := EnFacMode(c)
@@ -350,6 +379,9 @@ func (c *Scale) OpenScalePassth() (*ScaleRespMsg, error) { //FLF
 }
 
 func (c *Scale) CloseScalePassth() (*ScaleRespMsg, error) {
+	if c.ScaleCat == m.SCALE_C51 {
+		return &ScaleRespMsg{MsgType: m.UNREG_WEIGHT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
+	}
 	c.isSendUnolicitedData = false
 	// _, err := EnFacMode(c)
 	// if err != nil {
@@ -503,6 +535,10 @@ func DisFacMode(s *Scale) (*ScaleRespMsg, error) {
 }
 
 func excuteSimpCmd(s *Scale, cmdType m.CmdType, respType m.RespMsgType, perfTimes ...int) (*ScaleRespMsg, error) {
+	// if s.ScaleCat != m.SCALE_TMAX {
+	// 	return &ScaleRespMsg{}, nil //20250905
+
+	// }
 
 	scaleCmdExtractorFn := s.composer.ComposeCmd
 	cmd, timeoutMs, err := scaleCmdExtractorFn(s.composer, cmdType, m.CmdData{})
@@ -786,6 +822,9 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 func writeScale(c *Scale, data []byte) error {
 
 	if c.MySerial != nil && c.MySerial.isDefault {
+		if c.MySerial.toQuit {
+			return fmt.Errorf("serial is closed")
+		}
 		if len(c.MySerial.sendCh) > SEND_CH_SIZE {
 			return fmt.Errorf("serial sendCh full")
 		}
@@ -793,11 +832,14 @@ func writeScale(c *Scale, data []byte) error {
 	}
 
 	if c.MyNet != nil && c.MyNet.isAlive && c.MyNet.isDefault {
+		if c.MyNet.toQuit {
+			return fmt.Errorf("net is closed")
+		}
 		if c.MyNet.conn != nil {
 			if len(c.MyNet.sendCh) > SEND_CH_SIZE {
 				return fmt.Errorf("net sendCh full")
 			}
-			c.MyNet.sendCh <- data
+			c.MyNet.sendCh <- data //写数据到发送通道20250901
 		}
 	}
 	if c.MySerial == nil && c.MyNet == nil {
@@ -990,6 +1032,7 @@ var cmdComposerFuncMap map[m.ScaleCat]m.CmdComposer
 
 func init() {
 	cmdComposerFuncMap = make(map[m.ScaleCat]m.CmdComposer)
+	cmdComposerFuncMap[m.SCALE_C51] = *mcmd.NewComposerC51()
 	cmdComposerFuncMap[m.SCALE_T2200] = *mcmd.NewComposerT2200()
 	cmdComposerFuncMap[m.SCALE_TMAX] = *mcmd.NewComposerTMAX()
 }

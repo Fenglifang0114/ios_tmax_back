@@ -112,8 +112,10 @@ type NetworkConfig struct {
 }
 
 type ScaleIsOnlineInfo struct {
-	ScaleId  int64 `json:"scaleId"`
-	IsOnline bool  `json:"isOnline"`
+	ScaleId   int64  `json:"scaleId"`
+	IsOnline  bool   `json:"isOnline"`
+	ModelName string `json:"modelName"`
+	Sn        string `json:"sn"`
 }
 
 type Scale struct {
@@ -258,8 +260,18 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 
 	go scale.procScaleRespMsg()
 	go scale.procToScaleMsg()
+	if scale.ScaleCat == m.SCALE_C51 {
+		go scale.setC51Offline()
+	}
 
 	return scale, nil
+}
+
+func (s *Scale) setC51Offline() {
+	for {
+		s.Conn.IsOnline = false
+		time.Sleep(5 * time.Second)
+	}
 }
 
 func (s *Scale) keepSerialPortState() {
@@ -307,7 +319,6 @@ func (s *Scale) keepSerialPortState() {
 func (s *Scale) keepNetState() {
 	for {
 		if s.MyNet == nil {
-			time.Sleep(20 * time.Millisecond)
 			break
 		}
 		if s.MyNet.toQuit {
@@ -327,34 +338,8 @@ func (s *Scale) keepNetState() {
 
 		var err error
 		if s.MyNet != nil && s.MyNet.conn == nil {
-			sendScaleOnlineToUi(s, false)
+			sendScaleOnlineToUi(s, false, "", "")
 			fmt.Printf("reconnect is nil:%v\n", s.MyNet.ip)
-			s.MyNet.conn, err = s.MyNet.reconnect()
-			if err == nil {
-				s.MyNet.isAlive = true
-				go s.keepNetOnline()
-				time.Sleep(5 * time.Second) // 明确等待 10 秒
-				continue
-			}
-			s.MyNet.isAlive = false
-		} else if s.MyNet != nil && s.MyNet.conn != nil {
-			scaleModel, sn, err := getModelNameSn(s)
-			if err == nil {
-				req := ReqModifyScaleSn{
-					ScaleId:    s.Id,
-					ScaleModel: scaleModel,
-					Sn:         sn,
-				}
-				sendScaleOnlineToUi(s, true)
-				s.scaleMgr.UpdateScaleSn(req)
-				continue
-
-			}
-
-			sendScaleOnlineToUi(s, false)
-
-			fmt.Printf("reconnect not nil:%v\n", s.MyNet.ip)
-
 			s.MyNet.conn, err = s.MyNet.reconnect()
 			if err == nil {
 				s.MyNet.isAlive = true
@@ -365,7 +350,7 @@ func (s *Scale) keepNetState() {
 			s.MyNet.isAlive = false
 		}
 
-		time.Sleep(5 * time.Second) // 连不上等待 10 秒
+		time.Sleep(2 * time.Second) // 连不上等待 10 秒
 	}
 }
 
@@ -373,7 +358,10 @@ func (s *Scale) keepNetOnline() {
 	hasUpdated := false
 	for {
 		if s.MyNet == nil {
-			time.Sleep(2000 * time.Millisecond)
+			return
+		}
+		if s.MyNet.conn == nil {
+			println("退出online")
 			return
 		}
 		if s.MyNet.toQuit {
@@ -393,7 +381,7 @@ func (s *Scale) keepNetOnline() {
 						ScaleModel: scaleModel,
 						Sn:         sn,
 					}
-					sendScaleOnlineToUi(s, true)
+					sendScaleOnlineToUi(s, true, scaleModel, sn)
 					err := s.scaleMgr.UpdateScaleSn(req)
 					if err == nil {
 						hasUpdated = true
@@ -412,8 +400,8 @@ func (s *Scale) keepNetOnline() {
 	}
 }
 
-func sendScaleOnlineToUi(s *Scale, isOnline bool) {
-	sta := &ScaleIsOnlineInfo{ScaleId: s.Conn.ScaleId, IsOnline: isOnline}
+func sendScaleOnlineToUi(s *Scale, isOnline bool, modelName string, sn string) {
+	sta := &ScaleIsOnlineInfo{ScaleId: s.Conn.ScaleId, IsOnline: isOnline, ModelName: modelName, Sn: sn}
 	recsStr, _ := json.MarshalToString(sta)
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_ONLINE, MsgBody: recsStr}
 }
@@ -466,6 +454,14 @@ func (s *Scale) procScaleRespMsg() {
 				l.Log.Debugf("From sport: %v", inPack)
 
 				if s.ScaleCat == m.SCALE_C51 {
+
+					s.Conn.IsOnline = true
+
+					msg, err := retreiveRespMsgC51(s.Id, inPack.Payload)
+					if err != nil {
+						continue
+					}
+					sendMsgIntoChsOrWeightToClient(s, msg)
 				} else if s.ScaleCat == m.SCALE_T2200 {
 					msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
 					if err != nil {
@@ -2022,47 +2018,36 @@ func calculateMD5(input string) [16]byte {
 	return hash                    // 转换为十六进制并返回
 }
 func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
+	if c.ScaleCat != m.SCALE_TMAX {
+		return &ScaleRespMsg{}, nil, false //20250905
+	}
 	res := false
 	composer := c.composer
 	fn := composer.ComposeCmd
 
 	reqMsg, _ := excuteSimpCmd(c, m.CMD_CHECK_FAC_MODE, m.EN_FAC_MODE_RESP)
 	if reqMsg.MsgBody == "ok" {
-		sendScaleOnlineToUi(c, true)
+
+		sendScaleOnlineToUi(c, true, c.Model, c.Sn)
 		return &ScaleRespMsg{}, nil, true
 	}
 
-	var dataStruct FIFromScale
+	scaleModel, sn, err := getModelNameSn(c)
 
-	cmd, timeoutMs, err := fn(composer, m.CMD_GET_FACTORY_INFO, m.CmdData{})
 	if err != nil {
-		return &ScaleRespMsg{}, err, res
-	}
-	if res, err := perfCmdNwaitResult(c, cmd, m.GET_FACTORY_INFO_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err, false
-	} else if res.MsgBody == "" {
 		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-	} else {
-		msgBodyStr, ok := res.MsgBody.(string)
-		if !ok {
-			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-		}
-		err := json.UnmarshalFromString(msgBodyStr, &dataStruct)
-		if err != nil {
-			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
-		}
-		sendScaleOnlineToUi(c, true)
 	}
-	if dataStruct.ModelName == "" || dataStruct.ScaleSn == "" {
+
+	if scaleModel == "" || sn == "" {
 		// return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
 	}
 
-	crc16Byte := calculateMD5(dataStruct.ModelName + dataStruct.ScaleSn + MD5SEED)
+	crc16Byte := calculateMD5(scaleModel + sn + MD5SEED)
 	byte4Md5 := crc16Byte[0:4]
 	fmt.Println(byte4Md5)
 	//------拿到随机数
 	var nums []uint8
-	cmd, timeoutMs, err = fn(composer, m.CMD_GET_RANDOM_DATA, m.CmdData{})
+	cmd, timeoutMs, err := fn(composer, m.CMD_GET_RANDOM_DATA, m.CmdData{})
 	if err != nil {
 		return &ScaleRespMsg{}, err, false
 	}
@@ -2920,6 +2905,8 @@ func getModelNameSn(c *Scale) (string, string, error) {
 	if dataStruct.ModelName == "" || dataStruct.ScaleSn == "" {
 		return "", "", err
 	}
+
+	sendScaleOnlineToUi(c, true, dataStruct.ModelName, dataStruct.ScaleSn)
 	return dataStruct.ModelName, dataStruct.ScaleSn, nil
 }
 
@@ -2975,6 +2962,9 @@ const (
 
 // 更新srec之前要先验证 机种是否匹配
 func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	if c.ScaleCat == m.SCALE_C51 {
+		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,scale type error.", c.Id}, nil
+	}
 	if req.ReqData == "" {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
 	}
@@ -4307,6 +4297,9 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 	}
 	if msg.MsgType == m.WEIGHT_DATA && !s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
 		// writeScale(s, cmd.DIS_CONT_MODE_CMD_TMAX)
+		if s.ScaleCat != m.SCALE_TMAX {
+			return
+		}
 		perfCmdNwaitResult(s, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, -1, 1)
 		return
 	}
@@ -4324,6 +4317,9 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		return
 	}
 	if msg.MsgType == m.ANSWER_ALIVE_RESP {
+		if s.ScaleCat != m.SCALE_TMAX {
+			return
+		}
 		sendRespMsgScale(s)
 		return
 	}
@@ -4402,7 +4398,7 @@ func ReqSetMaxRange2(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 func ReqGetMaxRange1(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_MAX_RANGE1_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_MAX_RANGE1_RESP, "fail", c.Id}, nil
 	}
 
 	return excuteSimpCmd(c, m.CMD_GET_MAX_RANGE1, m.GET_MAX_RANGE1_RESP)
@@ -4412,7 +4408,7 @@ func ReqGetMaxRange1(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 func ReqGetMaxRange2(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_MAX_RANGE2_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_MAX_RANGE2_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_MAX_RANGE2, m.GET_MAX_RANGE2_RESP)
 }
@@ -4421,7 +4417,7 @@ func ReqGetMaxRange2(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 func ReqCalWeight(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_CAL_WGT_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_CAL_WGT_RESP, "fail", c.Id}, nil
 	}
 	reqData := req.ReqData
 	num, err := strconv.Atoi(reqData)
@@ -4451,7 +4447,7 @@ func ReqSetDecimalValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, "fail", c.Id}, nil
 	}
 
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_DECIMAl_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
@@ -4469,7 +4465,7 @@ func ReqSetGaduation1Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_GADUATION1_VALUE_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_GADUATION1_VALUE_RESP, "fail", c.Id}, nil
 	}
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GADUATION1_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
@@ -4484,7 +4480,7 @@ func ReqGetWeightUnit(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_WEIGHT_UNIT_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_WEIGHT_UNIT_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_WEIGHT_UNIT, m.GET_WEIGHT_UNIT_RESP)
 
@@ -4496,7 +4492,7 @@ func ReqSetWeightUnit(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_WEIGHT_UNIT_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_WEIGHT_UNIT_RESP, "fail", c.Id}, nil
 	}
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WEIGHT_UNIT, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
@@ -4513,7 +4509,7 @@ func ReqSetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_GADUATION2_VALUE_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_GADUATION2_VALUE_RESP, "fail", c.Id}, nil
 	}
 
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GADUATION2_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
@@ -4531,7 +4527,7 @@ func ReqGetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_GADUATION2_VALUE_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_GADUATION2_VALUE_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_GADUATION2_VALUE, m.GET_GADUATION2_VALUE_RESP)
 }
@@ -4541,7 +4537,7 @@ func ReqGetGaduation1Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_GADUATION1_VALUE_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_GADUATION1_VALUE_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_GADUATION1_VALUE, m.GET_GADUATION1_VALUE_RESP)
 }
@@ -4551,7 +4547,7 @@ func ReqGetDecimalValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_DECIMAL_VALUE_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_DECIMAL_VALUE_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_DECIMAL_VALUE, m.GET_DECIMAL_VALUE_RESP)
 }
@@ -4561,7 +4557,7 @@ func ReqSetInitialZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_INITIAL_ZERO_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_INITIAL_ZERO_RESP, "fail", c.Id}, nil
 	}
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_INITIAL_ZERO, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
@@ -4577,7 +4573,7 @@ func ReqGetInitialZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_INITIAL_ZERO_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_INITIAL_ZERO_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_INITIAL_ZERO, m.GET_INITIAL_ZERO_RESP)
 }
@@ -4588,7 +4584,7 @@ func ReqSetManualZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_MANUAL_ZERO_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_MANUAL_ZERO_RESP, "fail", c.Id}, nil
 	}
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_MANUAL_ZERO, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
@@ -4603,7 +4599,7 @@ func ReqGetManualZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_MANUAL_ZERO_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_MANUAL_ZERO_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_MANUAL_ZERO, m.GET_MANUAL_ZERO_RESP)
 }
@@ -4614,7 +4610,7 @@ func ReqSetZeroTracking(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_ZERO_TRACKING_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_ZERO_TRACKING_RESP, "fail", c.Id}, nil
 	}
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_ZERO_TRACKING, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
@@ -4628,7 +4624,7 @@ func ReqSetZeroTracking(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 func ReqGetZeroTracking(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_ZERO_TRACKING_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_ZERO_TRACKING_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_ZERO_TRACKING, m.GET_ZERO_TRACKING_RESP)
 }
@@ -4638,7 +4634,7 @@ func ReqSetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SET_GRAV_ACC_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.SET_GRAV_ACC_RESP, "fail", c.Id}, nil
 	}
 	num, err := strconv.Atoi(reqData)
 	if err != nil {
@@ -4656,7 +4652,32 @@ func ReqSetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 func ReqGetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.GET_GRAV_ACC_RESP, err.Error(), c.Id}, nil
+		return &ScaleRespMsg{m.GET_GRAV_ACC_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_GRAV_ACC, m.GET_GRAV_ACC_RESP)
+}
+
+func retreiveRespMsgC51(scaleId int64, data []byte) (*ScaleRespMsg, error) {
+	// checkHead, get msgid, get msgtype, check if return code is 0x06, for success
+	var err error
+	respMsg := &ScaleRespMsg{MsgType: GlastWantRespMsgType, MsgBody: "", ScaleId: scaleId}
+	if len(data) == 1 {
+		switch data[0] {
+		case 0x06:
+			respMsg.MsgBody = "ok"
+			err = nil
+		case 0x15:
+			respMsg.MsgBody = "fail"
+			err = nil
+		default:
+			return respMsg, fmt.Errorf("unknown response")
+		}
+	} else { // weight data, same as C51 scale
+		var msg WeightMsg
+		if msg, err = retreiveWeightNewC51(data); err == nil {
+			respMsg.MsgType = m.WEIGHT_DATA
+			respMsg.MsgBody = msg
+		}
+	}
+	return respMsg, err
 }

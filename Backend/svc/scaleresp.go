@@ -106,3 +106,57 @@ func retreiveWeightC51(data []byte) (pack WeightMsg, err error) {
 // 	}
 // 	return respMsg, err
 // }
+
+// NHB新增的  20250905
+// 1. 标准格式: ST,NT- 123.45kg 或 ST,NT 123.45kg
+// 2. 多逗号格式: ST,NT,-    123g  或 ST,NT,    123g
+// 3. 不稳定数据: ------或者--OL--后者--UL--
+// ST,GS    0.0(0) ct格式
+// ST,GS    0.0(0) g 格式
+// ST,NT- 492.5(5) ct格式
+// ST,NT-   98.5g  格式
+// ST,GS     0.0g  格式
+func retreiveWeightNewC51(data []byte) (pack WeightMsg, err error) {
+	weightMsg := WeightMsg{}
+	dataStr := string(data)
+
+	//先去掉左括号和右括号
+	dataStr = strings.ReplaceAll(dataStr, "(", "")
+	dataStr = strings.ReplaceAll(dataStr, ")", "")
+
+	re := regexp.MustCompile(`^([A-Z]{2}),([A-Z]{2})(,?)\s*([+-]?)\s+([0-9]+\.[0-9]+(?:\.[0-9]+\.[0-9]+)?|[0-9]+)\s*([a-zA-Z%]+)\s*$|^(--(?:OL|UL)--|-{6,})\s*$`)
+	matches := re.FindAllStringSubmatch(dataStr, -1)
+	if matches == nil || len(matches[0]) < 7 {
+		return weightMsg, fmt.Errorf("parse error on %v", string(data))
+	}
+
+	// 检查是否匹配到全"------"格式
+	if matches[0][7] != "" { // 全"------"情况
+		weightMsg.IsStable = false
+		weightMsg.IsNet = false
+		weightMsg.IsZero = false
+		weightMsg.WeightVal = matches[0][7]
+		weightMsg.WeightUnit = ""
+	} else {
+		status := matches[0][1] // ST, US 等
+		mode := matches[0][2]   // GS, NT 等
+		sign := matches[0][4]   // 正负号
+		value := matches[0][5]  // 重量值
+		unit := matches[0][6]   // 单位
+		isZero := (value == "0" || value == "0.0" || value == "0.00" || value == "0.000" || value == "0.0000")
+
+		// 处理正负号
+		if sign == "-" {
+			value = "-" + value
+		}
+
+		weightMsg.IsStable = (status == "ST")
+		weightMsg.IsNet = (mode == "NT")
+		weightMsg.WeightVal = value
+		weightMsg.WeightUnit = unit
+		weightMsg.IsZero = isZero
+
+	}
+
+	return weightMsg, nil
+}

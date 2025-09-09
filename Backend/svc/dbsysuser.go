@@ -329,7 +329,7 @@ func (d *DbSysUser) DeleteUser(userID []int) error {
 		defer sqlDB.Close()
 	}
 	for _, id := range userID {
-		if id == 0 {
+		if id == 1 {
 			continue
 		}
 		if err = db.Delete(&SysUser{}, "user_id = ?", id).Error; err != nil {

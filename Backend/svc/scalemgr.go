@@ -911,12 +911,16 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 			}
 			nextScaleId = maxScaleID + 1
 		}
+		scaleCat := comm.SCALE_TMAX
+		if req.ScaleModel == "DC500" {
+			scaleCat = comm.SCALE_C51
+		}
 		scaleName := "Scale" + strconv.FormatInt(nextScaleId, 10)
 		var comInfo ComInfo = ComInfo{DevPath: reqComInfo.DevPath, Baud: reqComInfo.Baud, DataBits: 8, Parity: 0, StopBits: 0}
 		var conf MediaConf = MediaConf{}
 		conf.Type = MEDIA_COM
 		conf.MediaInfoJson, _ = json.MarshalToString(comInfo)
-		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: comm.SCALE_TMAX, ScaleId: nextScaleId, ScaleModel: "T-Max", ScaleSn: getSn(), TMedia: MEDIA_COM, MediaConf: conf, IsDefault: true, ScaleName: scaleName}
+		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: scaleCat, ScaleId: nextScaleId, ScaleModel: "T-Max", ScaleSn: getSn(), TMedia: MEDIA_COM, MediaConf: conf, IsDefault: true, ScaleName: scaleName}
 		s.connPb.connPb.InsertScaleConn(*scaleConn)
 		s.AddMediaList(scaleConn.ScaleId, *scaleConn)
 

@@ -285,8 +285,22 @@ type ReqAddSysUser struct {
 }
 
 type ReqUpdateSysUser struct {
-	UpdateUser SysUser
+	UpdateUser UpdateUser
 	PagesId    []int
+}
+type UpdateUser struct {
+	UserId        int    `gorm:"primaryKey;not null;autoincrement;"`
+	UserName      string `gorm:"not null;unique"`         //账户名 用于登录
+	NickName      string `gorm:"not null;default:'name'"` // 昵称 或者姓名
+	RoleId        int    `gorm:"not null;"`
+	Password      string `gorm:"not null"`
+	IsEnabled     bool   `gorm:"not null;default:true;"`
+	Email         string `gorm:"not null;"`
+	Phone         string `gorm:"not null;"`
+	InitialPageId int
+	Remark        string
+	CreatedBy     int
+	UpdatedBy     int
 }
 type ReqEnabledSysUserId struct {
 	UserId    int

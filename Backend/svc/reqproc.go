@@ -123,6 +123,9 @@ func procGetRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func procSendScaleAlive(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	if scale.ScaleCat != m.SCALE_TMAX {
+		return nil, nil
+	}
 	sendRespMsgScale(scale)
 	return &ScaleRespMsg{m.ANSWER_ALIVE_RESP, "ok", scale.Id}, nil
 }
@@ -165,7 +168,7 @@ func procExportRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 		"LimitLow",
 		"Weight",
 		"Weight Unit",
-		"User NO.",
+		// "User NO.",
 		"User Name",
 		"Scale Name",
 		"Date Time",
@@ -209,7 +212,7 @@ func procExportRecs(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 				rec.LimitLow,
 				rec.Weight,
 				rec.WeightUnit,
-				rec.UserNo,
+				// rec.UserNo,
 				rec.UserName,
 				rec.ScaleName,
 				rec.CreatedAt.Format("2006-01-02 15:04:05"),

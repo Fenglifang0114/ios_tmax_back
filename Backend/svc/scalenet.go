@@ -140,11 +140,21 @@ func (tnet *TNet) read() {
 			log.Log.Errorf("@TNet read(), err: %v\n", err)
 			if tnet.toQuit {
 				continue
-
 			}
+
+			if err.Error() != "EOF" {
+				println("断开连接，重新连")
+				tnet.conn.Close()
+				tnet.conn = nil
+				continue
+			}
+
 			if err.Error() == "EOF" { // 20240801
 				log.Log.Errorf("EOF")
-				break
+				//20250901 断开TCP，重新连接
+				tnet.conn.Close()
+				tnet.reconnect()
+				continue
 			}
 			if !IsPacketChClosed(tnet.recvCh) {
 				// tnet.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}

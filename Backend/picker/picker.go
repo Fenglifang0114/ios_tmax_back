@@ -18,6 +18,8 @@ func GetPickerFn(stype comm.ScaleCat) PickerFunc {
 	switch stype {
 	case comm.SCALE_T2200:
 		return PickerFnT2200
+	case comm.SCALE_C51:
+		return PickerFnC51
 	case comm.SCALE_TMAX:
 		return pickerFnTmax
 	case comm.SCALE_TMAX_PASSTH:
