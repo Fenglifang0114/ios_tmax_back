@@ -48,6 +48,7 @@ type RawMaterial struct {
 	Remark string
 	// 备注1
 	Remark1 string
+	ScaleId int
 }
 
 // FormulaCategory 配方类别表
@@ -98,7 +99,6 @@ type FormulaHeader struct {
 	Remark2 string
 	// 备注3
 	Remark3 string
-
 	//是否删除
 	IsUsed bool `gorm:"default:true"` // 默认值为 true，表示未删除
 
@@ -184,7 +184,6 @@ type FormulaWgtRecHeader struct {
 	// 配方实际需要的重量
 	ActualFmaTotalWgt float64
 	// 是否加密
-
 	IsEncrypted bool
 	//是否有容器
 	NeedContainer bool
@@ -267,6 +266,14 @@ type FormulaWgtRecDetail struct {
 	RecRemark string
 	//记录备注1
 	RecRemark1 string
+	//秤ID
+	ScaleId int
+	//秤名字
+	ScaleName string
+	//秤型号
+	ScaleModel string
+	//秤序列号
+	ScaleSn string
 }
 
 type FormulaList struct {
@@ -417,6 +424,56 @@ func (d *DbFormulaInfo) CreateFormulaCategory(category FormulaCategory) error {
 	return db.Create(&category).Error
 }
 
+// 新增配方类别列表
+func (d *DbFormulaInfo) CreateFormulaCategoryList(categories []string) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		return err
+	}
+
+	for _, name := range categories {
+		// 检查是否已存在相同名称的类别
+		var count int64
+		if err := tx.Model(&FormulaCategory{}).Where("category_name = ?", name).Count(&count).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		// 如果不存在，则添加新类别
+		if count == 0 {
+			category := FormulaCategory{
+				CategoryName: name,
+			}
+			if err := tx.Create(&category).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
 // 获取所有配方类别
 func (d *DbFormulaInfo) GetAllFormulaCategories() ([]FormulaCategory, error) {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -508,6 +565,43 @@ func (d *DbFormulaInfo) CreateRawMaterialCategory(category RawMaterialCategory) 
 	if tx.Error != nil {
 		return tx.Error
 	}
+	return nil
+}
+
+// 新增原料类别
+func (d *DbFormulaInfo) CreateRawCategoryList(categories []string) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 遍历所有类别名称
+	for _, categoryName := range categories {
+		// 查询名字是否存在，不存在就新增，存在就跳过
+		var count int64
+		db.Model(&RawMaterialCategory{}).Where("category_name = ?", categoryName).Count(&count)
+
+		if count == 0 {
+			// 如果类别不存在，则创建新类别
+			category := RawMaterialCategory{
+				CategoryName: categoryName,
+			}
+			tx := db.Create(&category)
+			if tx.Error != nil {
+				return tx.Error
+			}
+		}
+		// 如果类别已存在，则跳过继续处理下一个
+	}
+
 	return nil
 }
 
@@ -609,6 +703,36 @@ func (d *DbFormulaInfo) CreateRawMaterial(material RawMaterial) error {
 	return db.Create(&material).Error
 }
 
+// 批量新增原料
+func (d *DbFormulaInfo) CreateRawMaterialList(materials []RawMaterial) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 批量创建原料
+	if err := tx.Create(&materials).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
 // 获取所有原料
 func (d *DbFormulaInfo) GetAllRawMaterials() ([]RawMaterial, error) {
 	var err error
@@ -670,6 +794,7 @@ func (d *DbFormulaInfo) UpdateRawMaterial(material RawMaterial) error {
 		"updated_by":    material.UpdatedBy,
 		"remark":        material.Remark,
 		"remark1":       material.Remark1,
+		"scale_id":      material.ScaleId,
 	}).Error
 }
 
@@ -689,6 +814,90 @@ func (d *DbFormulaInfo) DeleteRawMaterial(recId int) error {
 	}
 	// 修改为根据 recId 删除原料
 	return db.Where("rec_id = ?", recId).Delete(&RawMaterial{}).Error
+}
+
+// 删除所有原料 - 只删除未被使用的原料
+func (d *DbFormulaInfo) DeleteAllRawMaterials(recIds []int) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 查找未被配方明细使用的原料ID
+	var unusedMaterialIDs []int
+	err = tx.Model(&RawMaterial{}).
+		Where("rec_id IN ? AND material_id NOT IN (SELECT DISTINCT material_id FROM formula_details)", recIds).
+		Pluck("rec_id", &unusedMaterialIDs).Error
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 只删除未被使用的原料
+	if len(unusedMaterialIDs) > 0 {
+		if err := tx.Where("rec_id IN ?", unusedMaterialIDs).Delete(&RawMaterial{}).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// 新增配方列表
+func (d *DbFormulaInfo) InsertFormulaList(list []FmaDataImportInfo) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	//新增配方头和明细部分
+	for i := range list {
+		if err := tx.Create(&list[i].Head).Error; err != nil {
+			// 回滚事务
+			tx.Rollback()
+			return err
+		}
+		// 新增配方明细
+		for j := range list[i].Detail {
+			if err := tx.Create(&list[i].Detail[j]).Error; err != nil {
+				// 回滚事务
+				tx.Rollback()
+				return err
+			}
+		}
+
+	}
+
+	// 提交事务
+	return tx.Commit().Error
 }
 
 // 根据配方编号查询 FormulaList
@@ -1230,14 +1439,101 @@ func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
 		return err
 	}
 
-	// 将配方头中的isUsed设置为false
-
-	if err := tx.Model(&FormulaHeader{}).Where("rec_id = ?", recId).Updates(map[string]interface{}{
-		"is_used":   false,
-		"is_latest": false,
-	}).Error; err != nil {
+	// 直接删除配方头记录
+	if err := tx.Where("rec_id = ?", recId).Delete(&FormulaHeader{}).Error; err != nil {
 		tx.Rollback()
 		return err
+	}
+
+	// 删除所有 isUsed 和 isLatest 都为 false 的配方头记录
+	if err := tx.Where("is_used = ? AND is_latest = ?", false, false).Delete(&FormulaHeader{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// 根据recId删除所有配方
+// 根据recIds删除配方及其相关的暂存记录
+func (d *DbFormulaInfo) DeleteAllFormulaByRecId(recIds []int) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 查询所有指定recIds的配方头信息
+	var headers []FormulaHeader
+	if err := tx.Where("rec_id IN ?", recIds).Find(&headers).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 收集所有需要删除明细的配方recIds和配方ID
+
+	formulaIDs := make([]string, len(headers))
+	for i, header := range headers {
+
+		formulaIDs[i] = header.FormulaID
+	}
+
+	// 删除所有指定配方的明细记录
+	if len(formulaIDs) > 0 {
+		if err := tx.Where("formula_rec_id IN ?", recIds).Delete(&FormulaDetail{}).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		// 直接删除所有指定的配方头记录
+		if err := tx.Where("rec_id IN ?", recIds).Delete(&FormulaHeader{}).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// 根据配方ID查找相关的暂存配方记录头
+	var draftHeaders []DrafFmaWgtRecHeader
+	if len(formulaIDs) > 0 {
+		if err := tx.Where("formula_id IN ?", formulaIDs).Find(&draftHeaders).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		// 收集需要删除的暂存记录的orderIds
+		orderIds := make([]string, len(draftHeaders))
+		for i, draftHeader := range draftHeaders {
+			orderIds[i] = draftHeader.OrderId
+		}
+
+		// 根据orderIds删除暂存配方明细记录
+		if len(orderIds) > 0 {
+			if err := tx.Where("order_id IN ?", orderIds).Delete(&DrafFmaWgtRecDetail{}).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+
+		// 根据配方ID删除暂存配方头记录
+		if len(formulaIDs) > 0 {
+			if err := tx.Where("formula_id IN ?", formulaIDs).Delete(&DrafFmaWgtRecHeader{}).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
 	}
 
 	// 提交事务
@@ -1247,11 +1543,10 @@ func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
 //配方秤中的自动下一步设置
 
 type SetAutoNext struct {
-	// 类别ID（主键）
-	RecID int `gorm:"primaryKey;autoincrement;not null"`
-	// 类别名称
+	RecID      int  `gorm:"primaryKey;autoincrement;not null"`
 	AutoNext   bool `gorm:"not null"`
 	StableTime int  `gorm:"not null"`
+	AutoTare   bool `gorm:"default:0; not null"`
 }
 
 // 暂存配方的表头
@@ -1302,6 +1597,11 @@ type DrafFmaWgtRecDetail struct {
 	Remark1 string
 	// 备注2
 	Remark2 string
+	//秤的信息
+	ScaleId    int
+	ScaleName  string
+	ScaleModel string
+	ScaleSn    string
 }
 
 //暂存配方的记录
@@ -1344,6 +1644,7 @@ func (d *DbFormulaInfo) CreateSetAutoNext() error {
 		if err := tx.Create(&SetAutoNext{
 			AutoNext:   true,
 			StableTime: 5,
+			AutoTare:   false,
 		}).Error; err != nil {
 			tx.Rollback()
 			return err
@@ -1355,7 +1656,7 @@ func (d *DbFormulaInfo) CreateSetAutoNext() error {
 }
 
 // 修改SetAutoNext
-func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int) error {
+func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int, autoTare bool) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1377,6 +1678,7 @@ func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int) error {
 	if err := tx.Model(&SetAutoNext{}).Where("rec_id = ?", 1).Updates(map[string]interface{}{
 		"auto_next":   autoNext,
 		"stable_time": stableTime,
+		"auto_tare":   autoTare,
 	}).Error; err != nil {
 		tx.Rollback()
 		return err
@@ -1522,6 +1824,37 @@ func (d *DbFormulaInfo) DeleteDraftFmaWgtRec(orderId string) error {
 	return tx.Commit().Error
 }
 
+// 删除所有暂存配方
+func (d *DbFormulaInfo) DeleteAllDraftFmaWgtRec(orderIds []string) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	if err := tx.Where("order_id IN ?", orderIds).Delete(&DrafFmaWgtRecDetail{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	// 删除暂存配方称重记录头
+	if err := tx.Where("order_id IN ?", orderIds).Delete(&DrafFmaWgtRecHeader{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	// 提交事务
+	return tx.Commit().Error
+}
+
 // 更新暂存配方称重记录头和明细
 func (d *DbFormulaInfo) UpdateDraftFmaWgtRec(rec DrafFmaWgtRecInfo) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -1567,4 +1900,26 @@ func (d *DbFormulaInfo) UpdateDraftFmaWgtRec(rec DrafFmaWgtRecInfo) error {
 	}
 	// 提交事务
 	return tx.Commit().Error
+}
+
+func (d *DbFormulaInfo) CheckFormulaRawData(scaleId int) (bool, error) {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return false, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return false, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 检查配方材料里面是否使用了这个秤
+	var count int64
+	db.Model(&RawMaterial{}).Where("scale_id = ?", scaleId).Count(&count)
+	if count > 0 {
+		return true, nil
+	}
+	return false, nil
+
 }

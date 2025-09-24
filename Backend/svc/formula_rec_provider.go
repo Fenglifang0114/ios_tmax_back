@@ -33,9 +33,24 @@ func (p *FormulaRecProvider) InsertRawType(rec RawMaterialCategory) error {
 	return p.infoPb.CreateRawMaterialCategory(rec)
 }
 
+// 新增原料类别列表
+func (p *FormulaRecProvider) InsertRawTypeList(rec []string) error {
+	return p.infoPb.CreateRawCategoryList(rec)
+}
+
+// 新增配方类别列表
+func (p *FormulaRecProvider) InsertFormulaTypeList(rec []string) error {
+	return p.infoPb.CreateFormulaCategoryList(rec)
+}
+
 // 新增原料信息
 func (p *FormulaRecProvider) InsertRawInfo(rec RawMaterial) error {
 	return p.infoPb.CreateRawMaterial(rec)
+}
+
+// 新增原料信息列表
+func (p *FormulaRecProvider) InsertRawInfoList(rec []RawMaterial) error {
+	return p.infoPb.CreateRawMaterialList(rec)
 }
 
 // 新增配方类别
@@ -69,6 +84,11 @@ func (p *FormulaRecProvider) UpdateRawInfo(rec RawMaterial) error {
 // 删除原料信息
 func (p *FormulaRecProvider) DeleteRawInfo(recId int) error {
 	return p.infoPb.DeleteRawMaterial(recId)
+}
+
+// 删除所有原料信息
+func (p *FormulaRecProvider) DeleteAllRawInfo(recIds []int) error {
+	return p.infoPb.DeleteAllRawMaterials(recIds)
 }
 
 // 获取配方信息头ID
@@ -124,6 +144,11 @@ func (p *FormulaRecProvider) DeleteFormula(rec_id int) error {
 	return p.infoPb.DeleteFormulaByRecId(rec_id)
 }
 
+// 删除所有配方
+func (p *FormulaRecProvider) DeleteAllFormulas(rec_ids []int) error {
+	return p.infoPb.DeleteAllFormulaByRecId(rec_ids)
+}
+
 // 修改配方
 func (p *FormulaRecProvider) UpdateFormula(header FormulaHeader, details []FormulaDetail) error {
 	return p.infoPb.UpdateFormula(header, details)
@@ -138,6 +163,11 @@ func (p *FormulaRecProvider) DeleteRawType(recId string) error {
 // 修改原料类型
 func (p *FormulaRecProvider) UpdateRawType(rec RawMaterialCategory) error {
 	return p.infoPb.UpdateRawMaterialCategory(rec)
+}
+
+// 新增配方
+func (p *FormulaRecProvider) InsertFmaInfoList(rec []FmaDataImportInfo) error {
+	return p.infoPb.InsertFormulaList(rec)
 }
 
 // 删除配方类型
@@ -158,7 +188,7 @@ func (p *FormulaRecProvider) GetSetAutoNext() (*SetAutoNext, error) {
 
 // 更新配方秤中的自动下一步设置
 func (p *FormulaRecProvider) UpdateSetAutoNext(rec SetAutoNext) error {
-	return p.infoPb.UpdateSetAutoNext(rec.AutoNext, rec.StableTime)
+	return p.infoPb.UpdateSetAutoNext(rec.AutoNext, rec.StableTime, rec.AutoTare)
 }
 
 // 创建暂存配方称重记录
@@ -185,4 +215,14 @@ func (p *FormulaRecProvider) GetDraftFmaWgtRec() ([]DrafFmaWgtRecInfo, error) {
 // 删除暂存配方称重记录
 func (p *FormulaRecProvider) DeleteDraftFmaWgtRec(orderId string) error {
 	return p.infoPb.DeleteDraftFmaWgtRec(orderId)
+}
+
+// 删除所有暂存配方称重记录
+func (p *FormulaRecProvider) DeleteAllDraftFmaWgtRec(orderIds []string) error {
+	return p.infoPb.DeleteAllDraftFmaWgtRec(orderIds)
+}
+
+// 检查配方材料里面是否使用了这个秤
+func (p *FormulaRecProvider) CheckFormulaRawData(scaleId int) (bool, error) {
+	return p.infoPb.CheckFormulaRawData(scaleId)
 }

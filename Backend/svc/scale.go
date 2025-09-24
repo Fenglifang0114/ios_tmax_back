@@ -3053,7 +3053,8 @@ func ReqOpenSerialPort(c *Scale) (*ScaleRespMsg, error) {
 	if c.MySerial != nil {
 		return &ScaleRespMsg{m.OPEN_SERIAL_PORT_RESP, "fail", c.Id}, nil
 	}
-	picker := picker.GetPickerFn(5)
+	scaleCat := c.ScaleCat
+	picker := picker.GetPickerFn(scaleCat)
 
 	if c.MySerial, err = NewSerial(c.Pcnf, picker, true); err != nil {
 		l.Log.Error(err.Error())

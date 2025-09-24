@@ -158,6 +158,14 @@ func init() {
 	creategetDelFmaTypeNotifier := fmaTypeDeletedNotifier{}
 	fmaTypeDeleted.Register(creategetDelFmaTypeNotifier)
 
+	//导入原料数据列表
+	createRawListImportedNotifier := rawListImportedNotifier{}
+	rawListImported.Register(createRawListImportedNotifier)
+
+	//导入配方数据列表
+	createFormulaListImportedNotifier := formulaListImportedNotifier{}
+	formulaListImported.Register(createFormulaListImportedNotifier)
+
 	createGetrawDataListedNotifier := rawDataListedNotifier{}
 	rawDataListed.Register(createGetrawDataListedNotifier)
 
@@ -184,6 +192,15 @@ func init() {
 
 	createFmaDelNotifier := delFormulaNotifier{}
 	formulaDeleted.Register(createFmaDelNotifier)
+
+	createDelAllFormulaNotifier := delAllFormulaNotifier{}
+	formulaDeletedAll.Register(createDelAllFormulaNotifier)
+
+	createDelAllRawDataNotifier := delAllRawDataNotifier{}
+	rawDataDeletedAll.Register(createDelAllRawDataNotifier)
+
+	createDelAllDraftFmaWgtRecNotifier := delAllDraftFmaWgtRecNotifier{}
+	formulaDataDeletedAll.Register(createDelAllDraftFmaWgtRecNotifier)
 
 	addFlowRateNotifier := addFlowRateNotifier{}
 	flowRateAdded.Register(addFlowRateNotifier)
@@ -325,6 +342,11 @@ type fmaTypeEditedNotifier struct{}
 
 type fmaTypeDeletedNotifier struct{}
 
+type rawListImportedNotifier struct{}
+
+// 导入配方数据列表
+type formulaListImportedNotifier struct{}
+
 type rawDataListedNotifier struct{}
 
 type rawDataEditedNotifier struct{}
@@ -342,6 +364,12 @@ type addFormulaWgtRecNotifier struct{}
 type getFormulaWgtRecListNotifier struct{}
 
 type delFormulaNotifier struct{}
+
+type delAllFormulaNotifier struct{}
+
+type delAllRawDataNotifier struct{}
+
+type delAllDraftFmaWgtRecNotifier struct{}
 
 type addFlowRateNotifier struct{}
 
@@ -539,6 +567,18 @@ func (p setScaleSrvValNotifier) Handle(scaleMgr *ScaleMgr, rel SrvScaleRel) {
 func (p delScaleNotifier) Handle(payload ReqDelScale) { //修改秤的属性
 	// Do something for this event
 	log.Log.Debug("Handle delScaleNotifier called")
+	//先判断是否有配方使用了这个秤，使用了，不能删除
+	isUsed, err := NewFormulaRecProvider().CheckFormulaRawData(int(payload.ScaleId))
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_DEL, MsgBody: "fail,open db error"}
+		return
+	}
+
+	if isUsed {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_DEL, MsgBody: "fail,this scale is used by formula"}
+		return
+	}
+
 	if err := mSrvMgr.scaleMgr.DelScale(payload.ScaleId); err != nil {
 		log.Log.Errorf("%v\n", err)
 		resp := MgrRespMsg{IsAck: true, AckData: err.Error()}
@@ -1021,7 +1061,10 @@ func (s *ScaleMgr) DelScale(id int64) error {
 			} // terminate the socket that associate with the scale
 		}
 		// remove the conn then add new one s.conns
-		scale.MySerial.toQuit = true
+		if scale.MySerial != nil {
+			scale.MySerial.toQuit = true
+		}
+
 		time.Sleep(500 * time.Millisecond)
 		scale.Close()
 		s.srvMgr.removeScale <- scale
@@ -1046,7 +1089,10 @@ func (s *ScaleMgr) DelScale(id int64) error {
 			} // terminate the socket that associate with the scale
 		}
 		// remove the conn then add new one s.conns
-		scale.MyNet.toQuit = true
+		if scale.MyNet != nil {
+			scale.MyNet.toQuit = true
+		}
+
 		time.Sleep(500 * time.Millisecond)
 		scale.Close()
 		s.srvMgr.removeScale <- scale

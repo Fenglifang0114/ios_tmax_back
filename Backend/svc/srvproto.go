@@ -65,6 +65,8 @@ const (
 	REQ_DEL_FORMULA_TYPE      ReqType = "del_formula_type"      //删除配方类型
 	REQ_EDIT_FORMULA_TYPE     ReqType = "edit_formula_type"     //修改配方类型
 	REQ_GET_FORMULA_TYPE_LIST ReqType = "get_formula_type_list" //获取配方类型列表
+	REQ_IMPORT_RAW_LIST       ReqType = "import_raw_list"       //导入原料列表
+	REQ_IMPORT_FMA_LIST       ReqType = "import_fma_list"       //导入配方列表
 	REQ_ADD_RAW_DATA          ReqType = "add_raw_data"          //添加原始数据
 	REQ_DEL_RAW_DATA          ReqType = "del_raw_data"          //删除原始数据
 	REQ_EDIT_RAW_DATA         ReqType = "edit_raw_data"         //修改原始数据
@@ -74,6 +76,9 @@ const (
 	REQ_EDIT_FORMULA_DATA     ReqType = "edit_formula_data"     //修改配方信息
 	REQ_GET_FORMULA_LIST      ReqType = "get_formula_list"      //获取配方信息列表
 	REQ_DELETE_FORMULA_DATA   ReqType = "delete_formula_data"   //删除配方信息
+	REQ_DELETE_MANY_FORMULA   ReqType = "del_many_fma"          //删除所有配方
+	REQ_DEL_MANY_RAW_DATA     ReqType = "del_many_raw"          //删除所有原料数据
+	REQ_DEL_MANY_DRAFT_FMA    ReqType = "del_many_draft_fma"    //删除所有暂存配方
 	REQ_ADD_FORMULA_REC       ReqType = "add_formula_rec"       //新增配方称重记录
 	REQ_GET_FORMULA_REC_LIST  ReqType = "get_formula_rec_list"  //获取配方称重记录列表
 	REQ_ADD_FLOW_RATE         ReqType = "add_flow_rate"         //新增流速
@@ -228,10 +233,15 @@ type ReqAddFormulaType struct {
 type ReqUpdateAutoNext struct {
 	AutoNext   bool
 	StableTime int
+	AutoTare   bool
 }
 
 type ReqDeleteDraftFmaWgtRec struct {
 	OrderId string
+}
+
+type ReqDeleteAllDraftFmaWgtRec struct {
+	OrderId []string
 }
 
 type ReqAddRawData struct {
@@ -243,6 +253,44 @@ type ReqAddRawData struct {
 	UpdatedBy    string
 	Remark       string
 	Remark1      string
+	ScaleId      int
+}
+
+type ReqImportRawList struct {
+	RawInfo   []ReqAddRawInfo
+	CreatedBy string
+}
+
+type ReqAddRawInfo struct {
+	MaterialID   string
+	MaterialName string
+	CategoryName string
+	Ingredient   string
+	ScaleName    string
+	CategoryId   int
+	ScaleId      int
+}
+
+type ReqImportFmaList struct {
+	FmaInfo  []ReqAddFmaInfo
+	CreateBy string
+}
+type ReqAddFmaInfo struct {
+	FormulaId      string
+	FormulaName    string
+	Mode           string
+	WeightUnit     string
+	Category       string
+	IsConfidential bool
+	NeedContainer  bool
+	Ingredients    []ReqAddFmaIngredient
+}
+type ReqAddFmaIngredient struct {
+	IngredientNo    int
+	IngredientId    string
+	IngredientName  string
+	WeightOrPercent float64
+	AllowError      float64
 }
 
 type ReqEditRawData struct {
@@ -255,13 +303,22 @@ type ReqEditRawData struct {
 	UpdatedBy    string
 	Remark       string
 	Remark1      string
+	ScaleId      int
 }
 type ReqDelRawData struct {
 	RecId int
 }
 
+type ReqDelAllRawData struct {
+	RecId []int
+}
+
 type ReqDelFmaData struct {
 	RecId int
+}
+
+type ReqDelAllFmaData struct {
+	RecID []int
 }
 
 type ReqAddFormulaData struct {
@@ -445,6 +502,11 @@ type ReqFormulaWgtRecDetail struct {
 	ActualErrorPct float64
 	// 达标情况
 	IsQualified string
+	//记录秤号
+	ScaleId    int
+	ScaleName  string
+	ScaleModel string
+	ScaleSn    string
 }
 
 type ReqFlowRateRec struct {
@@ -574,37 +636,42 @@ const (
 	SCALE_MGR_RESP_DO_SERVICE_ACTION  ScaleMgrRespMsgType = "resp_do_service_action"  // with response
 
 	//配方秤
-	SCALE_MGR_RESP_RAW_TYPE_ADD         ScaleMgrRespMsgType = "resp_raw_type_add"
-	SCALE_MGR_RESP_RAW_TYPE_EDIT        ScaleMgrRespMsgType = "resp_raw_type_edit"
-	SCALE_MGR_RESP_RAW_TYPE_DELETE      ScaleMgrRespMsgType = "resp_raw_type_delete"
-	SCALE_MGR_RESP_FMA_TYPE_EDIT        ScaleMgrRespMsgType = "resp_fma_type_edit"
-	SCALE_MGR_RESP_FMA_TYPE_DELETE      ScaleMgrRespMsgType = "resp_fma_type_delete"
-	SCALE_MGR_RESP_FORMULA_TYPE_ADD     ScaleMgrRespMsgType = "resp_formula_type_add"
-	SCALE_MGR_RESP_FORMULA_TYPE_LIST    ScaleMgrRespMsgType = "resp_formula_type_list"
-	SCALE_MGR_RESP_RAW_TYPE_LIST        ScaleMgrRespMsgType = "resp_raw_type_list"
-	SCALE_MGR_RESP_RAW_LIST             ScaleMgrRespMsgType = "resp_raw_list"
-	SCALE_MGR_RESP_RAW_DATA_EDIT        ScaleMgrRespMsgType = "resp_raw_data_edit"
-	SCALE_MGR_RESP_RAW_DATA_DELETE      ScaleMgrRespMsgType = "resp_raw_data_delete"
-	SCALE_MGR_RESP_RAW_DATA_ADD         ScaleMgrRespMsgType = "resp_raw_data_add"
-	SCALE_MGR_RESP_FORMULA_ADD          ScaleMgrRespMsgType = "resp_formula_add"
-	SCALE_MGR_RESP_FORMULA_UPDATE       ScaleMgrRespMsgType = "resp_formula_update"
-	SCALE_MGR_RESP_FORMULA_LIST         ScaleMgrRespMsgType = "resp_formula_list"
-	SCALE_MGR_RESP_FORMULA_REC_ADD      ScaleMgrRespMsgType = "resp_formula_rec_add"
-	SCALE_MGR_RESP_FORMULA_REC_LIST     ScaleMgrRespMsgType = "resp_formula_rec_list"
-	SCALE_MGR_RESP_FORMULA_DELETE       ScaleMgrRespMsgType = "resp_formula_delete"
-	SCALE_MGR_RESP_FLOW_RATE_ADD        ScaleMgrRespMsgType = "resp_flow_rate_add"
-	SCALE_MGR_RESP_FLOW_RATE_LIST       ScaleMgrRespMsgType = "resp_flow_rate_list"
-	SCALE_MGR_RESP_GET_ALL_WGT_REC_LIST ScaleMgrRespMsgType = "resp_get_all_wgt_rec_list"
-	SCALE_MGR_RESP_GET_SEARCH_REC_LIST  ScaleMgrRespMsgType = "resp_get_search_rec_list"
-	SCALE_MGR_RESP_ADD_WGT_REC          ScaleMgrRespMsgType = "resp_add_wgt_rec"
-	SCALE_MGR_RESP_DEL_WGT_REC          ScaleMgrRespMsgType = "resp_del_wgt_rec"
-	SCALE_MGR_RESP_DEL_WGT_REC_BY_ID    ScaleMgrRespMsgType = "resp_del_wgt_rec_by_id"
-	SCALE_MGR_RESP_GET_UI_CONFIG        ScaleMgrRespMsgType = "resp_get_ui_config"       // with response of UI configuration
-	SCALE_MGR_RESP_UPDATE_UI_CONFIG     ScaleMgrRespMsgType = "resp_update_ui_config"    // without parameter
-	SCALE_MGR_RESP_EXPORT_ALL_RECS      ScaleMgrRespMsgType = "resp_export_all_recs"     // without parameter
-	SCALE_MGR_RESP_KILL_BOOT_COMMANDER  ScaleMgrRespMsgType = "resp_kill_boot_commander" // without parameter
-	SCALE_MGR_RESP_GET_AUTO_NEXT        ScaleMgrRespMsgType = "resp_get_auto_next"
-	SCALE_MGR_RESP_UPDATE_AUTO_NEXT     ScaleMgrRespMsgType = "resp_update_auto_next"
+	SCALE_MGR_RESP_RAW_TYPE_ADD                  ScaleMgrRespMsgType = "resp_raw_type_add"
+	SCALE_MGR_RESP_RAW_TYPE_EDIT                 ScaleMgrRespMsgType = "resp_raw_type_edit"
+	SCALE_MGR_RESP_RAW_TYPE_DELETE               ScaleMgrRespMsgType = "resp_raw_type_delete"
+	SCALE_MGR_RESP_FMA_TYPE_EDIT                 ScaleMgrRespMsgType = "resp_fma_type_edit"
+	SCALE_MGR_RESP_FMA_TYPE_DELETE               ScaleMgrRespMsgType = "resp_fma_type_delete"
+	SCALE_MGR_RESP_FORMULA_TYPE_ADD              ScaleMgrRespMsgType = "resp_formula_type_add"
+	SCALE_MGR_RESP_FORMULA_TYPE_LIST             ScaleMgrRespMsgType = "resp_formula_type_list"
+	SCALE_MGR_RESP_RAW_TYPE_LIST                 ScaleMgrRespMsgType = "resp_raw_type_list"
+	SCALE_MGR_RESP_RAW_LIST                      ScaleMgrRespMsgType = "resp_raw_list"
+	SCALE_MGR_RESP_RAW_DATA_EDIT                 ScaleMgrRespMsgType = "resp_raw_data_edit"
+	SCALE_MGR_RESP_RAW_DATA_DELETE               ScaleMgrRespMsgType = "resp_raw_data_delete"
+	SCALE_MGR_RESP_RAW_DATA_ADD                  ScaleMgrRespMsgType = "resp_raw_data_add"
+	SCALE_MGR_RESP_RAW_LIST_IMPORT               ScaleMgrRespMsgType = "resp_raw_list_import"
+	SCALE_MGR_RESP_FMA_LIST_IMPORT               ScaleMgrRespMsgType = "resp_fma_list_import"
+	SCALE_MGR_RESP_FORMULA_ADD                   ScaleMgrRespMsgType = "resp_formula_add"
+	SCALE_MGR_RESP_FORMULA_UPDATE                ScaleMgrRespMsgType = "resp_formula_update"
+	SCALE_MGR_RESP_FORMULA_LIST                  ScaleMgrRespMsgType = "resp_formula_list"
+	SCALE_MGR_RESP_FORMULA_REC_ADD               ScaleMgrRespMsgType = "resp_formula_rec_add"
+	SCALE_MGR_RESP_FORMULA_REC_LIST              ScaleMgrRespMsgType = "resp_formula_rec_list"
+	SCALE_MGR_RESP_FORMULA_DELETE                ScaleMgrRespMsgType = "resp_formula_delete"
+	SCALE_MGR_RESP_MANY_FMA_DELETE               ScaleMgrRespMsgType = "resp_many_fma_del"
+	SCALE_MGR_RESP_MANY_RAW_DELETE               ScaleMgrRespMsgType = "resp_many_raw_del"
+	SCALE_MGR_RESP_MANY_DRAFT_FMA_WGT_REC_DELETE ScaleMgrRespMsgType = "resp_many_draft_fma_del"
+	SCALE_MGR_RESP_FLOW_RATE_ADD                 ScaleMgrRespMsgType = "resp_flow_rate_add"
+	SCALE_MGR_RESP_FLOW_RATE_LIST                ScaleMgrRespMsgType = "resp_flow_rate_list"
+	SCALE_MGR_RESP_GET_ALL_WGT_REC_LIST          ScaleMgrRespMsgType = "resp_get_all_wgt_rec_list"
+	SCALE_MGR_RESP_GET_SEARCH_REC_LIST           ScaleMgrRespMsgType = "resp_get_search_rec_list"
+	SCALE_MGR_RESP_ADD_WGT_REC                   ScaleMgrRespMsgType = "resp_add_wgt_rec"
+	SCALE_MGR_RESP_DEL_WGT_REC                   ScaleMgrRespMsgType = "resp_del_wgt_rec"
+	SCALE_MGR_RESP_DEL_WGT_REC_BY_ID             ScaleMgrRespMsgType = "resp_del_wgt_rec_by_id"
+	SCALE_MGR_RESP_GET_UI_CONFIG                 ScaleMgrRespMsgType = "resp_get_ui_config"       // with response of UI configuration
+	SCALE_MGR_RESP_UPDATE_UI_CONFIG              ScaleMgrRespMsgType = "resp_update_ui_config"    // without parameter
+	SCALE_MGR_RESP_EXPORT_ALL_RECS               ScaleMgrRespMsgType = "resp_export_all_recs"     // without parameter
+	SCALE_MGR_RESP_KILL_BOOT_COMMANDER           ScaleMgrRespMsgType = "resp_kill_boot_commander" // without parameter
+	SCALE_MGR_RESP_GET_AUTO_NEXT                 ScaleMgrRespMsgType = "resp_get_auto_next"
+	SCALE_MGR_RESP_UPDATE_AUTO_NEXT              ScaleMgrRespMsgType = "resp_update_auto_next"
 
 	SCALE_MGR_RESP_GET_DRAFT_FMA_WGT_REC_LIST ScaleMgrRespMsgType = "resp_get_draft_fma_wgt_rec_list"    //获取草稿配方称重记录列表
 	SCALE_MGR_RESP_UPDATE_DRAFT_FMA_WGT_REC   ScaleMgrRespMsgType = "resp_update_draft_fma_wgt_rec_list" //更新草稿配方称重记录列表

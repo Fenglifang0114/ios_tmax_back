@@ -760,6 +760,53 @@ func (u RawDataAdded) Trigger(mgr *SrvMgr, payload ReqAddRawData) {
 	}
 }
 
+// 导入原料数据列表
+var rawListImported RawListImported
+
+type RawListImported struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqImportRawList)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *RawListImported) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqImportRawList)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u RawListImported) Trigger(mgr *SrvMgr, payload ReqImportRawList) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 导入配方数据列表
+
+var formulaListImported FormulaListImported
+
+type FormulaListImported struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqImportFmaList)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *FormulaListImported) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqImportFmaList)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u FormulaListImported) Trigger(mgr *SrvMgr, payload ReqImportFmaList) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
 // 获取原料数据列表
 var rawDataListed RawDataListed
 
@@ -943,6 +990,75 @@ func (u *FormulaDeleted) Register(handler interface {
 
 // Trigger sends out an event with the payload
 func (u FormulaDeleted) Trigger(mgr *SrvMgr, payload ReqDelFmaData) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除所有配方
+var formulaDeletedAll FormulaDeletedAll
+
+type FormulaDeletedAll struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDelAllFmaData)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *FormulaDeletedAll) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqDelAllFmaData)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u FormulaDeletedAll) Trigger(mgr *SrvMgr, payload ReqDelAllFmaData) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除所有原料数据
+var rawDataDeletedAll RawDataDeletedAll
+
+type RawDataDeletedAll struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDelAllRawData)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *RawDataDeletedAll) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqDelAllRawData)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u RawDataDeletedAll) Trigger(mgr *SrvMgr, payload ReqDelAllRawData) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除所有暂存配方称重记录
+var formulaDataDeletedAll FormulaDataDeletedAll
+
+type FormulaDataDeletedAll struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDeleteAllDraftFmaWgtRec)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *FormulaDataDeletedAll) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqDeleteAllDraftFmaWgtRec)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u FormulaDataDeletedAll) Trigger(mgr *SrvMgr, payload ReqDeleteAllDraftFmaWgtRec) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
 	}
