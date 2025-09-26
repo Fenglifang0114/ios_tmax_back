@@ -1640,7 +1640,7 @@ func (p formulaListImportedNotifier) Handle(mgr *SrvMgr, payload ReqImportFmaLis
 			FormulaName:   v.FormulaName,
 			FormulaKey:    headerKey + 1,
 			CategoryID:    categoryId,
-			Remark:        "",
+			Remark:        v.Notes,
 			CreatedBy:     payload.CreateBy,
 			UpdatedBy:     payload.CreateBy,
 			FormulaMode:   mode,

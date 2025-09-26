@@ -284,6 +284,7 @@ type ReqAddFmaInfo struct {
 	IsConfidential bool
 	NeedContainer  bool
 	Ingredients    []ReqAddFmaIngredient
+	Notes          string
 }
 type ReqAddFmaIngredient struct {
 	IngredientNo    int
