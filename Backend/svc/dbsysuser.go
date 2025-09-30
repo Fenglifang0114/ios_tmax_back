@@ -34,8 +34,8 @@ type SysUser struct {
 	RoleId        int    `gorm:"not null;"`
 	Password      string `gorm:"not null"`
 	IsEnabled     bool   `gorm:"not null;default:true;"`
-	Email         string `gorm:"not null;"`
-	Phone         string `gorm:"not null;"`
+	Email         string
+	Phone         string
 	InitialPageId int
 	Remark        string
 	CreatedTime   time.Time `gorm:"autoCreateTime"`
@@ -149,8 +149,8 @@ func initAdmin(sysUser *DbSysUser) error {
 		NickName:      "Super Admin",
 		Password:      "123456",
 		RoleId:        1,
-		Email:         "admin@admin.com",
-		Phone:         "18888888888",
+		Email:         "",
+		Phone:         "",
 		InitialPageId: 9999, //设置界面
 		Remark:        "super admin",
 	}

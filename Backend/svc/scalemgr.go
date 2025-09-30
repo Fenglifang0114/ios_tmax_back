@@ -137,6 +137,12 @@ func init() {
 	createAddFormulaTypeNotifier := addFormulaTypeNotifier{}
 	formulaTypeAdded.Register(createAddFormulaTypeNotifier)
 
+	createDelRawTypeNotifier := delRawTypeUnusedNotifier{}
+	rawTypeUnusedDeleted.Register(createDelRawTypeNotifier)
+
+	createDelFmaTypeNotifier := delFmaTypeUnusedNotifier{}
+	fmaTypeUnusedDeleted.Register(createDelFmaTypeNotifier)
+
 	createGetRawTypeListNotifier := getRawTypeListNotifier{}
 	rawTypeListed.Register(createGetRawTypeListNotifier)
 
@@ -183,6 +189,12 @@ func init() {
 
 	createFormulaRecListNotifier := getFormulaListNotifier{}
 	formulaRecList.Register(createFormulaRecListNotifier)
+
+	creategetFormulaDataNotifier := getFormulaDataNotifier{}
+	formulaData.Register(creategetFormulaDataNotifier)
+
+	createGetRawDataNotifier := getRawDataNotifier{}
+	rawDataGetted.Register(createGetRawDataNotifier)
 
 	createFormulaWgtRecAddedNotifier := addFormulaWgtRecNotifier{}
 	formulaWgtRecAdded.Register(createFormulaWgtRecAddedNotifier)
@@ -328,6 +340,10 @@ type addRawTypeNotifier struct{}
 
 type addFormulaTypeNotifier struct{}
 
+type delRawTypeUnusedNotifier struct{}
+
+type delFmaTypeUnusedNotifier struct{}
+
 type getFormulaTypeListNotifier struct{}
 
 type getRawTypeListNotifier struct{}
@@ -358,6 +374,10 @@ type addFormulaRecNotifier struct{}
 type editFormulaRecNotifier struct{}
 
 type getFormulaListNotifier struct{}
+
+type getFormulaDataNotifier struct{}
+
+type getRawDataNotifier struct{}
 
 type addFormulaWgtRecNotifier struct{}
 

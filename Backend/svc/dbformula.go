@@ -19,12 +19,6 @@ type RawMaterialCategory struct {
 	CategoryName string `gorm:"not null"`
 }
 
-// 用于返回包含原料类型名称的原料数据
-type RawMaterialWithTypeName struct {
-	RawMaterial     RawMaterial `json:"rawMaterial"`
-	RawCategoryName string      `json:"rawCategoryName"`
-}
-
 // RawMaterial 原料表
 type RawMaterial struct {
 	RecId int `gorm:"primaryKey;autoincrement;not null"`
@@ -141,11 +135,6 @@ type FormulaDetail struct {
 	Remark string
 	// 备注1
 	Remark1 string
-}
-
-type FormulaDetailWithRaw struct {
-	FormulaDetail       FormulaDetail
-	RawMaterialTypeName RawMaterialWithTypeName
 }
 
 // FormulaWgtRecHeader 配方称重记录头表
@@ -277,8 +266,8 @@ type FormulaWgtRecDetail struct {
 }
 
 type FormulaList struct {
-	Header  FormulaHeaderWithType
-	Details []FormulaDetailWithRaw
+	Header  FormulaHeader
+	Details []FormulaDetail
 }
 
 type FormulaWgtRecList struct {
@@ -405,6 +394,40 @@ func (d *DbFormulaInfo) UpdateFormulaKeyInWgtRecHeader() error {
 
 	// 提交事务
 	return tx.Commit().Error
+}
+
+// 删除未使用的原料类别
+func (d *DbFormulaInfo) DeleteUnusedRawMaterialCategories() error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	return db.Where("NOT EXISTS (SELECT 1 FROM raw_materials WHERE raw_materials.category_id = raw_material_categories.category_id)").
+		Delete(&RawMaterialCategory{}).Error
+}
+
+// 删除未使用的配方类别
+func (d *DbFormulaInfo) DeleteUnusedFormulaCategories() error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	return db.Where("NOT EXISTS (SELECT 1 FROM formula_headers WHERE formula_headers.category_id = formula_categories.category_id)").
+		Delete(&FormulaCategory{}).Error
 }
 
 // 新增配方类别
@@ -703,6 +726,28 @@ func (d *DbFormulaInfo) CreateRawMaterial(material RawMaterial) error {
 	return db.Create(&material).Error
 }
 
+// 获取最大的原料ID
+func (d *DbFormulaInfo) GetMaxRawRecId() (int, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return 0, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return 0, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var maxId int
+	err = db.Raw("SELECT MAX(rec_id) FROM raw_materials").Scan(&maxId).Error
+	if err != nil {
+		return 0, err
+	}
+	return maxId, nil
+}
+
 // 批量新增原料
 func (d *DbFormulaInfo) CreateRawMaterialList(materials []RawMaterial) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -752,23 +797,42 @@ func (d *DbFormulaInfo) GetAllRawMaterials() ([]RawMaterial, error) {
 	return materials, err
 }
 
-// 根据 ID 获取原料
-func (d *DbFormulaInfo) GetRawMaterialByID(id int) (RawMaterial, error) {
+// 获取原料
+func (d *DbFormulaInfo) GetRawMaterial(recId int) ([]RawMaterial, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
-		return RawMaterial{}, err
+		return []RawMaterial{}, err
 	}
 	sqlDB, err := db.DB()
 	if err != nil {
-		return RawMaterial{}, err
+		return []RawMaterial{}, err
 	}
 	if sqlDB != nil {
 		defer sqlDB.Close()
 	}
-	var material RawMaterial
-	err = db.First(&material, id).Error
-	return material, err
+	var materials []RawMaterial
+	err = db.Find(&materials).Error
+	return materials, err
+}
+
+// 根据 ID 获取原料
+func (d *DbFormulaInfo) GetRawMaterialByID(id int) ([]RawMaterial, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return []RawMaterial{}, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return []RawMaterial{}, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var materials []RawMaterial
+	err = db.Where("rec_id = ?", id).Find(&materials).Error
+	return materials, err
 }
 
 // 更新原料
@@ -922,18 +986,7 @@ func (d *DbFormulaInfo) GetFormulaListByFormulaID(formulaID string) (FormulaList
 		return list, err
 	}
 
-	// 查询配方类别名称
-	var category FormulaCategory
-	err = db.First(&category, header.CategoryID).Error
-	if err != nil {
-		return list, err
-	}
-
-	// 组合成 FormulaHeaderWithType
-	list.Header = FormulaHeaderWithType{
-		FormulaHeader:       header,
-		FormulaCategoryName: category.CategoryName,
-	}
+	list.Header = header
 
 	// 查询配方明细信息
 	var formulaDetails []FormulaDetail
@@ -942,33 +995,8 @@ func (d *DbFormulaInfo) GetFormulaListByFormulaID(formulaID string) (FormulaList
 		return list, err
 	}
 
-	for _, formulaDetail := range formulaDetails {
-		// 查询原料信息
-		var rawMaterial RawMaterial
-		err = db.Where("material_id = ?", formulaDetail.MaterialID).First(&rawMaterial).Error
-		if err != nil {
-			return list, err
-		}
-
-		// 查询原料类别信息
-		var rawMaterialCategory RawMaterialCategory
-		err = db.Where("category_id = ?", rawMaterial.CategoryID).First(&rawMaterialCategory).Error
-		if err != nil {
-			return list, err
-		}
-
-		// 组合成 RawMaterialWithTypeName
-		rawMaterialWithTypeName := RawMaterialWithTypeName{
-			RawMaterial:     rawMaterial,
-			RawCategoryName: rawMaterialCategory.CategoryName,
-		}
-
-		// 组合成 FormulaDetailWithRaw
-		list.Details = append(list.Details, FormulaDetailWithRaw{
-			FormulaDetail:       formulaDetail,
-			RawMaterialTypeName: rawMaterialWithTypeName,
-		})
-	}
+	// 组合成 FormulaDetailWithRaw
+	list.Details = formulaDetails
 
 	return list, nil
 }
@@ -1003,6 +1031,45 @@ func (d *DbFormulaInfo) GetFormulaWgtRecListByRecordID(recordID string) (Formula
 	return list, nil
 }
 
+// 查询单个配方信息
+func (d *DbFormulaInfo) GetFormulaData(id int) ([]FormulaList, error) {
+
+	var formulaLists []FormulaList
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	var headers []FormulaHeader
+	err = db.Where("rec_id = ? AND is_used = ? AND is_latest = ?", id, true, true).Find(&headers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, header := range headers {
+		var formulaDetails []FormulaDetail
+		err = db.Where("formula_rec_id = ?", header.RecId).Find(&formulaDetails).Error
+		if err != nil {
+			return nil, err
+		}
+
+		formulaLists = append(formulaLists, FormulaList{
+			Header:  header,
+			Details: formulaDetails,
+		})
+	}
+
+	return formulaLists, nil
+
+}
+
 // 查询所有的 FormulaList
 func (d *DbFormulaInfo) GetAllFormulaLists() ([]FormulaList, error) {
 	var formulaLists []FormulaList
@@ -1025,58 +1092,15 @@ func (d *DbFormulaInfo) GetAllFormulaLists() ([]FormulaList, error) {
 	}
 
 	for _, header := range headers {
-		var details []FormulaDetailWithRaw
-		// 查询配方明细
 		var formulaDetails []FormulaDetail
 		err = db.Where("formula_rec_id = ?", header.RecId).Find(&formulaDetails).Error
 		if err != nil {
 			return nil, err
 		}
 
-		for _, formulaDetail := range formulaDetails {
-			// 查询原料信息
-			var rawMaterial RawMaterial
-			err = db.Where("material_id = ?", formulaDetail.MaterialID).First(&rawMaterial).Error
-			if err != nil {
-				return nil, err
-			}
-
-			// 查询原料类别信息
-			var rawMaterialCategory RawMaterialCategory
-			err = db.Where("category_id = ?", rawMaterial.CategoryID).First(&rawMaterialCategory).Error
-			if err != nil {
-				return nil, err
-			}
-
-			// 组合成 RawMaterialWithTypeName
-			rawMaterialWithTypeName := RawMaterialWithTypeName{
-				RawMaterial:     rawMaterial,
-				RawCategoryName: rawMaterialCategory.CategoryName,
-			}
-
-			// 组合成 FormulaDetailWithRaw
-			details = append(details, FormulaDetailWithRaw{
-				FormulaDetail:       formulaDetail,
-				RawMaterialTypeName: rawMaterialWithTypeName,
-			})
-		}
-
-		// 查询配方类别名称
-		var category FormulaCategory
-		err = db.First(&category, header.CategoryID).Error
-		if err != nil {
-			return nil, err
-		}
-
-		// 组合成 FormulaHeaderWithType
-		headerWithType := FormulaHeaderWithType{
-			FormulaHeader:       header,
-			FormulaCategoryName: category.CategoryName,
-		}
-
 		formulaLists = append(formulaLists, FormulaList{
-			Header:  headerWithType,
-			Details: details,
+			Header:  header,
+			Details: formulaDetails,
 		})
 	}
 
@@ -1378,32 +1402,6 @@ func (d *DbFormulaInfo) DeleteFormulaWgtRecByRecordID(recordID string) error {
 
 	// 提交事务
 	return tx.Commit().Error
-}
-
-// 获取所有包含原料类别名称的原料列表
-func (d *DbFormulaInfo) GetAllRawMaterialsWithTypeName() ([]RawMaterialWithTypeName, error) {
-	// 调用 GetAllRawMaterials 方法获取所有原料
-	materials, err := d.GetAllRawMaterials()
-	if err != nil {
-		return nil, err
-	}
-
-	var rawMaterialsWithTypeName []RawMaterialWithTypeName
-	for _, material := range materials {
-		// 根据原料的 CategoryID 获取原料类别
-		category, err := d.GetRawMaterialCategoryByID(material.CategoryID)
-		if err != nil {
-			return nil, err
-		}
-
-		// 组合成 RawMaterialWithTypeName
-		rawMaterialsWithTypeName = append(rawMaterialsWithTypeName, RawMaterialWithTypeName{
-			RawMaterial:     material,
-			RawCategoryName: category.CategoryName,
-		})
-	}
-
-	return rawMaterialsWithTypeName, nil
 }
 
 // 根据recId将配方标记为未使用

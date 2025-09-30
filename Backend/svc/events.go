@@ -630,6 +630,52 @@ func (u RawTypeDeleted) Trigger(mgr *SrvMgr, payload ReqAddRawType) {
 	}
 }
 
+// 删除未使用的原料类型
+var rawTypeUnusedDeleted RawTypeUnusedDeleted
+
+type RawTypeUnusedDeleted struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *RawTypeUnusedDeleted) Register(handler interface {
+	Handle(*SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u RawTypeUnusedDeleted) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
+// 删除未使用的配方类型
+var fmaTypeUnusedDeleted FmaTypeUnusedDeleted
+
+type FmaTypeUnusedDeleted struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *FmaTypeUnusedDeleted) Register(handler interface {
+	Handle(*SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u FmaTypeUnusedDeleted) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
 // 修改配方类型
 var fmaTypeModified FmaTypeModified
 
@@ -927,6 +973,52 @@ func (u *FormulaRecListed) Register(handler interface{ Handle(payload *SrvMgr) }
 func (u FormulaRecListed) Trigger(payload *SrvMgr) {
 	for _, handler := range u.handlers {
 		go handler.Handle(payload)
+	}
+}
+
+// 获取原料数据
+var rawDataGetted RawDataGetted
+
+type RawDataGetted struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *RawDataGetted) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u RawDataGetted) Trigger(mgr *SrvMgr, payload string) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取配方数据
+var formulaData FormulaData
+
+type FormulaData struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *FormulaData) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u FormulaData) Trigger(mgr *SrvMgr, payload string) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
 	}
 }
 

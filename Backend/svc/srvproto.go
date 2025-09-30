@@ -58,6 +58,8 @@ const (
 	REQ_SET_SCALE_SRV_VAL     ReqType = "set_scale_srv_val"
 	REQ_SET_DO_SERVICE_ACTION ReqType = "do_service_action"
 	REQ_ADD_RAW_TYPE          ReqType = "add_raw_type"          //添加原料类型
+	REQ_DEL_UNUSED_FMA_TYPE   ReqType = "del_unused_fma_type"   //删除未使用的配方类型
+	REQ_DEL_UNUSED_RAW_TYPE   ReqType = "del_unused_raw_type"   //删除未使用的原料类型
 	REQ_DEL_RAW_TYPE          ReqType = "del_raw_type"          //删除原料类型
 	REQ_EDIT_RAW_TYPE         ReqType = "edit_raw_type"         //修改原料类型
 	REQ_GET_RAW_TYPE_LIST     ReqType = "get_raw_type_list"     //获取原料类型列表
@@ -75,6 +77,8 @@ const (
 	REQ_ADD_FORMULA_DATA      ReqType = "add_formula_data"      //新增配方信息
 	REQ_EDIT_FORMULA_DATA     ReqType = "edit_formula_data"     //修改配方信息
 	REQ_GET_FORMULA_LIST      ReqType = "get_formula_list"      //获取配方信息列表
+	REQ_GET_FORMULA_DATA      ReqType = "get_fma_data"          //获取配方数据
+	REQ_GET_RAW_DATA          ReqType = "get_raw_data"          //获取原料数据
 	REQ_DELETE_FORMULA_DATA   ReqType = "delete_formula_data"   //删除配方信息
 	REQ_DELETE_MANY_FORMULA   ReqType = "del_many_fma"          //删除所有配方
 	REQ_DEL_MANY_RAW_DATA     ReqType = "del_many_raw"          //删除所有原料数据
@@ -353,8 +357,8 @@ type UpdateUser struct {
 	RoleId        int    `gorm:"not null;"`
 	Password      string `gorm:"not null"`
 	IsEnabled     bool   `gorm:"not null;default:true;"`
-	Email         string `gorm:"not null;"`
-	Phone         string `gorm:"not null;"`
+	Email         string  
+	Phone         string  
 	InitialPageId int
 	Remark        string
 	CreatedBy     int
@@ -392,6 +396,8 @@ type ReqSysUserIdList struct {
 
 // 配方头表
 type ReqAddFormulaHeader struct {
+	RecId int
+
 	FormulaKey int `gorm:"not null"`
 
 	// 配方编号（主键）
@@ -643,6 +649,8 @@ const (
 	SCALE_MGR_RESP_FMA_TYPE_EDIT                 ScaleMgrRespMsgType = "resp_fma_type_edit"
 	SCALE_MGR_RESP_FMA_TYPE_DELETE               ScaleMgrRespMsgType = "resp_fma_type_delete"
 	SCALE_MGR_RESP_FORMULA_TYPE_ADD              ScaleMgrRespMsgType = "resp_formula_type_add"
+	SCALE_MGR_RESP_RAW_TYPE_DEL_UNUSED           ScaleMgrRespMsgType = "resp_raw_type_unused_del"
+	SCALE_MGR_RESP_FORMULA_TYPE_DEL_UNUSED       ScaleMgrRespMsgType = "resp_fma_type_unused_del"
 	SCALE_MGR_RESP_FORMULA_TYPE_LIST             ScaleMgrRespMsgType = "resp_formula_type_list"
 	SCALE_MGR_RESP_RAW_TYPE_LIST                 ScaleMgrRespMsgType = "resp_raw_type_list"
 	SCALE_MGR_RESP_RAW_LIST                      ScaleMgrRespMsgType = "resp_raw_list"
@@ -654,6 +662,8 @@ const (
 	SCALE_MGR_RESP_FORMULA_ADD                   ScaleMgrRespMsgType = "resp_formula_add"
 	SCALE_MGR_RESP_FORMULA_UPDATE                ScaleMgrRespMsgType = "resp_formula_update"
 	SCALE_MGR_RESP_FORMULA_LIST                  ScaleMgrRespMsgType = "resp_formula_list"
+	SCALE_MGR_RESP_FORMULA                       ScaleMgrRespMsgType = "resp_formula_data"
+	SCALE_MGR_RESP_RAW                           ScaleMgrRespMsgType = "resp_raw_data"
 	SCALE_MGR_RESP_FORMULA_REC_ADD               ScaleMgrRespMsgType = "resp_formula_rec_add"
 	SCALE_MGR_RESP_FORMULA_REC_LIST              ScaleMgrRespMsgType = "resp_formula_rec_list"
 	SCALE_MGR_RESP_FORMULA_DELETE                ScaleMgrRespMsgType = "resp_formula_delete"

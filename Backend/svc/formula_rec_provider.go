@@ -48,6 +48,11 @@ func (p *FormulaRecProvider) InsertRawInfo(rec RawMaterial) error {
 	return p.infoPb.CreateRawMaterial(rec)
 }
 
+// 获取最大的原料ID
+func (p *FormulaRecProvider) GetMaxRawRecId() (int, error) {
+	return p.infoPb.GetMaxRawRecId()
+}
+
 // 新增原料信息列表
 func (p *FormulaRecProvider) InsertRawInfoList(rec []RawMaterial) error {
 	return p.infoPb.CreateRawMaterialList(rec)
@@ -56,6 +61,14 @@ func (p *FormulaRecProvider) InsertRawInfoList(rec []RawMaterial) error {
 // 新增配方类别
 func (p *FormulaRecProvider) InsertFormulaType(rec FormulaCategory) error {
 	return p.infoPb.CreateFormulaCategory(rec)
+}
+
+// 删除未使用的原料类别
+func (p *FormulaRecProvider) DeleteUnusedRawType() error {
+	return p.infoPb.DeleteUnusedRawMaterialCategories()
+}
+func (p *FormulaRecProvider) DeleteUnusedFormulaType() error {
+	return p.infoPb.DeleteUnusedFormulaCategories()
 }
 
 // 获取原料类别列表
@@ -71,8 +84,8 @@ func (p *FormulaRecProvider) GetFormulaTypeList() ([]FormulaCategory, error) {
 }
 
 // 获取原料列表
-func (p *FormulaRecProvider) GetRawDataList() ([]RawMaterialWithTypeName, error) {
-	recs, err := p.infoPb.GetAllRawMaterialsWithTypeName()
+func (p *FormulaRecProvider) GetRawDataList() ([]RawMaterial, error) {
+	recs, err := p.infoPb.GetAllRawMaterials()
 	return recs, err
 }
 
@@ -115,6 +128,18 @@ func (p *FormulaRecProvider) InsertFormulaBody(rec FormulaDetail) error {
 func (p *FormulaRecProvider) GetFormulaDataList() ([]FormulaList, error) {
 
 	return p.infoPb.GetAllFormulaLists()
+}
+
+// 获取单个配方信息
+func (p *FormulaRecProvider) GetFormulaData(recId int) ([]FormulaList, error) {
+
+	return p.infoPb.GetFormulaData(recId)
+}
+
+// 获取单个原料信息
+func (p *FormulaRecProvider) GetRawData(recId int) ([]RawMaterial, error) {
+
+	return p.infoPb.GetRawMaterialByID(recId)
 }
 
 // 根据配方编号获取配方
