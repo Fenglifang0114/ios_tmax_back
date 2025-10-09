@@ -982,10 +982,7 @@ func (p productListedNotifier) Handle(mgr *SrvMgr) {
 func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
 	// Do something for this event
 	l.Log.Debug("Handle addProductNotifier called")
-	// rec := ProductRec{Id: payload.Id, Product: payload.Product, WithPretare: payload.WithPretare, Pretare: payload.Pretare, Remarks: payload.Remarks}
-	// if err := mgr.productPd.InsertRec(rec); err != nil {
-	// 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: err.Error()}
-	// }
+
 	var recList []ProductRec
 	for _, product := range payload {
 		rec := ProductRec{
@@ -1003,6 +1000,8 @@ func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
 			LimitLow:    product.LimitLow,
 			CreateBy:    product.CreateBy,
 			UpdateBy:    product.CreateBy,
+			CreateUser:  product.CreateUser,
+			UpdateUser:  product.UpdateUser,
 		}
 		recList = append(recList, rec)
 
@@ -1011,7 +1010,7 @@ func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: err.Error()}
 		return
 	}
-	// send result back to requestee
+
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: "ok"}
 }
 
@@ -1034,6 +1033,8 @@ func (p addOneProductNotifier) Handle(mgr *SrvMgr, payload AddProduct) {
 		LimitLow:    payload.LimitLow,
 		CreateBy:    payload.CreateBy,
 		UpdateBy:    payload.UpdateBy,
+		CreateUser:  payload.CreateUser,
+		UpdateUser:  payload.UpdateUser,
 	}
 
 	if err := mgr.productPd.InsertRec(product); err != nil {
@@ -1101,6 +1102,7 @@ func (p modifyProductNotifier) Handle(mgr *SrvMgr, payload AddProduct) {
 		LimitHigh:   payload.LimitHigh,
 		LimitLow:    payload.LimitLow,
 		UpdateBy:    payload.UpdateBy,
+		UpdateUser:  payload.UpdateUser,
 	}
 
 	if err := mgr.productPd.ModifyRec(product); err != nil {

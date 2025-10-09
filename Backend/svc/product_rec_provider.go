@@ -49,7 +49,7 @@ func (p *ProductRecProvider) BatchModifyRec(rec []ProductRec) error {
 	return p.recPb.BatchUpdateProductRec(rec)
 }
 
-func (p *ProductRecProvider) UpdateProductRecEnabled(rec []int, enabled bool, updateBy int) error {
+func (p *ProductRecProvider) UpdateProductRecEnabled(rec []int, enabled bool, updateBy string) error {
 	return p.recPb.UpdateProductRecEnabled(rec, enabled, updateBy)
 }
 func (p *ProductRecProvider) GetLastProductRec() (ProductRec, error) {

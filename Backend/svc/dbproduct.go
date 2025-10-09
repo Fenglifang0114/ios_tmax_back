@@ -32,6 +32,8 @@ type ProductRec struct {
 	CreateBy    int  `gorm:"default:1"`
 	UpdateBy    int  `gorm:"default:1"`
 	Enabled     bool `gorm:"default:true"`
+	CreateUser  string
+	UpdateUser  string
 }
 
 func NewDbProductRec(dbName string) (*DbProductRec, error) {
@@ -187,6 +189,7 @@ func (d *DbProductRec) UpdateProductRec(rec ProductRec) error {
 		"updated_at":   time.Now(),
 		"created_at":   oldRec.CreatedAt,
 		"create_by":    oldRec.CreateBy,
+		"update_user":  rec.UpdateUser,
 	})
 	if result.Error != nil {
 		return result.Error
@@ -312,7 +315,7 @@ func (d *DbProductRec) DeleteAllProductRecs() error {
 }
 
 // 批量启用或者停用PLU
-func (d *DbProductRec) UpdateProductRecEnabled(pluList []int, enabled bool, updateBy int) error {
+func (d *DbProductRec) UpdateProductRecEnabled(pluList []int, enabled bool, updateUser string) error {
 
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -329,8 +332,8 @@ func (d *DbProductRec) UpdateProductRecEnabled(pluList []int, enabled bool, upda
 	// 批量更新
 	result := db.Model(&ProductRec{}).Where("rec_id IN ?", pluList).Updates(map[string]interface{}{
 
-		"enabled":   enabled,
-		"update_by": updateBy,
+		"enabled":     enabled,
+		"update_user": updateUser,
 	})
 	if result.Error != nil {
 		return result.Error

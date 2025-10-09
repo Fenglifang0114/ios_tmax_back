@@ -169,6 +169,8 @@ type AddProduct struct {
 	LimitLow    string
 	CreateBy    int
 	UpdateBy    int
+	CreateUser  string
+	UpdateUser  string
 }
 
 type ReqDelProduct struct {
@@ -178,7 +180,7 @@ type ReqDelProduct struct {
 type ReqUpdateEnabledPlu struct {
 	PluList  []int
 	Enabled  bool
-	UpdateBy int
+	UpdateBy string
 }
 
 type ReqModifyProduct struct {
@@ -357,8 +359,8 @@ type UpdateUser struct {
 	RoleId        int    `gorm:"not null;"`
 	Password      string `gorm:"not null"`
 	IsEnabled     bool   `gorm:"not null;default:true;"`
-	Email         string  
-	Phone         string  
+	Email         string
+	Phone         string
 	InitialPageId int
 	Remark        string
 	CreatedBy     int
