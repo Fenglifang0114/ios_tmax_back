@@ -1611,6 +1611,29 @@ func (u Login) Trigger(mgr *SrvMgr, payload ReqLogin) {
 	}
 }
 
+// 登出
+var logout Logout
+
+type Logout struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *Logout) Register(handler interface {
+	Handle(mgr *SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u Logout) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
 // 获取所有用户
 var getAllUsers GetAllUsers
 
@@ -1653,6 +1676,317 @@ func (u *GetUserDetail) Register(handler interface {
 
 // Trigger sends out an event with the payload
 func (u GetUserDetail) Trigger(mgr *SrvMgr, payload ReqSysUserName) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 新增系统日志记录
+var addSysLog AddSysLog
+
+type AddSysLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqAddSysLog)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *AddSysLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqAddSysLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u AddSysLog) Trigger(mgr *SrvMgr, payload ReqAddSysLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 新增称重日志记录
+var addScaleLog AddScaleLog
+
+type AddScaleLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqAddScaleLog)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *AddScaleLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqAddScaleLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u AddScaleLog) Trigger(mgr *SrvMgr, payload ReqAddScaleLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取系统日志列表
+var getAllSysLog GetAllSysLog
+
+type GetAllSysLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqGetLog)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetAllSysLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqGetLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetAllSysLog) Trigger(mgr *SrvMgr, payload ReqGetLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取校准记录列表
+var getAllCalLog GetAllCalLog
+
+type GetAllCalLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqGetLog)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetAllCalLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqGetLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetAllCalLog) Trigger(mgr *SrvMgr, payload ReqGetLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取称重日志列表
+var getAllScaleLog GetAllScaleLog
+
+type GetAllScaleLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqGetLog)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetAllScaleLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqGetLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetAllScaleLog) Trigger(mgr *SrvMgr, payload ReqGetLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除所有系统日志
+var delAllSysLog DelAllSysLog
+
+type DelAllSysLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+func (u *DelAllSysLog) Register(handler interface {
+	Handle(mgr *SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u DelAllSysLog) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
+// 删除所有校准记录
+var delAllCalLog DelAllCalLog
+
+type DelAllCalLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+func (u *DelAllCalLog) Register(handler interface {
+	Handle(mgr *SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u DelAllCalLog) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
+// 删除所有称重记录
+var delAllScaleLog DelAllScaleLog
+
+type DelAllScaleLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+func (u *DelAllScaleLog) Register(handler interface {
+	Handle(mgr *SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u DelAllScaleLog) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
+// 删除多条系统日志
+var delMultiSysLog DelMultiSysLog
+
+type DelMultiSysLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDelLogs)
+	}
+}
+
+func (u *DelMultiSysLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqDelLogs)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u DelMultiSysLog) Trigger(mgr *SrvMgr, payload ReqDelLogs) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除多条校准记录
+var delMultiCalLog DelMultiCalLog
+
+type DelMultiCalLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDelLogs)
+	}
+}
+
+func (u *DelMultiCalLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqDelLogs)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u DelMultiCalLog) Trigger(mgr *SrvMgr, payload ReqDelLogs) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 删除多条称重日志
+var delMultiScaleLog DelMultiScaleLog
+
+type DelMultiScaleLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDelLogs)
+	}
+}
+
+func (u *DelMultiScaleLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqDelLogs)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u DelMultiScaleLog) Trigger(mgr *SrvMgr, payload ReqDelLogs) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 导出系统日志
+var exportSysLog ExportSysLog
+
+type ExportSysLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqExportLog)
+	}
+}
+
+func (u *ExportSysLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqExportLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u ExportSysLog) Trigger(mgr *SrvMgr, payload ReqExportLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 导出校准记录
+var exportCalLog ExportCalLog
+
+type ExportCalLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqExportLog)
+	}
+}
+
+func (u *ExportCalLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqExportLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u ExportCalLog) Trigger(mgr *SrvMgr, payload ReqExportLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 导出称重记录
+var exportScaleLog ExportScaleLog
+
+type ExportScaleLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqExportLog)
+	}
+}
+
+func (u *ExportScaleLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqExportLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u ExportScaleLog) Trigger(mgr *SrvMgr, payload ReqExportLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 增加标定记录
+var addCalRecord AddCalRecord
+
+type AddCalRecord struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload CalibrationLog)
+	}
+}
+
+func (u *AddCalRecord) Register(handler interface {
+	Handle(mgr *SrvMgr, payload CalibrationLog)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u AddCalRecord) Trigger(mgr *SrvMgr, payload CalibrationLog) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
 	}

@@ -211,9 +211,9 @@ func (s *TSerial) readScale() (int, error) {
 
 	if n > 0 {
 
-		log.Log.Infof("******serial port Got: %x ", string(s.tmpbuf[0:n]))
+		// log.Log.Infof("******serial port Got: %x ", string(s.tmpbuf[0:n]))
 
-		log.Log.Infof("******serial port Got: %v ", string(s.tmpbuf[0:n]))
+		// log.Log.Infof("******serial port Got: %v ", string(s.tmpbuf[0:n]))
 		// fmt.Printf("recv data:%x ", string(s.tmpbuf[0:n]))
 		// fmt.Printf("data:%s\n", string(s.tmpbuf[0:n]))
 		if err := s.queue.EnqueueN(s.tmpbuf[0:n], n); err != nil {

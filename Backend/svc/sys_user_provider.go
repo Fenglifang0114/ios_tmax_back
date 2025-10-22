@@ -22,19 +22,21 @@ func (p *SysUserProvider) GetUserDetail(userName string) (*userRolePermission, e
 	return &user, err
 }
 
-// 获取用户信息
-func (p *SysUserProvider) GetUserInfo(userName string) (*SysUser, error) {
-	user, err := p.infoPb.GetUserByUsername(userName)
-	if err != nil {
-		return nil, err
-	}
-
+// 获取用户详情
+func (p *SysUserProvider) GetUserInfoById(userId int) (*SysUser, error) {
+	user, err := p.infoPb.GetUserByUserId(userId)
 	return user, err
 }
 
+// 获取多个用户详情
+func (p *SysUserProvider) GetManyUserInfoById(userIds []int) ([]SysUser, error) {
+	users, err := p.infoPb.GetManyUserByUserIds(userIds)
+	return users, err
+}
+
 // 获取用户信息
-func (p *SysUserProvider) GetUserInfoById(userId int) (*SysUser, error) {
-	user, err := p.infoPb.GetUserByUserId(userId)
+func (p *SysUserProvider) GetUserInfo(userName string) (*SysUser, error) {
+	user, err := p.infoPb.GetUserByUsername(userName)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +77,8 @@ func (p *SysUserProvider) UpdateUserPassword(userId int, password string) error 
 }
 
 // 禁用用户
-func (p *SysUserProvider) DisableUser(userId int, isEnabled bool) error {
-	return p.infoPb.DisableUser(userId, isEnabled)
+func (p *SysUserProvider) DisableUser(userId int, isEnabled bool, updateBy int, updateByName string) error {
+	return p.infoPb.DisableUser(userId, isEnabled, updateBy, updateByName)
 }
 
 // 登录

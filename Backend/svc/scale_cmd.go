@@ -467,6 +467,9 @@ func (c *Scale) AddRec(rec ScaleRec) error {
 	// rec.ScaleModel = c.Model
 	// rec.ScaleSn = c.Sn
 	scaleModeInt, _ := strconv.Atoi(rec.ScaleMode)
+
+	LogScaleWgtOperation(scaleModeInt, rec, "")
+
 	switch scaleModeInt {
 	case NORMAL_WEIGHT_MODE:
 		return c.scaleMgr.recPb.InsertRec(rec)

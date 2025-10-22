@@ -42,6 +42,9 @@ type SysUser struct {
 	UpdatedTime   time.Time `gorm:"autoUpdateTime"`
 	CreatedBy     int
 	UpdatedBy     int
+	CreatedByName string
+	UpdatedByName string
+	IsChanged     bool `gorm:"not null;default:false;"`
 }
 
 // 操作员-页面关联表
@@ -272,6 +275,25 @@ func (d *DbSysUser) GetUserByUserId(userId int) (*SysUser, error) {
 	return &user, nil
 }
 
+// 获取多个用户详情
+func (d *DbSysUser) GetManyUserByUserIds(userIds []int) ([]SysUser, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return []SysUser{}, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return []SysUser{}, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var users []SysUser
+	result := db.Find(&users, "user_id IN ?", userIds)
+	return users, result.Error
+}
+
 // 更新用户
 
 func (d *DbSysUser) UpdateUser(user *SysUser, pswUpdated bool) error {
@@ -301,6 +323,7 @@ func (d *DbSysUser) UpdateUser(user *SysUser, pswUpdated bool) error {
 			return fmt.Errorf("fail to update user: %w", err)
 		}
 		user.Password = encryptedPassword
+		user.IsChanged = true
 	}
 
 	// 2. 执行更新操作（仅更新提供的字段）
@@ -401,6 +424,7 @@ func (d *DbSysUser) ChangePassword(userId int, newPassword string) error {
 
 	// 更新密码
 	user.Password = hashedNewPassword
+	user.IsChanged = true
 	err = db.Save(&user).Error
 	if err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
@@ -411,7 +435,7 @@ func (d *DbSysUser) ChangePassword(userId int, newPassword string) error {
 
 // 禁用用户
 
-func (d *DbSysUser) DisableUser(userID int, isEnabled bool) error {
+func (d *DbSysUser) DisableUser(userID int, isEnabled bool, updateBy int, updateByName string) error {
 
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -433,6 +457,8 @@ func (d *DbSysUser) DisableUser(userID int, isEnabled bool) error {
 	}
 
 	user.IsEnabled = isEnabled
+	user.UpdatedBy = updateBy
+	user.UpdatedByName = updateByName
 	if err := db.Save(&user).Error; err != nil {
 		return fmt.Errorf("failed to disable user: %w", err)
 	}
@@ -531,6 +557,7 @@ type userRolePermission struct {
 	RoleID        int    `json:"roleId"`
 	RoleName      string `json:"roleName"`
 	InitialPageID int    `json:"initialPageId"`
+	IsChanged     bool   `json:"isChanged"`
 	PageIDList    []int  `json:"pageIdList"`
 }
 
@@ -587,6 +614,7 @@ func (d *DbSysUser) GetUserRolePermission(userName string) (userRolePermission, 
 		RoleID:        sysRole.RoleId,
 		RoleName:      sysRole.RoleName,
 		InitialPageID: sysUser.InitialPageId,
+		IsChanged:     sysUser.IsChanged,
 		PageIDList:    pageIDs,
 	}
 

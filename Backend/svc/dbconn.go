@@ -333,3 +333,27 @@ func (d *DbScaleConn) DeleteSrvScaleRelAll() error {
 
 	return nil
 }
+
+func (d *DbScaleConn) getNameById(id int64) string {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var scale ScaleConnMedia
+
+	result := db.Where("scale_id=?", id).First(&scale)
+
+	if result.RowsAffected == 0 {
+		return ""
+	}
+
+	return scale.ScaleName
+}

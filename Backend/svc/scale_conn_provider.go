@@ -48,3 +48,7 @@ func (p *ScaleConnProvider) DeleteSrvScaleRelByScaleId(scaleId int64) error {
 func (p *ScaleConnProvider) InsertSrvScaleRel(rel SrvScaleRel) error {
 	return p.connPb.InsertSrvScaleRel(rel)
 }
+
+func (p *ScaleConnProvider) GetScaleNameById(scaleId int64) string {
+	return p.connPb.getNameById(scaleId)
+}

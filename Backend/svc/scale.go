@@ -759,6 +759,8 @@ func ReqModifyBTName(s *Scale, name string) (*ScaleRespMsg, error) {
 		return msg, err
 	}
 
+	SaveUpdateBtNameLog(s.Conn.ScaleName, name)
+
 	return s.ModifyBTName(name)
 }
 
@@ -775,6 +777,8 @@ func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
 		msg.MsgType = m.SEND_DATA_TO_BT_RESP
 		return msg, err
 	}
+
+	SaveUpdateBtPowerLog(s.Conn.ScaleName, data)
 
 	return SendDataToBT(s, data+"\r\n\x00")
 }
@@ -2214,6 +2218,9 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			l.Log.Info("send bin ok")
 		}
 	}
+
+	SaveDownLabelFmtToScaleLog(c.Conn.ScaleName, req.ReqData)
+
 	return &ScaleRespMsg{m.DOWN_PRN_FMT_RESP, "ok", c.Id}, nil
 }
 
@@ -2349,6 +2356,7 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,Check for over 150 variables, excessive 8K print format, or incorrect print format")
 	}
 
+	SaveDownLabelFmtToScaleLog(c.Conn.ScaleName, req.ReqData)
 	return &ScaleRespMsg{m.DOWN_DEFAULT_PRN_FMT_RESP, "ok", c.Id}, nil
 }
 func getEepromData(c *Scale, readLen int) ([]byte, error) {
@@ -3001,6 +3009,8 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 	}()
 
+	SaveUpdateFirmwareLog(c.Conn.ScaleName, parts[0], "Serial Port")
+
 	writeStringToFile(string(binData), tmpFile.Name())
 	switch bootloaderVersion {
 	case BOOTLOADER_NEW:
@@ -3260,6 +3270,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 
 	l.Log.Info("send bin ok")
+	SaveUpdateFirmwareLog(c.Conn.ScaleName, req.ReqData, "Network")
 
 	// 重启
 	Reboot(c)
@@ -3495,7 +3506,10 @@ func ReqSetScaleTime(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, fmt.Errorf("set time fail")
 	}
 
+	SaveSetScaleTimeLog(c.Conn.ScaleName, num)
+
 	return &ScaleRespMsg{m.SET_SCALE_TIME_RESP, "ok", c.Id}, nil
+
 }
 
 func ReqDelPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {

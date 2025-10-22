@@ -2,6 +2,7 @@ package svc
 
 import (
 	"net"
+	"time"
 
 	"go.bug.st/serial"
 
@@ -108,9 +109,26 @@ const (
 	REQ_UPDATE_SYS_USER  ReqType = "update_sys_user"  //更新系统用户
 	REQ_DISABLE_SYS_USER ReqType = "disable_sys_user" //禁用系统用户
 	REQ_CHANGE_PASSWORD  ReqType = "change_password"  //修改密码
-	REQ_LOGIN            ReqType = "login"            //登录
+	REQ_LOGIN            ReqType = "login"            //登录、
+	REQ_LOGOUT           ReqType = "logout"           //登出
 	REQ_GET_ALL_USERS    ReqType = "get_all_users"    //获取所有用户列表
 	REQ_GET_USER_DETAIL  ReqType = "get_user_detail"  //获取用户详情
+
+	REQ_ADD_SYS_LOG       ReqType = "add_sys_log"       //新增系统日志记录
+	REQ_ADD_CAL_LOG       ReqType = "add_cal_log"       //新增校准日志记录
+	REQ_ADD_SCALE_LOG     ReqType = "add_scale_log"     //新增称重日志记录
+	REQ_DEL_SYS_LOG       ReqType = "del_sys_log"       //删除系统日志记录
+	REQ_DEL_CAL_LOG       ReqType = "del_cal_log"       //删除校准日志记录
+	REQ_DEL_SCALE_LOG     ReqType = "del_scale_log"     //删除称重日志记录
+	REQ_DEL_ALL_SYS_LOG   ReqType = "del_all_sys_log"   //删除所有系统日志记录
+	REQ_DEL_ALL_CAL_LOG   ReqType = "del_all_cal_log"   //删除所有校准日志记录
+	REQ_DEL_ALL_SCALE_LOG ReqType = "del_all_scale_log" //删除所有称重日志记录
+	REQ_EXPORT_SYS_LOG    ReqType = "export_sys_log"    //导出系统日志记录
+	REQ_EXPORT_CAL_LOG    ReqType = "export_cal_log"    //导出校准日志记录
+	REQ_EXPORT_SCALE_LOG  ReqType = "export_scale_log"  //导出称重日志记录
+	REQ_GET_SYS_LOG       ReqType = "get_sys_log"       //获取系统日志记录
+	REQ_GET_CAL_LOG       ReqType = "get_cal_log"       //获取校准日志记录
+	REQ_GET_SCALE_LOG     ReqType = "get_scale_log"     //获取称重日志记录
 
 )
 
@@ -377,8 +395,9 @@ type ReqChangePassword struct {
 
 // 登录
 type ReqLogin struct {
-	UserName string
-	Password string
+	UserName  string
+	Password  string
+	AutoLogin bool
 }
 
 // 用户
@@ -396,12 +415,69 @@ type ReqSysUserIdList struct {
 	UserIds []int
 }
 
+// 新增系统日志记录
+type ReqAddSysLog struct {
+	RecId         int
+	Operator      string
+	RoleId        int
+	Module        string
+	FuncName      string
+	OperationType string
+	Operation     string
+	Remarks       string
+	CreateTime    time.Time
+}
+
+// 标定日志
+
+// 称重日志
+type ReqAddScaleLog struct {
+	RecId      int
+	Operator   string
+	RoleId     int
+	Module     string
+	ScaleId    int
+	ScaleName  string
+	ModelName  string
+	Sn         string
+	Weight     string
+	Unit       string
+	Remarks    string
+	CreateTime time.Time
+}
+
+type ReqDelLogs struct {
+	RecId []int
+}
+
+type ReqExportLog struct {
+	FilePath    string
+	FieldName   string
+	Direction   string
+	Search      LogQuery
+	Translation map[string]string
+}
+
+type ReqGetLog struct {
+	Page      int
+	PageSize  int
+	FieldName string
+	Direction string
+	Search    LogQuery
+}
+
+type LogQuery struct {
+	Operator  string // 操作员
+	Module    string
+	RoleId    int    // 角色ID
+	StartTime string // 创建时间起始
+	EndTime   string // 创建时间结束
+}
+
 // 配方头表
 type ReqAddFormulaHeader struct {
-	RecId int
-
+	RecId      int
 	FormulaKey int `gorm:"not null"`
-
 	// 配方编号（主键）
 	FormulaID string `gorm:"not null"`
 	// 配方名称
@@ -699,6 +775,26 @@ const (
 	SCALE_MGR_RESP_LOGIN            ScaleMgrRespMsgType = "resp_login"            //登录
 	SCALE_MGR_RESP_GET_ALL_USERS    ScaleMgrRespMsgType = "resp_get_all_users"    //获取所有用户列表
 	SCALE_MGR_RESP_GET_USER_DETAIL  ScaleMgrRespMsgType = "resp_get_user_detail"  //获取用户详情
+
+	SCALE_MGR_RESP_SYS_LOG_ADD   ScaleMgrRespMsgType = "resp_sys_log_add"   //新增系统日志记录
+	SCALE_MGR_RESP_CAL_LOG_ADD   ScaleMgrRespMsgType = "resp_cal_log_add"   //新增校准日志记录
+	SCALE_MGR_RESP_SCALE_LOG_ADD ScaleMgrRespMsgType = "resp_scale_log_add" //新增称重日志记录
+
+	SCALE_MGR_RESP_DEL_SYS_LOG   ScaleMgrRespMsgType = "resp_del_sys_log"   //删除系统日志记录
+	SCALE_MGR_RESP_DEL_CAL_LOG   ScaleMgrRespMsgType = "resp_del_cal_log"   //删除校准日志记录
+	SCALE_MGR_RESP_DEL_SCALE_LOG ScaleMgrRespMsgType = "resp_del_scale_log" //删除称重日志记录
+
+	SCALE_MGR_RESP_DEL_ALL_SYS_LOG   ScaleMgrRespMsgType = "resp_del_all_sys_log"   //删除所有系统日志记录
+	SCALE_MGR_RESP_DEL_ALL_CAL_LOG   ScaleMgrRespMsgType = "resp_del_all_cal_log"   //删除所有校准日志记录
+	SCALE_MGR_RESP_DEL_ALL_SCALE_LOG ScaleMgrRespMsgType = "resp_del_all_scale_log" //删除所有称重日志记录
+
+	SCALE_MGR_RESP_GET_SYS_LOG_LIST   ScaleMgrRespMsgType = "resp_get_sys_log_list"   //获取系统日志记录列表
+	SCALE_MGR_RESP_GET_CAL_LOG_LIST   ScaleMgrRespMsgType = "resp_get_cal_log_list"   //获取校准日志记录列表
+	SCALE_MGR_RESP_GET_SCALE_LOG_LIST ScaleMgrRespMsgType = "resp_get_scale_log_list" //获取称重日志记录列表
+
+	SCALE_MGR_RESP_EXPORT_SYS_LOG   ScaleMgrRespMsgType = "resp_export_sys_log"   //导出系统日志记录列表
+	SCALE_MGR_RESP_EXPORT_CAL_LOG   ScaleMgrRespMsgType = "resp_export_cal_log"   //导出校准日志记录列表
+	SCALE_MGR_RESP_EXPORT_SCALE_LOG ScaleMgrRespMsgType = "resp_export_scale_log" //导出称重日志记录列表
 
 )
 

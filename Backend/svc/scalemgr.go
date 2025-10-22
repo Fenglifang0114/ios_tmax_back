@@ -25,7 +25,6 @@ type ScaleMgr struct {
 	recTakeOutPb      *ScaleRecTakeOutProvider
 	medias            []*ScaleConnMedia // scale connections meida
 	detailPb          *DetailRecProvider
-	// formulaPb         *FormulaRecProvider
 }
 
 func NewScaleMgr() *ScaleMgr {
@@ -274,11 +273,59 @@ func init() {
 	createLoginNotifier := loginNotifier{}
 	login.Register(createLoginNotifier)
 
+	createLogoutNotifier := logoutNotifier{}
+	logout.Register(createLogoutNotifier)
+
 	createGetAllUsersNotifier := getAllUsersNotifier{}
 	getAllUsers.Register(createGetAllUsersNotifier)
 
 	createGetUserDetailNotifier := getUserDetailNotifier{}
 	getUserDetail.Register(createGetUserDetailNotifier)
+
+	createSysLogNotifier := addSysLogNotifier{}
+	addSysLog.Register(createSysLogNotifier)
+
+	createScaleLogNotifier := addScaleLogNotifier{}
+	addScaleLog.Register(createScaleLogNotifier)
+
+	deleteSysLogNotifier := delSysLogNotifier{}
+	delMultiSysLog.Register(deleteSysLogNotifier)
+
+	deleteCalLogNotifier := delCalLogNotifier{}
+	delMultiCalLog.Register(deleteCalLogNotifier)
+
+	deleteScaleLogNotifier := delScaleLogNotifier{}
+	delMultiScaleLog.Register(deleteScaleLogNotifier)
+
+	deleteAllSysLogNotifier := delAllSysLogNotifier{}
+	delAllSysLog.Register(deleteAllSysLogNotifier)
+
+	deleteAllCalLogNotifier := delAllCalLogNotifier{}
+	delAllCalLog.Register(deleteAllCalLogNotifier)
+
+	deleteAllScaleLogNotifier := delAllScaleLogNotifier{}
+	delAllScaleLog.Register(deleteAllScaleLogNotifier)
+
+	getAllSysLogNotifier := getSysLogNotifier{}
+	getAllSysLog.Register(getAllSysLogNotifier)
+
+	getAllCalLogNotifier := getCalLogNotifier{}
+	getAllCalLog.Register(getAllCalLogNotifier)
+
+	getAllScaleLogNotifier := getScaleLogNotifier{}
+	getAllScaleLog.Register(getAllScaleLogNotifier)
+
+	exportAllSysLogNotifier := exportSysLogNotifier{}
+	exportSysLog.Register(exportAllSysLogNotifier)
+
+	exportAllCalLogNotifier := exportCalLogNotifier{}
+	exportCalLog.Register(exportAllCalLogNotifier)
+
+	exportAllScaleLogNotifier := exportScaleLogNotifier{}
+	exportScaleLog.Register(exportAllScaleLogNotifier)
+
+	addCalRecordNotifier := addCalLogNotifier{}
+	addCalRecord.Register(addCalRecordNotifier)
 
 }
 
@@ -431,9 +478,41 @@ type changePasswordNotifier struct{}
 
 type loginNotifier struct{}
 
+type logoutNotifier struct{}
+
 type getAllUsersNotifier struct{}
 
 type getUserDetailNotifier struct{}
+
+type addSysLogNotifier struct{}
+
+type addScaleLogNotifier struct{}
+
+type delSysLogNotifier struct{}
+
+type delCalLogNotifier struct{}
+
+type delScaleLogNotifier struct{}
+
+type delAllSysLogNotifier struct{}
+
+type delAllCalLogNotifier struct{}
+
+type delAllScaleLogNotifier struct{}
+
+type getSysLogNotifier struct{}
+
+type getCalLogNotifier struct{}
+
+type getScaleLogNotifier struct{}
+
+type exportSysLogNotifier struct{}
+
+type exportCalLogNotifier struct{}
+
+type exportScaleLogNotifier struct{}
+
+type addCalLogNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event
@@ -524,6 +603,7 @@ func (p addScaleNotifier) Handle(payload ReqAddScale) {
 	}
 	// send ports list back to requestee
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALES_LIST, MsgBody: scalesStr}
+	SaveAddScaleLog(payload)
 }
 
 func (p detailListedNotifier) Handle(scaleMgr *ScaleMgr) {
@@ -599,6 +679,9 @@ func (p delScaleNotifier) Handle(payload ReqDelScale) { //修改秤的属性
 		return
 	}
 
+	delScaleInfo := mSrvMgr.scaleMgr.scales[payload.ScaleId].Conn.MediaConf
+	delScaleName := mSrvMgr.scaleMgr.scales[payload.ScaleId].Conn.ScaleName
+
 	if err := mSrvMgr.scaleMgr.DelScale(payload.ScaleId); err != nil {
 		log.Log.Errorf("%v\n", err)
 		resp := MgrRespMsg{IsAck: true, AckData: err.Error()}
@@ -610,11 +693,17 @@ func (p delScaleNotifier) Handle(payload ReqDelScale) { //修改秤的属性
 	jsonStr, _ := json.MarshalToString(resp)
 	// send ports list back to requestee
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_DEL, MsgBody: jsonStr}
+	SaveDelScaleInfoLog(delScaleInfo, delScaleName)
 }
 
 func (p modifyScaleNotifier) Handle(payload ReqModifyScale) { //修改秤的属性
 	// Do something for this event
 	log.Log.Debug("Handle modifyScaleNotifier called")
+
+	oldMedia := mSrvMgr.scaleMgr.scales[payload.ScaleId].Conn.MediaConf
+	newMedia := payload.MediaConf
+	scaleName := mSrvMgr.scaleMgr.scales[payload.ScaleId].Conn.ScaleName
+
 	if err := mSrvMgr.scaleMgr.UpdateScale(payload); err != nil {
 		log.Log.Errorf("%v\n", err)
 		resp := MgrRespMsg{IsAck: true, AckData: err.Error()}
@@ -625,11 +714,16 @@ func (p modifyScaleNotifier) Handle(payload ReqModifyScale) { //修改秤的属�
 	jsonStr, _ := json.MarshalToString(resp)
 	// send ports list back to requestee
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_MODIFY, MsgBody: jsonStr}
+
+	SaveModifyScaleLog(newMedia, oldMedia, scaleName)
 }
 
 func (p modifyScaleNameNotifier) Handle(payload ReqModifyScaleName) { //修改秤的属性
 	// Do something for this event
 	log.Log.Debug("Handle modifyScaleNameNotifier called")
+
+	oldName := mSrvMgr.scaleMgr.scales[payload.ScaleId].Conn.ScaleName
+
 	if err := mSrvMgr.scaleMgr.UpdateScaleName(payload); err != nil {
 		log.Log.Errorf("%v\n", err)
 		resp := MgrRespMsg{IsAck: true, AckData: err.Error()}
@@ -640,6 +734,8 @@ func (p modifyScaleNameNotifier) Handle(payload ReqModifyScaleName) { //修改�
 	jsonStr, _ := json.MarshalToString(resp)
 	// send ports list back to requestee
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_MODIFY, MsgBody: jsonStr}
+	SaveModifyScaleNameLog(payload.ScaleName, oldName)
+
 }
 
 // Run function will scan the scale from the scale list that from database, will inform srvMgr if any scale's online state is changed

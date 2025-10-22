@@ -66,6 +66,8 @@ type SrvMgr struct {
 	uiConfig    *UiConfig
 	modeSetting *ModeSettingProvider
 	sysUserPd   *SysUserProvider
+	sysLogPd    *LogRecProvider
+
 	//服务与秤的关系
 	srvScaleRel []*SrvScaleRel
 }
@@ -101,6 +103,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 	formulaPb := NewFormulaRecProvider()
 	flowRatePb := NewFlowRateProvider()
 	sysUserPb := NewSysUserProvider()
+	sysLogPb := NewLogRecProvider()
 
 	var licKey string
 
@@ -152,6 +155,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		uiConfig:           NewUiConfig(),
 		modeSetting:        modeSettingPb,
 		sysUserPd:          sysUserPb,
+		sysLogPd:           sysLogPb,
 		srvScaleRel:        make([]*SrvScaleRel, 0),
 	}
 }
@@ -813,6 +817,8 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			login.Trigger(scaleMgr.srvMgr, data)
 		}
+	case REQ_LOGOUT:
+		logout.Trigger(scaleMgr.srvMgr)
 	case REQ_GET_ALL_USERS:
 		getAllUsers.Trigger(scaleMgr.srvMgr)
 
@@ -897,6 +903,114 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			}
 		}
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_KILL_BOOT_COMMANDER, MsgBody: "ok"}
+	case REQ_ADD_SYS_LOG:
+		jsonStr := req.ReqData
+		var data ReqAddSysLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			addSysLog.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_ADD_CAL_LOG:
+		jsonStr := req.ReqData
+		var data CalibrationLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			addCalRecord.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_ADD_SCALE_LOG:
+		jsonStr := req.ReqData
+		var data ReqAddScaleLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			addScaleLog.Trigger(scaleMgr.srvMgr, data)
+		}
+
+	case REQ_DEL_SYS_LOG:
+		jsonStr := req.ReqData
+		var data ReqDelLogs
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			delMultiSysLog.Trigger(scaleMgr.srvMgr, data)
+		}
+
+	case REQ_DEL_CAL_LOG:
+		jsonStr := req.ReqData
+		var data ReqDelLogs
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			delMultiCalLog.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_DEL_SCALE_LOG:
+		jsonStr := req.ReqData
+		var data ReqDelLogs
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			delMultiScaleLog.Trigger(scaleMgr.srvMgr, data)
+		}
+
+	case REQ_DEL_ALL_SYS_LOG:
+		delAllSysLog.Trigger(scaleMgr.srvMgr)
+
+	case REQ_DEL_ALL_CAL_LOG:
+		delAllCalLog.Trigger(scaleMgr.srvMgr)
+	case REQ_DEL_ALL_SCALE_LOG:
+		delAllScaleLog.Trigger(scaleMgr.srvMgr)
+
+	case REQ_EXPORT_SYS_LOG:
+		jsonStr := req.ReqData
+		var data ReqExportLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			exportSysLog.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_EXPORT_CAL_LOG:
+		jsonStr := req.ReqData
+		var data ReqExportLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			exportCalLog.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_EXPORT_SCALE_LOG:
+		jsonStr := req.ReqData
+		var data ReqExportLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			exportScaleLog.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_GET_SYS_LOG:
+		jsonStr := req.ReqData
+		var data ReqGetLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			getAllSysLog.Trigger(scaleMgr.srvMgr, data)
+		}
+
+	case REQ_GET_CAL_LOG:
+		jsonStr := req.ReqData
+		var data ReqGetLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			getAllCalLog.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_GET_SCALE_LOG:
+		jsonStr := req.ReqData
+		var data ReqGetLog
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			getAllScaleLog.Trigger(scaleMgr.srvMgr, data)
+		}
 
 	}
 
@@ -1404,50 +1518,59 @@ func IsServiceRunning(serviceName string) bool {
 	return status.State == svc.Running
 }
 
-//配方秤
-
+// 配方秤原料类型新增
 func (p addRawTypeNotifier) Handle(mgr *SrvMgr, payload ReqAddRawType) {
 	// Do something for this event
 	l.Log.Debug("Handle addRawTypeNotifier called")
 	var rec RawMaterialCategory = RawMaterialCategory{CategoryName: payload.Name}
 	if err := NewFormulaRecProvider().InsertRawType(rec); err != nil {
-		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_ADD, MsgBody: err.Error()}
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_ADD, MsgBody: ""}
+	jsonStr, _ := json.MarshalToString(TypeName{Type: payload.Name})
+	LogSysOperation(MenuFormulaManage, SubFmaRawTypeAdd, OpAddStr, jsonStr, "ok", "")
 }
 
+// 配方类型新增
 func (p addFormulaTypeNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaType) {
 	// Do something for this event
 	l.Log.Debug("Handle addFormulaTypeNotifier called")
 	var rec FormulaCategory = FormulaCategory{CategoryName: payload.Name}
 	if err := NewFormulaRecProvider().InsertFormulaType(rec); err != nil {
-		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_ADD, MsgBody: err.Error()}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_ADD, MsgBody: ""}
+
+	jsonStr, _ := json.MarshalToString(TypeName{Type: payload.Name})
+	LogSysOperation(MenuFormulaManage, SubFormulaTypeAdd, OpAddStr, jsonStr, "ok", "")
 }
 
+// 配方秤原料类型清除未使用的
 func (p delRawTypeUnusedNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
 	l.Log.Debug("Handle delRawTypeUnusedNotifier called")
 	if err := NewFormulaRecProvider().DeleteUnusedRawType(); err != nil {
-		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_DEL_UNUSED, MsgBody: err.Error()}
+		return
 	}
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_DEL_UNUSED, MsgBody: ""}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_DEL_UNUSED, MsgBody: "ok"}
+	LogSysOperation(MenuFormulaManage, SubFmaRawTypeClearUnused, OpClearStr, "", "ok", "")
 }
 
+// 配方类型清除未使用的
 func (p delFmaTypeUnusedNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
 	l.Log.Debug("Handle delFmaTypeUnusedNotifier called")
 	if err := NewFormulaRecProvider().DeleteUnusedFormulaType(); err != nil {
-		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_DEL_UNUSED, MsgBody: err.Error()}
+		return
 	}
-	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_DEL_UNUSED, MsgBody: ""}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_DEL_UNUSED, MsgBody: "ok"}
+	LogSysOperation(MenuFormulaManage, SubFormulaTypeClearUnused, OpClearStr, "", "ok", "")
 }
 
+// 配方秤原料类型列表
 func (p getRawTypeListNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
 	l.Log.Debug("Handle getRawTypeListNotifier called")
@@ -1456,11 +1579,13 @@ func (p getRawTypeListNotifier) Handle(mgr *SrvMgr) {
 	var err error
 	if typesStr, err = json.MarshalToString(types); err != nil {
 		l.Log.Error(err)
-
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_LIST, MsgBody: ""}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_LIST, MsgBody: typesStr}
 }
 
+// 配方类型列表
 func (p getFormulaTypeListNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
 	l.Log.Debug("Handle getFormulaTypeListNotifier called")
@@ -1469,11 +1594,13 @@ func (p getFormulaTypeListNotifier) Handle(mgr *SrvMgr) {
 	var err error
 	if typesStr, err = json.MarshalToString(types); err != nil {
 		l.Log.Error(err)
-
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_LIST, MsgBody: ""}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_TYPE_LIST, MsgBody: typesStr}
 }
 
+// 原料数据新增
 func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
 	// Do something for this event
 	l.Log.Debug("Handle addRawTypeNotifier called")
@@ -1489,8 +1616,8 @@ func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
 		ScaleId:      payload.ScaleId,
 	}
 	if err := NewFormulaRecProvider().InsertRawInfo(rec); err != nil {
-		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: "failed to get max raw id"}
+		return
 	}
 
 	//获取最大的原料ID
@@ -1499,8 +1626,8 @@ func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: "failed to get max raw id"}
 		return
 	}
-
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: "ok," + strconv.Itoa(maxId)}
+	SaveFmaRawDataLog(payload)
 }
 
 // //导入原料数据列表
@@ -1514,7 +1641,6 @@ func (p rawListImportedNotifier) Handle(mgr *SrvMgr, payload ReqImportRawList) {
 		if v.CategoryName != "" {
 			categoryNames = append(categoryNames, v.CategoryName)
 		}
-
 	}
 	//去掉重复值
 	categoryNames = removeDuplicates(categoryNames)
@@ -1622,11 +1748,8 @@ func (p formulaListImportedNotifier) Handle(mgr *SrvMgr, payload ReqImportFmaLis
 
 	//再导入配方数据
 	headerKey, _ := NewFormulaRecProvider().GetMaxFormulaRecKey() //获取最新的配方ID
-
 	fmaDataList := []FmaDataImportInfo{}
-
 	for _, v := range payload.FmaInfo {
-
 		//根据类型名称查出类型ID
 		categoryId := 0
 		if v.Category != "" {
@@ -1640,7 +1763,6 @@ func (p formulaListImportedNotifier) Handle(mgr *SrvMgr, payload ReqImportFmaLis
 				mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_LIST_IMPORT, MsgBody: "failed to get formula type id"}
 				return
 			}
-
 		}
 
 		FmaDataImportInfo := FmaDataImportInfo{}
@@ -1714,21 +1836,33 @@ func (p rawTypeEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawType) {
 		CategoryID:   payload.Id,
 		CategoryName: payload.Name,
 	}
-	if err := NewFormulaRecProvider().UpdateRawType(rec); err != nil {
+	rawType, _ := mgr.formulaPd.GetRawTypeByID(payload.Id)
 
-		// TODO: error handling
+	if err := mgr.formulaPd.UpdateRawType(rec); err != nil {
+
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_EDIT, MsgBody: err.Error()}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_EDIT, MsgBody: "ok"}
+
+	jsonStr, _ := json.MarshalToString(UpdateTypeInfo{NewType: payload.Name, OldType: rawType.CategoryName})
+
+	LogSysOperation(MenuFormulaManage, SubFmaRawTypeUpdate, OpUpdateStr, jsonStr, "ok", "")
+
 }
+
+// 删除原料类型
 func (p rawTypeDeletedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawType) {
 	// Do something for this event
 	l.Log.Debug("Handle rawTypeDeletedNotifier called")
-	if err := NewFormulaRecProvider().DeleteRawType(payload.Name); err != nil {
-		// TODO: error handling
+	if err := mgr.formulaPd.DeleteRawType(payload.Name); err != nil {
+
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_DELETE, MsgBody: err.Error()}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_TYPE_DELETE, MsgBody: "ok"}
+	jsonStr, _ := json.MarshalToString(TypeName{Type: payload.Name})
+	LogSysOperation(MenuFormulaManage, SubFmaRawTypeDel, OpDeleteStr, jsonStr, "ok", "")
 }
 
 // 修改配方类型
@@ -1739,22 +1873,30 @@ func (p fmaTypeEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawType) {
 		CategoryID:   payload.Id,
 		CategoryName: payload.Name,
 	}
+
+	formulaType, _ := NewFormulaRecProvider().GetFormulaCategoryByID(payload.Id)
 	if err := NewFormulaRecProvider().UpdateFmaType(rec); err != nil {
 
-		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_TYPE_EDIT, MsgBody: err.Error()}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_TYPE_EDIT, MsgBody: "ok"}
+	jsonStr, _ := json.MarshalToString(UpdateTypeInfo{NewType: payload.Name, OldType: formulaType.CategoryName})
+	LogSysOperation(MenuFormulaManage, SubFormulaTypeUpdate, OpUpdateStr, jsonStr, "ok", "")
 }
+
+// 删除配方类型
 func (p fmaTypeDeletedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawType) {
 	// Do something for this event
 	l.Log.Debug("Handle fmaTypeDeletedNotifier called")
 	if err := NewFormulaRecProvider().DeleteFmaType(payload.Name); err != nil {
 
-		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_TYPE_DELETE, MsgBody: err.Error()}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FMA_TYPE_DELETE, MsgBody: "ok"}
+	jsonStr, _ := json.MarshalToString(TypeName{Type: payload.Name})
+	LogSysOperation(MenuFormulaManage, SubFormulaTypeDel, OpDeleteStr, jsonStr, "ok", "")
 }
 
 // 获取原料列表
@@ -1795,6 +1937,8 @@ func (p rawDataEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawData) {
 	// Do something for this event
 	l.Log.Debug("Handle rawDataEditedNotifier called")
 
+	oldRawData, _ := NewFormulaRecProvider().GetRawData(payload.RecId)
+
 	var rec RawMaterial = RawMaterial{
 		RecId:        payload.RecId,
 		MaterialID:   payload.MaterialID,
@@ -1809,10 +1953,12 @@ func (p rawDataEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawData) {
 	}
 
 	if err := NewFormulaRecProvider().UpdateRawInfo(rec); err != nil {
-		// TODO: error handling
+
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_EDIT, MsgBody: err.Error()}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_EDIT, MsgBody: "ok," + strconv.Itoa(payload.RecId)}
+	SaveUpdateFmaRawDataLog(payload, oldRawData)
 }
 
 func (p rawDataDeletedNotifier) Handle(mgr *SrvMgr, payload ReqDelRawData) {
@@ -1820,10 +1966,12 @@ func (p rawDataDeletedNotifier) Handle(mgr *SrvMgr, payload ReqDelRawData) {
 	l.Log.Debug("Handle rawDataDeletedNotifier called")
 	rec := payload.RecId
 	if err := NewFormulaRecProvider().DeleteRawInfo(rec); err != nil {
-		// TODO: error handling
+
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_DELETE, MsgBody: "failed to delete raw info"}
+		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_DELETE, MsgBody: "ok," + strconv.Itoa(rec)}
+	//TODO: 增加日志记录
 }
 
 // 增加配方
@@ -1850,8 +1998,9 @@ func (p addFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 	}
 
 	if err := NewFormulaRecProvider().InsertFormulaHeader(header); err != nil {
-		// TODO: error handling
+
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_ADD, MsgBody: err.Error()}
+		return
 	}
 
 	headerId, _ := NewFormulaRecProvider().GetMaxFormulaRecId() //获取最新的配方ID
@@ -1867,12 +2016,13 @@ func (p addFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 			Remark:             detail.Remark,
 		}
 		if err := NewFormulaRecProvider().InsertFormulaBody(tempRec); err != nil {
-			// TODO: error handling
+
 			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_ADD, MsgBody: err.Error()}
+			return
 		}
 	}
-
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_ADD, MsgBody: "ok," + strconv.Itoa(headerId)}
+	SaveFmaDataAddLog(payload)
 
 }
 
@@ -1880,6 +2030,8 @@ func (p addFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 func (p editFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 	// Do something for this event
 	l.Log.Debug("Handle editFormulaRecNotifier called")
+
+	oldData, _ := NewFormulaRecProvider().GetFormulaListByFormulaID(payload.Header.FormulaID)
 
 	var header FormulaHeader = FormulaHeader{
 		RecId:         payload.Header.RecId,
@@ -1913,11 +2065,13 @@ func (p editFormulaRecNotifier) Handle(mgr *SrvMgr, payload ReqAddFormulaData) {
 	}
 
 	if err := NewFormulaRecProvider().UpdateFormula(header, details); err != nil {
-		// TODO: error handling
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_UPDATE, MsgBody: "failed to update formula"}
+		return
 	}
 
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_UPDATE, MsgBody: "ok," + strconv.Itoa(payload.Header.RecId)}
+
+	SaveUpdateFmaDataLog(payload, oldData)
 
 }
 
@@ -2161,6 +2315,7 @@ func (p addFormulaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqFormulaWgtRec) 
 		}
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_REC_ADD, MsgBody: "ok"}
+	//TODO: 增加日志记录
 }
 
 // 获取配方称重记录
@@ -2197,6 +2352,9 @@ func (p getFormulaWgtRecListNotifier) Handle(mgr *SrvMgr) {
 func (p delFormulaNotifier) Handle(mgr *SrvMgr, payload ReqDelFmaData) {
 	// Do something for this event
 	l.Log.Debug("Handle delFormulaNotifier called")
+
+	oldFmaData, _ := NewFormulaRecProvider().GetFormulaByRecId(payload.RecId)
+
 	rec := payload.RecId
 	if err := NewFormulaRecProvider().DeleteFormula(rec); err != nil {
 
@@ -2204,6 +2362,7 @@ func (p delFormulaNotifier) Handle(mgr *SrvMgr, payload ReqDelFmaData) {
 		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_FORMULA_DELETE, MsgBody: "ok," + strconv.Itoa(rec)}
+	SaveDeleteFormulaLog(oldFmaData)
 
 }
 
@@ -2218,6 +2377,9 @@ func (p delAllFormulaNotifier) Handle(mgr *SrvMgr, payload ReqDelAllFmaData) {
 		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_MANY_FMA_DELETE, MsgBody: "ok"}
+	//TODO: 增加日志记录
+	//记录删除的配方，以及配方相关的暂存的称重记录
+	// SaveDeleteManyFormulaLog(oldFmaData)
 
 }
 
@@ -2232,6 +2394,7 @@ func (p delAllRawDataNotifier) Handle(mgr *SrvMgr, payload ReqDelAllRawData) {
 		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_MANY_RAW_DELETE, MsgBody: "ok"}
+	//TODO: 增加日志记录
 
 }
 
@@ -2239,6 +2402,9 @@ func (p delAllRawDataNotifier) Handle(mgr *SrvMgr, payload ReqDelAllRawData) {
 func (p delAllDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqDeleteAllDraftFmaWgtRec) {
 	// Do something for this event
 	l.Log.Debug("Handle delAllDraftFmaWgtRecNotifier called")
+
+	// 查询暂存配方称重记录ByOrderId
+	draftFmaWgtRecLists, _ := NewFormulaRecProvider().GetDraftFmaWgtRecByOrderId(payload.OrderId)
 	recs := payload.OrderId
 	if err := NewFormulaRecProvider().DeleteAllDraftFmaWgtRec(recs); err != nil {
 
@@ -2246,6 +2412,11 @@ func (p delAllDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqDeleteAllDr
 		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_MANY_DRAFT_FMA_WGT_REC_DELETE, MsgBody: "ok"}
+	//记录删除的暂存配方称重记录
+	if len(draftFmaWgtRecLists) == 0 {
+		return
+	}
+	SaveDeleteManyDraftFmaWgtRecLog(draftFmaWgtRecLists)
 
 }
 
@@ -2341,7 +2512,10 @@ func (p delWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqDelWgtRec) {
 
 	}
 
+	SaveClearScaleWgtLog(int(mode))
+
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC, MsgBody: "ok"}
+
 }
 
 // 删除称重记录
@@ -2379,6 +2553,7 @@ func (p delWgtRecByIdNotifier) Handle(mgr *SrvMgr, payload ReqDelWgtRecById) {
 
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_WGT_REC_BY_ID, MsgBody: "ok"}
+	//TODO: 增加日志记录
 }
 
 // 获取称重记录
@@ -2524,6 +2699,7 @@ func (p addWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqAddWgtRec) {
 
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_WGT_REC, MsgBody: "ok"}
+	SaveAddScaleWgtLog(payload)
 
 }
 
@@ -2697,6 +2873,7 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 
 	// 发送成功消息
 	mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: "ok"}
+	//TODO: 增加日志记录
 }
 
 //获取自动下一步设置
@@ -2731,6 +2908,7 @@ func (p updateAutoNextNotifier) Handle(mgr *SrvMgr, payload ReqUpdateAutoNext) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_AUTO_NEXT, MsgBody: err.Error()}
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_AUTO_NEXT, MsgBody: "ok"}
+	//TODO: 增加日志记录
 }
 
 // 创建暂存配方
@@ -2782,12 +2960,17 @@ func (p addDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload DrafFmaWgtRecInfo
 		}
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CREATE_DRAFT_FMA_WGT_REC, MsgBody: "ok"}
+	//TODO: 增加日志记录
+	SaveFmaDarftAddLog(payload)
 }
 
 // 删除暂存的配方
 func (p deleteDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqDeleteDraftFmaWgtRec) {
 	// Do something for this event
 	l.Log.Debug("Handle deleteDraftFmaWgtRecNotifier called")
+	orders := []string{payload.OrderId}
+
+	draftFmaWgtRecLists, _ := NewFormulaRecProvider().GetDraftFmaWgtRecByOrderId(orders)
 
 	if err := NewFormulaRecProvider().DeleteDraftFmaWgtRec(payload.OrderId); err != nil {
 		l.Log.Error(err)
@@ -2795,6 +2978,7 @@ func (p deleteDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload ReqDeleteDraft
 		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DELETE_DRAFT_FMA_WGT_REC, MsgBody: "ok"}
+	SaveFmaDarftDelLog(draftFmaWgtRecLists)
 }
 
 // 更新暂存配方
@@ -2802,12 +2986,16 @@ func (p updateDraftFmaWgtRecNotifier) Handle(mgr *SrvMgr, payload DrafFmaWgtRecI
 	// Do something for this event
 	l.Log.Debug("Handle updateDraftFmaWgtRecNotifier called")
 
+	orders := []string{payload.Header.OrderId}
+	draftFmaWgtRecLists, _ := NewFormulaRecProvider().GetDraftFmaWgtRecByOrderId(orders)
+
 	if err := NewFormulaRecProvider().UpdateDraftFmaWgtRec(payload); err != nil {
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_DRAFT_FMA_WGT_REC, MsgBody: err.Error()}
 		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_DRAFT_FMA_WGT_REC, MsgBody: "ok"}
+	SaveFmaDarftUpdateLog(payload, draftFmaWgtRecLists)
 }
 
 // 获取暂存配方列表
@@ -2835,6 +3023,8 @@ func (p addSysUserNotifier) Handle(mgr *SrvMgr, payload ReqAddSysUser) {
 	// Do something for this event
 	l.Log.Debug("Handle addSysUserNotifier called")
 
+	_, username, _ := GetCurrentUser()
+
 	userInfo := SysUser{
 		CreatedBy:     payload.CreatedBy,
 		UpdatedBy:     payload.UpdatedBy,
@@ -2846,6 +3036,8 @@ func (p addSysUserNotifier) Handle(mgr *SrvMgr, payload ReqAddSysUser) {
 		Phone:         payload.Phone,
 		InitialPageId: payload.InitialPageId,
 		Remark:        payload.Remark,
+		CreatedByName: username,
+		UpdatedByName: username,
 	}
 	err := mSrvMgr.sysUserPd.AddUser(&userInfo)
 	if err != nil {
@@ -2869,26 +3061,30 @@ func (p addSysUserNotifier) Handle(mgr *SrvMgr, payload ReqAddSysUser) {
 		return
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_ADD_SYS_USER, MsgBody: "ok"}
+
+	jsonStr := SaveAddUserFunc(newUser, pagesId)
+	LogSysOperation(MenuUserManage, SubAdd, OpAddStr, jsonStr, "ok", "")
 }
 
 // 删除用户
 func (p deleteSysUserNotifier) Handle(mgr *SrvMgr, payload ReqSysUserIdList) {
 	// Do something for this event
 	l.Log.Debug("Handle deleteSysUserNotifier called")
-
+	// 记录操作日志
+	users, _ := mSrvMgr.sysUserPd.GetManyUserInfoById(payload.UserIds)
 	if err := mSrvMgr.sysUserPd.DeleteUser((payload.UserIds)); err != nil {
-
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DELETE_SYS_USER, MsgBody: "fail,delete user failed"}
 		return
 	}
-
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DELETE_SYS_USER, MsgBody: "ok"}
+
+	jsonStr := SaveDelUserFunc(users)
+	LogSysOperation(MenuUserManage, SubDel, OpDeleteStr, jsonStr, "ok", "")
 }
 
 // 更新用户
 func (p updateSysUserNotifier) Handle(mgr *SrvMgr, payload ReqUpdateSysUser) {
-	// Do something for this event
 	l.Log.Debug("Handle updateSysUserNotifier called")
 	// 检查用户是否存在
 	user, err := mSrvMgr.sysUserPd.GetUserInfoById(payload.UpdateUser.UserId)
@@ -2897,6 +3093,13 @@ func (p updateSysUserNotifier) Handle(mgr *SrvMgr, payload ReqUpdateSysUser) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,user not exist"}
 		return
 	}
+
+	// 比较新旧数据，找出变更的字段和原始值
+	updatedFields, oldFieldValues := CompareUserFields(user, payload.UpdateUser)
+
+	// 检查页面权限是否有变化
+	pagesChanged, oldPages := ComparePages(user.UserName, payload.PagesId)
+	_, username, _ := GetCurrentUser()
 	userInfo := SysUser{
 		UserId:        user.UserId,
 		CreatedBy:     user.CreatedBy,
@@ -2912,12 +3115,23 @@ func (p updateSysUserNotifier) Handle(mgr *SrvMgr, payload ReqUpdateSysUser) {
 		InitialPageId: payload.UpdateUser.InitialPageId,
 		Remark:        payload.UpdateUser.Remark,
 		UpdatedBy:     payload.UpdateUser.UpdatedBy,
+		UpdatedByName: username,
 	}
+
 	// 密码是否更新
 	pswUpdated := false
 	if payload.UpdateUser.Password != user.Password {
 		pswUpdated = true
+		updatedFields["Password"] = "***"  // 新密码用***表示
+		oldFieldValues["Password"] = "***" // 旧密码也用***表示
 	}
+
+	// 如果没有字段更新且页面权限没有变化，则不记录日志
+	if len(updatedFields) == 0 && !pagesChanged && !pswUpdated {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "ok"}
+		return
+	}
+
 	err = mSrvMgr.sysUserPd.UpdateUser(&userInfo, pswUpdated)
 	if err != nil {
 		l.Log.Error(err)
@@ -2925,25 +3139,36 @@ func (p updateSysUserNotifier) Handle(mgr *SrvMgr, payload ReqUpdateSysUser) {
 		return
 	}
 
-	// 清除用户所有页面权限
-	err = mSrvMgr.sysUserPd.ClearAllPagePermissions(userInfo.UserId)
-	if err != nil {
-		l.Log.Error(err)
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,update user failed"}
-		return
-	}
+	// 检查页面权限是否有变化
+	if pagesChanged {
+		// 清除用户所有页面权限
+		err = mSrvMgr.sysUserPd.ClearAllPagePermissions(userInfo.UserId)
+		if err != nil {
+			l.Log.Error(err)
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,update user failed"}
+			return
+		}
 
-	// 更新用户页面权限
-	pagesId := payload.PagesId
-	err = mSrvMgr.sysUserPd.UpdateUserPageId(userInfo.UserId, pagesId)
-	if err != nil {
-		l.Log.Error(err)
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,update user failed"}
-		return
+		// 更新用户页面权限
+		pagesId := payload.PagesId
+		err = mSrvMgr.sysUserPd.UpdateUserPageId(userInfo.UserId, pagesId)
+		if err != nil {
+			l.Log.Error(err)
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "fail,update user failed"}
+			return
+		}
+
+		updatedFields["PagesId"] = payload.PagesId
+		oldFieldValues["PagesId"] = oldPages
 	}
 
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_SYS_USER, MsgBody: "ok"}
 
+	// 只记录变更的字段
+	if len(updatedFields) > 0 {
+		jsonStr := SaveUpdateUserLog(user.UserName, user.NickName, updatedFields, oldFieldValues)
+		LogSysOperation(MenuUserManage, SubUpdate, OpUpdateStr, jsonStr, "ok", "")
+	}
 }
 
 // 禁用用户
@@ -2951,13 +3176,31 @@ func (p disableSysUserNotifier) Handle(mgr *SrvMgr, payload ReqEnabledSysUserId)
 	// Do something for this event
 	l.Log.Debug("Handle disableSysUserNotifier called")
 
-	err := mSrvMgr.sysUserPd.DisableUser(payload.UserId, payload.IsEnabled)
+	userid, username, _ := GetCurrentUser()
+
+	err := mSrvMgr.sysUserPd.DisableUser(payload.UserId, payload.IsEnabled, userid, username)
 	if err != nil {
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DISABLE_SYS_USER, MsgBody: "fail,disable user failed"}
 		return
 	}
+
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DISABLE_SYS_USER, MsgBody: "ok"}
+
+	userPerm, _ := mSrvMgr.sysUserPd.GetUserInfoById(payload.UserId)
+	type ReqEnabledSysUserName struct {
+		Account   string
+		UserName  string
+		IsEnabled bool
+	}
+	reqInfo := ReqEnabledSysUserName{
+		Account:   userPerm.UserName,
+		UserName:  userPerm.NickName,
+		IsEnabled: payload.IsEnabled,
+	}
+
+	jsonStr, _ := json.MarshalToString(reqInfo)
+	LogSysOperation(MenuUserManage, SubUserManageEnabled, OpEnabledStr, jsonStr, "ok", "")
 
 }
 
@@ -2972,6 +3215,7 @@ func (p changePasswordNotifier) Handle(mgr *SrvMgr, payload ReqChangePassword) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHANGE_PASSWORD, MsgBody: "fail,change password failed"}
 		return
 	}
+	LogSysOperation(MenuUserManage, SubUserManageEditPswd, OpUpdateStr, "", "ok", "")
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHANGE_PASSWORD, MsgBody: "ok"}
 }
 
@@ -2979,17 +3223,42 @@ func (p changePasswordNotifier) Handle(mgr *SrvMgr, payload ReqChangePassword) {
 func (p loginNotifier) Handle(mgr *SrvMgr, payload ReqLogin) {
 	// Do something for this event
 	l.Log.Debug("Handle loginNotifier called")
-	res, err := mSrvMgr.sysUserPd.Login(payload.UserName, payload.Password)
-	if err != nil {
-		l.Log.Error(err)
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "fail,login failed"}
-		return
-	}
-	if res {
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "ok"}
+
+	if payload.AutoLogin {
+		userPerm, _ := mSrvMgr.sysUserPd.GetUserDetail(payload.UserName)
+		SetCurrentUser(userPerm.UserID, userPerm.NickName, userPerm.RoleID)
+		// 记录登录日志
+		LogSysOperation(MenuSystem, SubSysLogin, OpLoginStr, "", "ok", "")
+
 	} else {
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "fail,login failed"}
+
+		res, err := mSrvMgr.sysUserPd.Login(payload.UserName, payload.Password)
+		if err != nil {
+			l.Log.Error(err)
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "fail,login failed"}
+			return
+		}
+		if res {
+
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "ok"}
+			userPerm, _ := mSrvMgr.sysUserPd.GetUserDetail(payload.UserName)
+			SetCurrentUser(userPerm.UserID, userPerm.NickName, userPerm.RoleID)
+			// 记录登录日志
+			LogSysOperation(MenuSystem, SubSysLogin, OpLoginStr, "", "ok", "")
+		} else {
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "fail,login failed"}
+		}
+
 	}
+
+}
+
+// 登出
+func (p logoutNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle logoutNotifier called")
+	LogSysOperation(MenuSystem, SubSysLogout, OpLogoutStr, "", "ok", "")
+	SetCurrentUser(0, "", 0)
 }
 
 // 获取所有用户列表
@@ -3033,4 +3302,318 @@ func (p getUserDetailNotifier) Handle(mgr *SrvMgr, payload ReqSysUserName) {
 	}
 	// 发送消息
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_USER_DETAIL, MsgBody: string(userStr)}
+}
+
+// 新增系统日志记录
+func (p addSysLogNotifier) Handle(mgr *SrvMgr, payload ReqAddSysLog) {
+	// Do something for this event
+	l.Log.Debug("Handle addSysLogNotifier called")
+
+	newLog := Syslog{
+		CreateTime:    time.Now(),
+		FuncName:      payload.FuncName,
+		Module:        payload.Module,
+		Operation:     payload.Operation,
+		OperationType: payload.OperationType,
+		Operator:      payload.Operator,
+		RecId:         payload.RecId,
+		Remarks:       payload.Remarks,
+	}
+
+	err := mSrvMgr.sysLogPd.AddSyslog(newLog)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SYS_LOG_ADD, MsgBody: "fail,add sys log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SYS_LOG_ADD, MsgBody: "ok"}
+}
+
+// 新增称重记录
+func (p addScaleLogNotifier) Handle(mgr *SrvMgr, payload ReqAddScaleLog) {
+	// Do something for this event
+	l.Log.Debug("Handle addScaleLogNotifier called")
+	newLog := ScaleWgtLog{
+		Operator:   payload.Operator,
+		RoleId:     payload.RoleId,
+		ScaleName:  payload.ScaleName,
+		Module:     payload.Module,
+		ModelName:  payload.ModelName,
+		Sn:         payload.Sn,
+		Unit:       payload.Unit,
+		Weight:     payload.Weight,
+		Remarks:    payload.Remarks,
+		CreateTime: time.Now(),
+	}
+
+	err := mSrvMgr.sysLogPd.AddScaleLog(newLog)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_LOG_ADD, MsgBody: "fail,add scale log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_LOG_ADD, MsgBody: "ok"}
+	//校准日志已经是日志了。所以这里不需要记录操作日志。
+}
+
+// 删除系统日志记录
+func (p delSysLogNotifier) Handle(mgr *SrvMgr, payload ReqDelLogs) {
+	// Do something for this event
+	l.Log.Debug("Handle delSysLogNotifier called")
+
+	err := mSrvMgr.sysLogPd.DeleteSyslog(payload.RecId)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_SYS_LOG, MsgBody: "fail,delete sys log failed"}
+		return
+	}
+
+	jsonStr, _ := json.Marshal(payload)
+	LogSysOperation(MenuSysLog, SubLogDel, OpDeleteStr, string(jsonStr), "ok", "")
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_SYS_LOG, MsgBody: "ok"}
+
+}
+
+// 删除校准日志
+func (p delCalLogNotifier) Handle(mgr *SrvMgr, payload ReqDelLogs) {
+	// Do something for this event
+	l.Log.Debug("Handle delCalLogNotifier called")
+
+	logs, err := mSrvMgr.sysLogPd.GetCalibrationLogByID(payload.RecId)
+	if err != nil {
+		l.Log.Error(err)
+	}
+
+	err = mSrvMgr.sysLogPd.DeleteCalibrationLog(payload.RecId)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_CAL_LOG, MsgBody: "fail,delete calibration log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_CAL_LOG, MsgBody: "ok"}
+	jsonStr := SaveDelCalLog(logs)
+	LogSysOperation(MenuCalLog, SubLogDel, OpDeleteStr, string(jsonStr), "ok", "")
+}
+
+// 删除称重日志
+func (p delScaleLogNotifier) Handle(mgr *SrvMgr, payload ReqDelLogs) {
+	// Do something for this event
+	l.Log.Debug("Handle delScaleLogNotifier called")
+
+	logs, err := mSrvMgr.sysLogPd.GetScaleLogByID(payload.RecId)
+	if err != nil {
+		l.Log.Error(err)
+	}
+	err = mSrvMgr.sysLogPd.DeleteScaleLog(payload.RecId)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_SCALE_LOG, MsgBody: "fail,delete scale log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_SCALE_LOG, MsgBody: "ok"}
+	jsonStr := SaveDelScaleLog(logs)
+
+	LogSysOperation(MenuScaleLog, SubLogDel, OpDeleteStr, string(jsonStr), "ok", "")
+}
+
+// 删除所有系统日志记录
+func (p delAllSysLogNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle delAllSysLogNotifier called")
+	err := mSrvMgr.sysLogPd.DeleteAllSyslog()
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_ALL_SYS_LOG, MsgBody: "fail,delete all sys log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_ALL_SYS_LOG, MsgBody: "ok"}
+	LogSysOperation(MenuSysLog, SubLogClear, OpClearStr, "", "ok", "")
+}
+
+// 删除所有校准日志记录
+func (p delAllCalLogNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle delAllCalLogNotifier called")
+	err := mSrvMgr.sysLogPd.DeleteAllCalibrationLog()
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_ALL_CAL_LOG, MsgBody: "fail,delete all calibration log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_ALL_CAL_LOG, MsgBody: "ok"}
+	LogSysOperation(MenuCalLog, SubLogClear, OpClearStr, "", "ok", "")
+}
+
+// 删除所有称重日志记录
+func (p delAllScaleLogNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle delAllScaleLogNotifier called")
+	err := mSrvMgr.sysLogPd.DeleteAllScaleLog()
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_ALL_SCALE_LOG, MsgBody: "fail,delete all scale log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DEL_ALL_SCALE_LOG, MsgBody: "ok"}
+	LogSysOperation(MenuScaleLog, SubLogClear, OpClearStr, "", "ok", "")
+}
+
+// 获取系统日志记录
+func (p getSysLogNotifier) Handle(mgr *SrvMgr, payload ReqGetLog) {
+	// Do something for this event
+	l.Log.Debug("Handle getSysLogNotifier called")
+	syslogQuery := GetSearchLog(payload.Search)
+	logs, total, err := mSrvMgr.sysLogPd.GetSyslog(payload.Page, payload.PageSize, payload.FieldName, payload.Direction, syslogQuery)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_SYS_LOG_LIST, MsgBody: "fail,get sys log failed"}
+		return
+	}
+
+	SyslogList := SyslogList{Total: int(total), Logs: logs}
+	jsonStr, _ := json.Marshal(SyslogList)
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_SYS_LOG_LIST, MsgBody: string(jsonStr)}
+}
+
+// 获取校准日志记录
+func (p getCalLogNotifier) Handle(mgr *SrvMgr, payload ReqGetLog) {
+	// Do something for this event
+	l.Log.Debug("Handle getCalLogNotifier called")
+	syslogQuery := GetSearchLog(payload.Search)
+	logs, total, err := mSrvMgr.sysLogPd.GetCalibrationLog(payload.Page, payload.PageSize, payload.FieldName, payload.Direction, syslogQuery)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_CAL_LOG_LIST, MsgBody: "fail,get calibration log failed"}
+		return
+	}
+
+	CalibrationLogList := CalibrationLogList{Total: int(total), Logs: logs}
+	jsonStr, _ := json.Marshal(CalibrationLogList)
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_CAL_LOG_LIST, MsgBody: string(jsonStr)}
+
+}
+
+// 获取称重日志记录
+func (p getScaleLogNotifier) Handle(mgr *SrvMgr, payload ReqGetLog) {
+	// Do something for this event
+	l.Log.Debug("Handle getScaleLogNotifier called")
+	syslogQuery := GetSearchLog(payload.Search)
+
+	logs, total, err := mSrvMgr.sysLogPd.GetScaleLog(payload.Page, payload.PageSize, payload.FieldName, payload.Direction, syslogQuery)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_SCALE_LOG_LIST, MsgBody: "fail,get scale log failed"}
+		return
+	}
+
+	ScaleLogList := ScaleLogList{Total: int(total), Logs: logs}
+	jsonStr, _ := json.Marshal(ScaleLogList)
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_SCALE_LOG_LIST, MsgBody: string(jsonStr)}
+}
+
+// 导出系统日志
+func (p exportSysLogNotifier) Handle(mgr *SrvMgr, payload ReqExportLog) {
+	// Do something for this event
+	l.Log.Debug("Handle exportSysLogNotifier called")
+	syslogQuery := GetSearchLog(payload.Search)
+
+	logs, err := mSrvMgr.sysLogPd.ExportSyslog(payload.FieldName, payload.Direction, syslogQuery)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SYS_LOG, MsgBody: "fail,export sys log failed"}
+		return
+	}
+	trans := payload.Translation
+	fmt.Print(len(logs))
+
+	// 导出日志到文件
+	err = ExportSysLogsToFile(logs, payload.FilePath, trans)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SYS_LOG, MsgBody: "fail,export sys log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SYS_LOG, MsgBody: "ok," + payload.FilePath}
+
+	type Total struct {
+		Total int
+	}
+	jsonStr, _ := json.Marshal(Total{Total: len(logs)})
+	LogSysOperation(MenuSysLog, SubLogExport, OpExportStr, string(jsonStr), "ok", "")
+}
+
+// 导出校准日志
+func (p exportCalLogNotifier) Handle(mgr *SrvMgr, payload ReqExportLog) {
+	// Do something for this event
+	l.Log.Debug("Handle exportCalLogNotifier called")
+	syslogQuery := GetSearchLog(payload.Search)
+	logs, err := mSrvMgr.sysLogPd.ExportCalibrationLog(payload.FieldName, payload.Direction, syslogQuery)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_CAL_LOG, MsgBody: "fail,export calibration log failed"}
+		return
+	}
+	fmt.Print(len(logs))
+
+	// 导出日志到文件
+	err = ExportCalLogsToFile(logs, payload.FilePath, payload.Translation)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_CAL_LOG, MsgBody: "fail,export calibration log failed"}
+		return
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_CAL_LOG, MsgBody: "ok," + payload.FilePath}
+}
+
+// 导出称重日志
+func (p exportScaleLogNotifier) Handle(mgr *SrvMgr, payload ReqExportLog) {
+	// Do something for this event
+	l.Log.Debug("Handle exportScaleLogNotifier called")
+	syslogQuery := GetSearchLog(payload.Search)
+	logs, err := mSrvMgr.sysLogPd.ExportScaleLog(payload.FieldName, payload.Direction, syslogQuery)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SCALE_LOG, MsgBody: "fail,export scale log failed"}
+		return
+	}
+	fmt.Print(len(logs))
+	trans := payload.Translation
+	fmt.Print(len(logs))
+
+	// 导出日志到文件
+	err = ExportWgtLogsToFile(logs, payload.FilePath, trans)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SCALE_LOG, MsgBody: "fail,export sys log failed"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SCALE_LOG, MsgBody: "ok," + payload.FilePath}
+
+	type Total struct {
+		Total int
+	}
+	jsonStr, _ := json.Marshal(Total{Total: len(logs)})
+	LogSysOperation(MenuScaleLog, SubLogExport, OpExportStr, string(jsonStr), "ok", "")
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SCALE_LOG, MsgBody: "ok"}
+}
+
+// 新增标定记录
+func (p addCalLogNotifier) Handle(mgr *SrvMgr, payload CalibrationLog) {
+	l.Log.Debug("Handle addCalLogNotifier called")
+
+	for _, v := range mgr.scales {
+		if v.Conn.ScaleId == int64(payload.ScaleId) {
+			payload.ScaleName = v.Conn.ScaleName
+			payload.Sn = v.Conn.ScaleSn
+			payload.ModelName = v.Conn.ScaleModel
+			break
+		}
+	}
+	LogCalLogOperation(payload)
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CAL_LOG_ADD, MsgBody: "ok"}
+
 }

@@ -1001,6 +1001,41 @@ func (d *DbFormulaInfo) GetFormulaListByFormulaID(formulaID string) (FormulaList
 	return list, nil
 }
 
+// 根据rec_id 查询配方信息
+func (d *DbFormulaInfo) GetFormulaByRecId(recId int) (FormulaList, error) {
+	var list FormulaList
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return list, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return list, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var header FormulaHeader
+	// 查询配方头信息
+	err = db.Where("rec_id = ? AND is_used = ? AND is_latest = ?", recId, true, true).First(&header).Error
+	if err != nil {
+		return list, err
+	}
+	list.Header = header
+
+	// 查询配方明细信息
+	var formulaDetails []FormulaDetail
+	err = db.Where("formula_rec_id = ?", header.RecId).Find(&formulaDetails).Error
+	if err != nil {
+		return list, err
+	}
+
+	// 组合成 FormulaDetailWithRaw
+	list.Details = formulaDetails
+
+	return list, nil
+}
+
 // 根据记录编号查询 FormulaWgtRecList
 func (d *DbFormulaInfo) GetFormulaWgtRecListByRecordID(recordID string) (FormulaWgtRecList, error) {
 	var list FormulaWgtRecList
@@ -1789,6 +1824,40 @@ func (d *DbFormulaInfo) GetAllDraftFmaWgtRecLists() ([]DrafFmaWgtRecInfo, error)
 	return draftFmaWgtRecLists, nil
 }
 
+// 查询暂存配方称重记录ByOrderId
+func (d *DbFormulaInfo) GetDraftFmaWgtRecByOrderId(orderIds []string) ([]DrafFmaWgtRecInfo, error) {
+	var draftFmaWgtRecLists []DrafFmaWgtRecInfo
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 查询暂存配方称重记录头
+	var headers []DrafFmaWgtRecHeader
+	err = db.Where("order_id IN ?", orderIds).Find(&headers).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, header := range headers {
+		var details []DrafFmaWgtRecDetail
+		err = db.Where("order_id = ?", header.OrderId).Find(&details).Error
+		if err != nil {
+			return nil, err
+		}
+		draftFmaWgtRecLists = append(draftFmaWgtRecLists, DrafFmaWgtRecInfo{
+			Header:  header,
+			Details: details,
+		})
+	}
+	return draftFmaWgtRecLists, nil
+}
+
 // 根据order_id删除某一条记录
 func (d *DbFormulaInfo) DeleteDraftFmaWgtRec(orderId string) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -1920,4 +1989,25 @@ func (d *DbFormulaInfo) CheckFormulaRawData(scaleId int) (bool, error) {
 	}
 	return false, nil
 
+}
+
+// 根据原料ID获取原料信息
+func (d *DbFormulaInfo) GetRawDataByRawID(rawId string) (RawMaterial, error) {
+	var raw RawMaterial
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return raw, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return raw, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 查询原料信息
+	if err := db.Where("material_id = ?", rawId).First(&raw).Error; err != nil {
+		return raw, err
+	}
+	return raw, nil
 }
