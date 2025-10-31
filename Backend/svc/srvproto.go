@@ -18,9 +18,15 @@ type Request struct {
 type ReqType string
 
 const (
-	REQ_GET_PORT_LIST     ReqType = "get_port_list"     // without parameter
-	REQ_GET_SCALE_LIST    ReqType = "get_scale_list"    // without parameter
-	REQ_GET_PRODUCT_LIST  ReqType = "get_product_list"  // without parameter
+	REQ_GET_PORT_LIST    ReqType = "get_port_list"    // without parameter
+	REQ_GET_SCALE_LIST   ReqType = "get_scale_list"   // without parameter
+	REQ_GET_PRODUCT_LIST ReqType = "get_product_list" // without parameter
+
+	REQ_DOWN_ALL_PLU    ReqType = "down_all_plu"    // without parameter
+	REQ_SET_PLU         ReqType = "set_plu_fields"  // with ReqPluSetting parameter
+	REQ_GET_PLU_SETTING ReqType = "get_plu_setting" // without parameter
+
+	REQ_GET_PLU_BY_PAGE   ReqType = "get_plu_by_page"   // without parameter
 	REQ_GET_USER_LIST     ReqType = "get_user_list"     // without parameter
 	REQ_GET_WIFI_PWD_LIST ReqType = "get_wifi_pwd_list" // without parameter
 
@@ -29,8 +35,12 @@ const (
 	REQ_MODIFY_SCALE      ReqType = "modify_scale"      // with ReqModifyScale parameter
 	REQ_MODIFY_SCALE_NAME ReqType = "modify_scale_name" // with ReqModifyScale parameter
 
+	REQ_EXPORT_PRODUCT  ReqType = "export_product"  // without parameter
 	REQ_ADD_PRODUCT     ReqType = "add_product"     // with ReqAddProduct parameter
 	REQ_ADD_ONE_PRODUCT ReqType = "add_one_product" // with ReqAddOneProduct parameter
+	REQ_CLEAR_PRODUCT   ReqType = "clear_product"   // without parameter
+	check_plu_exist
+	REQ_CHECK_PLU_EXIST ReqType = "check_plu_exist" // with ReqCheckPluExist parameter
 
 	REQ_DEL_PRODUCT          ReqType = "del_product"          // with ReqDelScale parameter
 	REQ_DEL_ALL_PRODUCT      ReqType = "del_all_product"      // with ReqDelScale parameter
@@ -161,15 +171,37 @@ type ReqModifyScaleSn struct {
 	ScaleModel string
 }
 
-// type ReqAddProduct struct {
-//     Id          string
-//     Product     string
-//     WithPretare bool
-//     Pretare     string
-//     Remarks     string
-// }
+type ReqAddPlu struct {
+	PluList []AddProduct
+	Total   int
+	Index   int
+}
 
-type ReqAddProductList []AddProduct
+type ReqPluSetting struct {
+	Plu []string `json:"plu"`
+}
+
+type ReqExportProduct struct {
+	Path        string
+	Translation map[string]string
+	SearchPlu   ProductQuery
+}
+
+type ReqGetPluByPage struct {
+	Page      int
+	PageSize  int
+	FieldName string
+	Direction string
+	Search    ProductQuery
+}
+
+type ProductQuery struct {
+	Plu        string
+	PluName    string
+	Category   string
+	Enabled    bool
+	SetEnabled bool // 是否设置了Enabled条件
+}
 
 type AddProduct struct {
 	RecId       int
@@ -667,8 +699,10 @@ type ReqDelWgtRecById struct {
 }
 
 type ReqExportAllRecs struct {
-	Mode uint
-	Path string
+	Mode        uint
+	Path        string
+	Translation map[string]string
+	FieldName   []string
 }
 
 // ********** Response of scale manager **********
@@ -688,15 +722,23 @@ type ScaleMgrRespMsgType string
 
 // 处理公用的回应
 const (
-	SCALE_MGR_RESP_PORTS_LIST           ScaleMgrRespMsgType = "resp_ports_list"           // with response of PortsListMsg
-	SCALE_MGR_RESP_SCALES_LIST          ScaleMgrRespMsgType = "resp_scales_list"          // with response of ScalesListMsg
-	SCALE_MGR_RESP_SCALE_ADD            ScaleMgrRespMsgType = "resp_scale_add"            // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_SCALE_DEL            ScaleMgrRespMsgType = "resp_scale_del"            // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_SCALE_MODIFY         ScaleMgrRespMsgType = "resp_scale_modify"         // same as SCALE_MGR_RESP_SCALE_Add
-	SCALE_MGR_RESP_PRODUCTS_LIST        ScaleMgrRespMsgType = "resp_product_list"         // with response of ScalesListMsg
-	SCALE_MGR_RESP_PRODUCT_ADD          ScaleMgrRespMsgType = "resp_product_add"          // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_PRODUCT_ADD_ONE      ScaleMgrRespMsgType = "resp_product_add_one"      // with response of MgrRespMsg to indicate that status coreponding request procsssed
-	SCALE_MGR_RESP_PRODUCT_DEL          ScaleMgrRespMsgType = "resp_product_del"          // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_PORTS_LIST    ScaleMgrRespMsgType = "resp_ports_list"   // with response of PortsListMsg
+	SCALE_MGR_RESP_SCALES_LIST   ScaleMgrRespMsgType = "resp_scales_list"  // with response of ScalesListMsg
+	SCALE_MGR_RESP_SCALE_ADD     ScaleMgrRespMsgType = "resp_scale_add"    // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_SCALE_DEL     ScaleMgrRespMsgType = "resp_scale_del"    // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_SCALE_MODIFY  ScaleMgrRespMsgType = "resp_scale_modify" // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_PRODUCTS_LIST ScaleMgrRespMsgType = "resp_product_list" // with response of ScalesListMsg
+
+	SCALE_MGR_RESP_CHECK_PLU_EXIST ScaleMgrRespMsgType = "resp_check_plu_exist" // with response of string "ok" or "not exist"
+	SCALE_MGR_RESP_EXPORT_PLU_LIST ScaleMgrRespMsgType = "resp_export_plu_list" // with response of ScalesListMsg
+
+	SCALE_MGR_RESP_PLU_LIST        ScaleMgrRespMsgType = "resp_plu_list"        // with response of ScalesListMsg
+	SCALE_MGR_RESP_PRODUCT_ADD     ScaleMgrRespMsgType = "resp_product_add"     // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_PRODUCT_ADD_ONE ScaleMgrRespMsgType = "resp_product_add_one" // with response of MgrRespMsg to indicate that status coreponding request procsssed
+	SCALE_MGR_RESP_PRODUCT_DEL     ScaleMgrRespMsgType = "resp_product_del"     // same as SCALE_MGR_RESP_SCALE_Add
+	SCALE_MGR_RESP_PLU_SETTING     ScaleMgrRespMsgType = "resp_plu_setting"     // with response of MgrRespMsg to indicate that status coreponding request procsssed
+
+	SCALE_MGR_RESP_DOWN_ALL_PLU         ScaleMgrRespMsgType = "resp_down_all_plu"         // with response of MgrRespMsg to indicate that status coreponding request procsssed
 	SCALE_MGR_RESP_UPDATE_ENABLED_PLU   ScaleMgrRespMsgType = "resp_update_enabled_plu"   // with response of MgrRespMsg to indicate that status coreponding request procsssed
 	SCALE_MGR_RESP_GET_LAST_PRODUCT_REC ScaleMgrRespMsgType = "resp_get_last_product_rec" // with response of ScalesListMsg
 	SCALE_MGR_RESP_PRODUCT_MODIFY       ScaleMgrRespMsgType = "resp_product_modify"       // same as SCALE_MGR_RESP_SCALE_Add

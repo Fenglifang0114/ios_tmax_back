@@ -36,6 +36,14 @@ type ProductRec struct {
 	UpdateUser  string
 }
 
+type FieldDisplaySetting struct {
+	Id        int `gorm:"primaryKey;autoincrement;not null"`
+	FieldName string
+	Sequence  int
+	UpdatedAt time.Time
+	UserName  string
+}
+
 func NewDbProductRec(dbName string) (*DbProductRec, error) {
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
@@ -50,7 +58,7 @@ func NewDbProductRec(dbName string) (*DbProductRec, error) {
 		defer sqlDB.Close()
 	}
 	// Migrate the schema
-	if err = db.AutoMigrate(&ProductRec{}); err != nil {
+	if err = db.AutoMigrate(&ProductRec{}, &FieldDisplaySetting{}); err != nil {
 		l.Log.Debug("failed to migrate database of scale connection")
 	}
 
@@ -58,6 +66,41 @@ func NewDbProductRec(dbName string) (*DbProductRec, error) {
 	db.Exec("UPDATE product_recs SET updated_at = created_at, create_by = 1, update_by = 1, enabled = true WHERE updated_at IS NULL")
 
 	return &DbProductRec{dbName: dbName}, nil
+}
+
+// CheckPluExist 检查PLU是否存在
+func (d *DbProductRec) CheckPluExist(id int, plu string) (bool, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// Migrate the schema
+	if err = db.AutoMigrate(&ProductRec{}); err != nil {
+		l.Log.Debug("failed to migrate database of product")
+	}
+
+	//查找Plu信息
+	var recs []ProductRec
+	query := db.Model(&ProductRec{}).Where("plu = ?", plu)
+	query.Find(&recs)
+	if id == 0 {
+		return len(recs) > 0, nil
+	}
+
+	if len(recs) > 0 {
+		return recs[0].RecId != id, nil
+	}
+
+	return false, nil
+
 }
 
 func (d *DbProductRec) GetProductRecsList() ([]ProductRec, error) {
@@ -81,6 +124,161 @@ func (d *DbProductRec) GetProductRecsList() ([]ProductRec, error) {
 	// 读取内容
 	var recs []ProductRec
 	db.Find(&recs)
+	return recs, nil
+}
+
+// 获取分页数据
+func (d *DbProductRec) GetPluByPage(page, pageSize int, fieldName, direction string, search ProductQuery) ([]ProductRec, int, error) {
+	// fieldName是排序字段，direction是排序方向asc/desc
+	// ProductQuery是查询条件,如果为空,则不进行过滤
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+		return nil, 0, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+		return nil, 0, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// Migrate the schema
+	if err = db.AutoMigrate(&ProductRec{}); err != nil {
+		l.Log.Debug("failed to migrate database of product")
+		return nil, 0, err
+	}
+
+	//查询总数
+	var total int64
+	db.Model(&ProductRec{}).Count(&total)
+
+	// 构建查询
+	query := db.Model(&ProductRec{})
+
+	// 添加搜索条件
+	if search.Plu != "" {
+		query = query.Where("plu LIKE ?", "%"+search.Plu+"%")
+	}
+	if search.PluName != "" {
+		query = query.Where("product_name LIKE ?", "%"+search.PluName+"%")
+	}
+	if search.Category != "" {
+		query = query.Where("category LIKE ?", "%"+search.Category+"%")
+	}
+	// Enabled 条件 - 只有当明确查询启用或禁用时才添加条件
+
+	if search.SetEnabled {
+		if search.Enabled {
+			query = query.Where("enabled = ?", true)
+		} else if !search.Enabled {
+			query = query.Where("enabled = ?", false)
+		}
+
+	}
+
+	// 添加排序
+	if fieldName != "" {
+		// 验证排序方向
+		orderDirection := "ASC"
+		if direction == "desc" {
+			orderDirection = "DESC"
+		}
+		//如果字段是plu,转为数字排序
+		switch fieldName {
+		case "plu":
+			query = query.Order("CAST(plu AS INTEGER) " + orderDirection)
+		case "price":
+			query = query.Order("CAST(price AS REAL) " + orderDirection)
+		case "limit_high":
+			query = query.Order("CAST(limit_high AS REAL) " + orderDirection)
+		case "limit_low":
+			query = query.Order("CAST(limit_low AS REAL) " + orderDirection)
+		case "unit_weight":
+			query = query.Order("CAST(unit_weight AS REAL) " + orderDirection)
+		case "pretare":
+			query = query.Order("CAST(pretare AS REAL) " + orderDirection)
+		case "tax_type":
+			query = query.Order("CAST(tax_type AS INTEGER) " + orderDirection)
+		default:
+			query = query.Order(fieldName + " " + orderDirection)
+		}
+
+	} else {
+		// 如果没有指定排序字段，默认按plu从小到大排序
+		// query = query.Order("plu ASC")
+	}
+
+	// 读取内容
+	var recs []ProductRec
+	result := query.Limit(pageSize).Offset((page - 1) * pageSize).Find(&recs)
+	if result.Error != nil {
+		l.Log.Debug("failed to query products")
+		return nil, 0, result.Error
+	}
+
+	return recs, int(total), nil
+}
+
+// 导出产品列表
+func (d *DbProductRec) GetExportProductList(search ProductQuery) ([]ProductRec, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// Migrate the schema
+	if err = db.AutoMigrate(&ProductRec{}); err != nil {
+		l.Log.Debug("failed to migrate database of product")
+		return nil, err
+	}
+
+	//查询总数
+	var total int64
+	db.Model(&ProductRec{}).Count(&total)
+
+	// 构建查询
+	query := db.Model(&ProductRec{})
+
+	// 添加搜索条件
+	if search.Plu != "" {
+		query = query.Where("plu LIKE ?", "%"+search.Plu+"%")
+	}
+	if search.PluName != "" {
+		query = query.Where("product_name LIKE ?", "%"+search.PluName+"%")
+	}
+	if search.Category != "" {
+		query = query.Where("category LIKE ?", "%"+search.Category+"%")
+	}
+	// Enabled 条件 - 只有当明确查询启用或禁用时才添加条件
+
+	if search.SetEnabled {
+		if search.Enabled {
+			query = query.Where("enabled = ?", true)
+		} else if !search.Enabled {
+			query = query.Where("enabled = ?", false)
+		}
+
+	}
+
+	// 读取内容
+	var recs []ProductRec
+	result := query.Find(&recs)
+	if result.Error != nil {
+		l.Log.Debug("failed to query products")
+		return nil, result.Error
+	}
 	return recs, nil
 }
 
@@ -143,8 +341,37 @@ func (d *DbProductRec) Insert100ProductsWithGorm(products []ProductRec) error {
 		defer sqlDB.Close()
 	}
 
-	// 使用Create方法批量插入数据
-	result := db.Create(products)
+	var pluList []string
+	for _, p := range products {
+		pluList = append(pluList, p.Plu)
+	}
+
+	// 明确指定模型
+	var existPluList []string
+	err = db.Model(&ProductRec{}).Where("plu IN ?", pluList).Pluck("plu", &existPluList).Error
+	if err != nil {
+
+		return err
+	}
+
+	existPluSet := make(map[string]bool)
+	for _, plu := range existPluList {
+		existPluSet[plu] = true
+	}
+
+	// 过滤掉已存在的记录
+	filteredProducts := make([]ProductRec, 0, len(products))
+	for _, p := range products {
+		if !existPluSet[p.Plu] {
+			filteredProducts = append(filteredProducts, p)
+		}
+	}
+
+	if len(filteredProducts) == 0 {
+		return nil
+	}
+
+	result := db.Create(filteredProducts)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -338,6 +565,71 @@ func (d *DbProductRec) UpdateProductRecEnabled(pluList []int, enabled bool, upda
 	if result.Error != nil {
 		return result.Error
 	}
+	return nil
+
+}
+
+func (d *DbProductRec) GetPluSetting() (map[int]string, error) {
+
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var results []FieldDisplaySetting
+	err = db.Model(&FieldDisplaySetting{}).Order("sequence ASC").Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+
+	fieldDisplaySetting := make(map[int]string)
+	for _, r := range results {
+		fieldDisplaySetting[r.Sequence] = r.FieldName
+	}
+
+	return fieldDisplaySetting, nil
+}
+
+// 设置字段显示
+func (d *DbProductRec) SetPluSetting(fieldDisplaySetting []string, updateUser string) error {
+
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Log.Debug("failed to connect database")
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	//删除所有记录
+	result := db.Exec("DELETE FROM field_display_settings")
+	if result.Error != nil {
+		return result.Error
+	}
+	sequence := 1
+	for _, r := range fieldDisplaySetting {
+		if r == "plu" || r == "productName" {
+			continue
+		}
+		db.Create(&FieldDisplaySetting{
+			Sequence:  sequence,
+			FieldName: r,
+			UpdatedAt: time.Now(),
+			UserName:  updateUser,
+		})
+		sequence++
+	}
+
 	return nil
 
 }

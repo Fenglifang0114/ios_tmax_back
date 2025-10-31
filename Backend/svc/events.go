@@ -134,6 +134,52 @@ func (u ScaleDeleted) Trigger(payload ReqDelScale) {
 	}
 }
 
+// 分页获取PLU列表
+var pluByPageListed PluByPageListed
+
+type PluByPageListed struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, data ReqGetPluByPage)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *PluByPageListed) Register(handler interface {
+	Handle(mgr *SrvMgr, data ReqGetPluByPage)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u PluByPageListed) Trigger(mgr *SrvMgr, data ReqGetPluByPage) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, data)
+	}
+}
+
+// 清空产品列表
+var productCleared ProductCleared
+
+type ProductCleared struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ProductCleared) Register(handler interface {
+	Handle(mgr *SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ProductCleared) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
 var productsListed ProductListed
 
 type ProductListed struct {
@@ -152,23 +198,139 @@ func (u ProductListed) Trigger(mgr *SrvMgr) {
 	}
 }
 
-var productAdded ProductAdded
+// 导出PLU列表到excel文件
 
-type ProductAdded struct {
+var exportPluToFile ExportPluToFile
+
+type ExportPluToFile struct {
 	handlers []interface {
-		Handle(mgr *SrvMgr, payload ReqAddProductList)
+		Handle(mgr *SrvMgr, payload string)
 	}
 }
 
 // Register adds an event handler for this event
-func (u *ProductAdded) Register(handler interface {
-	Handle(*SrvMgr, ReqAddProductList)
+func (u *ExportPluToFile) Register(handler interface {
+	Handle(mgr *SrvMgr, payload string)
 }) {
 	u.handlers = append(u.handlers, handler)
 }
 
 // Trigger sends out an event with the payload
-func (u ProductAdded) Trigger(mgr *SrvMgr, payload ReqAddProductList) {
+func (u ExportPluToFile) Trigger(mgr *SrvMgr, payload string) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取PLU设置字段
+var getPluSetting GetPluSetting
+
+type GetPluSetting struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetPluSetting) Register(handler interface {
+	Handle(mgr *SrvMgr)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetPluSetting) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
+// 设置PLU字段
+var pluSetting PluSetting
+
+type PluSetting struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqPluSetting)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *PluSetting) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqPluSetting)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u PluSetting) Trigger(mgr *SrvMgr, payload ReqPluSetting) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 导出
+var exportProduct ExportProduct
+
+type ExportProduct struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqExportProduct)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ExportProduct) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqExportProduct)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ExportProduct) Trigger(mgr *SrvMgr, payload ReqExportProduct) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+var productAdded ProductAdded
+
+type ProductAdded struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqAddPlu)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ProductAdded) Register(handler interface {
+	Handle(*SrvMgr, ReqAddPlu)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ProductAdded) Trigger(mgr *SrvMgr, payload ReqAddPlu) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 检查plu是否存在
+var checkPluExist CheckPluExist
+
+type CheckPluExist struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *CheckPluExist) Register(handler interface {
+	Handle(mgr *SrvMgr, payload string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u CheckPluExist) Trigger(mgr *SrvMgr, payload string) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
 	}

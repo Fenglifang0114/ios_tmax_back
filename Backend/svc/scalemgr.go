@@ -72,6 +72,28 @@ func init() {
 	createProductListNotifier := productListedNotifier{}
 	productsListed.Register(createProductListNotifier)
 
+	createCheckPluExistNotifier := checkPluExistNotifier{}
+	checkPluExist.Register(createCheckPluExistNotifier)
+
+	//分页获取PLU列表
+	createPluByPageListNotifier := pluByPageListedNotifier{}
+	pluByPageListed.Register(createPluByPageListNotifier)
+
+	createProductClearedNotifier := productClearedNotifier{}
+	productCleared.Register(createProductClearedNotifier)
+
+	createExportProductNotifier := exportProductNotifier{}
+	exportProduct.Register(createExportProductNotifier)
+
+	createPluSettingNotifier := pluSettingNotifier{}
+	pluSetting.Register(createPluSettingNotifier)
+
+	createGetPluSettingNotifier := getPluSettingNotifier{}
+	getPluSetting.Register(createGetPluSettingNotifier)
+
+	createExportPluToFileNotifier := exportPluToFileNotifier{}
+	exportPluToFile.Register(createExportPluToFileNotifier)
+
 	createAddProductNotifier := addProductNotifier{}
 	productAdded.Register(createAddProductNotifier)
 
@@ -348,6 +370,20 @@ type modifyScaleNotifier struct{}
 type modifyScaleNameNotifier struct{}
 
 type productListedNotifier struct{}
+
+type checkPluExistNotifier struct{}
+
+type pluByPageListedNotifier struct{}
+
+type productClearedNotifier struct{}
+
+type exportProductNotifier struct{}
+
+type pluSettingNotifier struct{}
+
+type getPluSettingNotifier struct{}
+
+type exportPluToFileNotifier struct{}
 
 type addProductNotifier struct{}
 

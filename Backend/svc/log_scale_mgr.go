@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type AddComInfo struct {
@@ -171,4 +173,49 @@ func SaveAddScaleWgtLog(payload ReqAddWgtRec) {
 func SaveClearScaleWgtLog(mode int) {
 	module := GetScaleWgtMode(mode)
 	LogSysOperation(module, module, OpClearStr, "", "ok", "")
+}
+
+func SavePluToFile(filepath string, products []ProductRec) error {
+	file := excelize.NewFile()
+	defer file.Close()
+
+	streamWriter, err := file.NewStreamWriter("Sheet1")
+	if err != nil {
+		return fmt.Errorf("failed to create stream writer: %w", err)
+	}
+
+	// 表头
+	headers := []interface{}{"PLU", "ProductName", "GeneralUnit", "TaxType", "Price", "UnitWeight", "PreTare", "LimitHigh", "LimitLow"}
+
+	cell, _ := excelize.CoordinatesToCellName(1, 1)
+	if err := streamWriter.SetRow(cell, headers); err != nil {
+		return err
+	}
+
+	// 批量写入数据（无样式，最高性能）
+	for i, product := range products {
+		rowID := i + 2
+		rowData := []interface{}{
+			product.Plu,
+			product.ProductName,
+			product.GeneralUnit,
+			product.TaxType,
+			product.Price,
+			product.UnitWeight,
+			product.Pretare,
+			product.LimitHigh,
+			product.LimitLow,
+		}
+
+		cell, _ := excelize.CoordinatesToCellName(1, rowID)
+		if err := streamWriter.SetRow(cell, rowData); err != nil {
+			return fmt.Errorf("failed to set row %d: %w", rowID, err)
+		}
+	}
+
+	if err := streamWriter.Flush(); err != nil {
+		return err
+	}
+
+	return file.SaveAs(filepath)
 }

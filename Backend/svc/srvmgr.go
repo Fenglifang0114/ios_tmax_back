@@ -388,16 +388,57 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			ScaleNameModified.Trigger(scaleNameModified, data)
 		}
 
+	case REQ_GET_PLU_BY_PAGE:
+		jsonStr := req.ReqData
+		var data ReqGetPluByPage
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			PluByPageListed.Trigger(pluByPageListed, scaleMgr.srvMgr, data)
+		}
+
 	case REQ_GET_PRODUCT_LIST:
 		productsListed.Trigger(scaleMgr.srvMgr)
+
+	case REQ_DOWN_ALL_PLU:
+
+		exportPluToFile.Trigger(scaleMgr.srvMgr, req.ReqData)
+
+	case REQ_SET_PLU:
+		jsonStr := req.ReqData
+		var data ReqPluSetting
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			pluSetting.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_GET_PLU_SETTING:
+		getPluSetting.Trigger(scaleMgr.srvMgr)
+
+	case REQ_CLEAR_PRODUCT:
+		productCleared.Trigger(scaleMgr.srvMgr)
+
+	case REQ_EXPORT_PRODUCT:
+		jsonStr := req.ReqData
+		var data ReqExportProduct
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			exportProduct.Trigger(scaleMgr.srvMgr, data)
+		}
+
 	case REQ_ADD_PRODUCT:
 		jsonStr := req.ReqData
-		var data ReqAddProductList
+		var data ReqAddPlu
 		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
 			l.Log.Error(err)
 		} else {
 			ProductAdded.Trigger(productAdded, scaleMgr.srvMgr, data)
 		}
+	case REQ_CHECK_PLU_EXIST:
+
+		checkPluExist.Trigger(scaleMgr.srvMgr, req.ReqData)
+
 	case REQ_ADD_ONE_PRODUCT:
 		jsonStr := req.ReqData
 		var data AddProduct
@@ -1064,6 +1105,221 @@ func parseMsgAndTrigEvtService(scaleMgr *ScaleMgr, reqJson string, scaleId int64
 	}
 }
 
+//分页获取PLU
+
+type SendPluList struct {
+	Total   int
+	PluList []ProductRec
+}
+
+func (p pluByPageListedNotifier) Handle(mgr *SrvMgr, payload ReqGetPluByPage) {
+
+	products, total, _ := mgr.productPd.GetPluByPage(payload.Page, payload.PageSize, payload.FieldName, payload.Direction, payload.Search)
+	sendPlu := SendPluList{Total: total, PluList: products}
+	sendPluStr, err := json.MarshalToString(sendPlu)
+	if err != nil {
+		l.Log.Error(err)
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PLU_LIST, MsgBody: sendPluStr}
+}
+
+// 获取PLU设置字段
+func (p getPluSettingNotifier) Handle(mgr *SrvMgr) {
+	pluSetting, err := mgr.productPd.GetPluSetting()
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PLU_SETTING, MsgBody: ""}
+		return
+	}
+
+	plus := []string{}
+	for _, value := range pluSetting {
+		if value == "plu" || value == "productName" {
+			continue
+		}
+		plus = append(plus, value)
+	}
+
+	Req := ReqPluSetting{Plu: plus}
+	jsonStr, err := json.MarshalToString(Req)
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PLU_SETTING, MsgBody: ""}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PLU_SETTING, MsgBody: jsonStr}
+}
+
+// 导出产品列表到excel文件
+func (p exportPluToFileNotifier) Handle(mgr *SrvMgr, payload string) {
+	var products []ProductRec
+	err := error(nil)
+	products, err = mgr.productPd.GetRecsList()
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DOWN_ALL_PLU, MsgBody: "fail to get product list"}
+	}
+
+	err = SavePluToFile(payload, products)
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DOWN_ALL_PLU, MsgBody: "fail to save plu to file"}
+		return
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DOWN_ALL_PLU, MsgBody: "ok," + payload}
+
+}
+
+// 导出产品列表
+func (p exportProductNotifier) Handle(mgr *SrvMgr, payload ReqExportProduct) {
+	fmt.Println(payload)
+	fmt.Println(payload)
+	translate := payload.Translation
+	products := []ProductRec{}
+	err := error(nil)
+	if products, err = mgr.productPd.GetExportProductList(payload.SearchPlu); err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_PLU_LIST, MsgBody: "fail to get product list"}
+		return
+	}
+	//获取plu设置字段
+	pluSetting, err := mgr.productPd.GetPluSetting()
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_PLU_LIST, MsgBody: "fail to get plu setting"}
+		return
+	}
+	//写入csv文件表头
+	// 打开 CSV 文件
+	file, err := os.Create(payload.Path)
+	if err != nil {
+		mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: "fail to create csv file"}
+		return
+	}
+	defer file.Close()
+
+	// 创建 CSV 写入器
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	selectPluFields := []string{}
+	selectPluFields = append(selectPluFields, "plu")
+	selectPluFields = append(selectPluFields, "productName")
+	if len(pluSetting) > 0 {
+
+		for _, value := range pluSetting {
+			selectPluFields = append(selectPluFields, value)
+		}
+	}
+
+	//将recs写入csv文件，文件路径为payload.Path
+	//下面是总的表头
+	headers := []string{}
+	for _, value := range selectPluFields {
+		headers = append(headers, getPluTranslate(translate, value))
+	}
+
+	//明细的头和表头共用即可，不需要重新写
+
+	// 写入总的标题
+	if err := writer.Write(headers); err != nil {
+		mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: "fail to write csv file"}
+		return
+	}
+
+	for _, product := range products {
+		row := []string{}
+		for _, value := range selectPluFields {
+			row = append(row, getFieldValue(product, value))
+		}
+		if err := writer.Write(row); err != nil {
+			mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: "fail to write csv file"}
+			return
+		}
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_PLU_LIST, MsgBody: payload.Path}
+	type Total struct {
+		Total int
+	}
+	jsonStr, _ := json.Marshal(Total{Total: len(products)})
+	LogSysOperation(MenuPLUManage, OpExportStr, OpExportStr, string(jsonStr), "ok", "")
+}
+
+// 根据字段名获取产品字段值
+func getFieldValue(product ProductRec, fieldName string) string {
+	switch fieldName {
+	case "plu":
+		return product.Plu
+	case "productName":
+		return product.ProductName
+	case "category":
+		return product.Category
+	case "generalUnit":
+		unitMap := map[string]string{"0": "kg", "1": "100g", "2": "pcs", "3": "lb", "4": "g", "5": "oz", "6": "lboz", "7": "tj", "8": "hj", "9": "t"}
+		if unit, ok := unitMap[product.GeneralUnit]; ok {
+			return unit
+		}
+		return product.GeneralUnit
+	case "taxType":
+		taxMap := map[string]string{"0": "tax1", "1": "tax2", "2": "tax3"}
+		if tax, ok := taxMap[product.TaxType]; ok {
+			return tax
+		}
+		return product.TaxType
+	case "price":
+		return product.Price
+	case "unitWeight":
+		return product.UnitWeight
+	case "pretare":
+		return product.Pretare
+	case "limitHigh":
+		return product.LimitHigh
+	case "limitLow":
+		return product.LimitLow
+	case "productCode":
+		return product.ProductCode
+	case "itemCode":
+		return product.ItemCode
+	default:
+		return ""
+	}
+}
+
+func getPluTranslate(pluMap map[string]string, title string) string {
+
+	for k, v := range pluMap {
+		if title == k {
+			return v
+		}
+	}
+	return title
+
+}
+
+// 设置PLU字段
+func (p pluSettingNotifier) Handle(mgr *SrvMgr, payload ReqPluSetting) {
+	l.Log.Debug("Handle pluSettingNotifier called")
+	_, username, _ := GetCurrentUser()
+
+	err := mgr.productPd.SetPluSetting(payload.Plu, username)
+	if err != nil {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PLU_SETTING, MsgBody: "fail to get plu setting"}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PLU_SETTING, MsgBody: "ok"}
+
+	jsonStr, _ := json.Marshal(payload.Plu)
+	LogSysOperation(MenuPLUManage, OpSetStr, OpSetStr, string(jsonStr), "ok", "")
+}
+
+func (p productClearedNotifier) Handle(mgr *SrvMgr) {
+	l.Log.Debug("Handle productClearedNotifier called")
+	if err := mgr.productPd.DeleteAllRec(); err != nil {
+		l.Log.Error(err)
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_DEL, MsgBody: "ok"}
+	LogSysOperation(MenuPLUManage, OpClearStr, OpClearStr, "", "ok", "")
+
+}
+
+// 获取产品列表
 func (p productListedNotifier) Handle(mgr *SrvMgr) {
 	// Do something for this event
 	l.Log.Debug("Handle productListedNotifier called")
@@ -1085,7 +1341,7 @@ func (p productListedNotifier) Handle(mgr *SrvMgr) {
 		var err error
 		if productsStr, err = json.MarshalToString(batchProducts); err != nil {
 			l.Log.Error(err)
-			// TODO: error handling
+			continue
 		}
 		// 发送每一批次的数据
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCTS_LIST, MsgBody: productsStr}
@@ -1093,12 +1349,30 @@ func (p productListedNotifier) Handle(mgr *SrvMgr) {
 	}
 }
 
-func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
+// checkPluExist
+func (p checkPluExistNotifier) Handle(mgr *SrvMgr, payload string) {
+	// Do something for this event
+	l.Log.Debug("Handle checkPluExistNotifier called")
+
+	pluIdNum := strings.Split(payload, ",")
+	id := pluIdNum[0]
+	pluId, _ := strconv.Atoi(id)
+	plu := pluIdNum[1]
+	exist, _ := mgr.productPd.CheckPluExist(pluId, plu)
+	if exist {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_PLU_EXIST, MsgBody: "true"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_PLU_EXIST, MsgBody: "false"}
+}
+
+func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddPlu) {
 	// Do something for this event
 	l.Log.Debug("Handle addProductNotifier called")
 
-	var recList []ProductRec
-	for _, product := range payload {
+	productList := payload.PluList
+	recList := make([]ProductRec, 0)
+	for _, product := range productList {
 		rec := ProductRec{
 			Plu:         product.Plu,
 			ProductCode: product.ProductCode,
@@ -1125,7 +1399,13 @@ func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddProductList) {
 		return
 	}
 
+	if payload.Index*100 < payload.Total {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: "ok"}
+		return
+	}
+	LogSysOperation(MenuPLUManage, OpImportStr, OpImportStr, "Total: "+strconv.Itoa(payload.Total), "ok", "")
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PRODUCT_ADD, MsgBody: "ok"}
+
 }
 
 func (p addOneProductNotifier) Handle(mgr *SrvMgr, payload AddProduct) {
@@ -2740,6 +3020,9 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 
 	}
 
+	selFields := payload.FieldName
+	translation := payload.Translation
+
 	// 打开 CSV 文件
 	file, err := os.Create(payload.Path)
 	if err != nil {
@@ -2754,32 +3037,50 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 
 	//将recs写入csv文件，文件路径为payload.Path
 	//下面是总的表头
-	headers := []string{
-		"Id",
-		"ScaleModel",
-		"ScaleSn",
-		"PLU",
-		"Product Code",
-		"Item Code",
-		"Category",
-		"PLU Name",
-		"GeneralUnit",
-		"TaxType",
-		"Price",
-		"UnitWeight",
-		"Pretare",
-		"LimitHigh",
-		"LimitLow",
-		"Weight",
-		"Weight Unit",
-		// "User NO.",
-		"User Name",
-		"Scale Name",
-		"Date Time",
+
+	headers := []string{}
+
+	for _, field := range selFields {
+		switch field {
+		case "Id":
+			headers = append(headers, getTranslation(translation, "Id"))
+		case "Weight":
+			headers = append(headers, getTranslation(translation, "Weight"))
+		case "Weight Unit":
+			headers = append(headers, getTranslation(translation, "Weight Unit"))
+		case "Scale Name":
+			headers = append(headers, getTranslation(translation, "Scale Name"))
+		case "PLU":
+			headers = append(headers, getTranslation(translation, "PLU"))
+		case "PLU Name":
+			headers = append(headers, getTranslation(translation, "PLU Name"))
+		case "Price":
+			headers = append(headers, getTranslation(translation, "Price"))
+		case "Product Code":
+			headers = append(headers, getTranslation(translation, "Product Code"))
+		case "Item Code":
+			headers = append(headers, getTranslation(translation, "Item Code"))
+		case "Category":
+			headers = append(headers, getTranslation(translation, "Category"))
+		case "GeneralUnit":
+			headers = append(headers, getTranslation(translation, "GeneralUnit"))
+		case "TaxType":
+			headers = append(headers, getTranslation(translation, "TaxType"))
+		case "UnitWeight":
+			headers = append(headers, getTranslation(translation, "UnitWeight"))
+		case "Pretare":
+			headers = append(headers, getTranslation(translation, "Pretare"))
+		case "LimitHigh":
+			headers = append(headers, getTranslation(translation, "LimitHigh"))
+		case "LimitLow":
+			headers = append(headers, getTranslation(translation, "LimitLow"))
+		case "User Name":
+			headers = append(headers, getTranslation(translation, "User Name"))
+		case "Date Time":
+			headers = append(headers, getTranslation(translation, "Date Time"))
+		}
 	}
-
 	//明细的头和表头共用即可，不需要重新写
-
 	// 写入总的标题
 	if err := writer.Write(headers); err != nil {
 		mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
@@ -2808,29 +3109,59 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 	for _, info := range recs {
 		// 提取表头数据，需要根据 ScaleRec 结构体实际字段调整
 		createdAtFormatted := info.Header.CreatedAt.Format(formatTemplate)
-		headerData := []string{
-			fmt.Sprint(info.Header.RecId),
-			fmt.Sprint(info.Header.ScaleModel),
-			fmt.Sprint(info.Header.ScaleSn),
-			fmt.Sprint(info.Header.Plu),
-			fmt.Sprint(info.Header.ProductCode),
-			fmt.Sprint(info.Header.ItemCode),
-			fmt.Sprint(info.Header.Category),
-			fmt.Sprint(info.Header.ProductName),
-			fmt.Sprint(info.Header.GeneralUnit),
-			fmt.Sprint(info.Header.TaxType),
-			fmt.Sprint(info.Header.Price),
-			fmt.Sprint(info.Header.UnitWeight),
-			fmt.Sprint(info.Header.Pretare),
-			fmt.Sprint(info.Header.LimitHigh),
-			fmt.Sprint(info.Header.LimitLow),
-			fmt.Sprint(info.Header.Weight),
-			fmt.Sprint(info.Header.WeightUnit),
-			// fmt.Sprint(info.Header.UserNo),
-			fmt.Sprint(info.Header.UserName),
-			fmt.Sprint(info.Header.ScaleName),
-			createdAtFormatted,
+
+		headerData := []string{}
+		for _, field := range selFields {
+			switch field {
+			case "Id":
+				headerData = append(headerData, fmt.Sprint(info.Header.RecId))
+			case "Weight":
+				headerData = append(headerData, fmt.Sprint(info.Header.Weight))
+			case "Weight Unit":
+				headerData = append(headerData, fmt.Sprint(info.Header.WeightUnit))
+			case "Scale Name":
+				headerData = append(headerData, fmt.Sprint(info.Header.ScaleName))
+			case "PLU":
+				headerData = append(headerData, fmt.Sprint(info.Header.Plu))
+			case "PLU Name":
+				headerData = append(headerData, fmt.Sprint(info.Header.ProductName))
+			case "Price":
+				headerData = append(headerData, fmt.Sprint(info.Header.Price))
+			case "Product Code":
+				headerData = append(headerData, fmt.Sprint(info.Header.ProductCode))
+			case "Item Code":
+				headerData = append(headerData, fmt.Sprint(info.Header.ItemCode))
+			case "Category":
+				headerData = append(headerData, fmt.Sprint(info.Header.Category))
+			case "GeneralUnit":
+				unitMap := map[string]string{"0": "kg", "1": "100g", "2": "pcs", "3": "lb", "4": "g", "5": "oz", "6": "lboz", "7": "tj", "8": "hj", "9": "t"}
+				if unit, ok := unitMap[info.Header.GeneralUnit]; ok {
+					headerData = append(headerData, unit)
+				} else {
+					headerData = append(headerData, fmt.Sprint(info.Header.GeneralUnit))
+				}
+			case "TaxType":
+				taxMap := map[string]string{"0": "tax1", "1": "tax2", "2": "tax3"}
+				if tax, ok := taxMap[info.Header.TaxType]; ok {
+					headerData = append(headerData, tax)
+				} else {
+					headerData = append(headerData, fmt.Sprint(info.Header.TaxType))
+				}
+			case "UnitWeight":
+				headerData = append(headerData, fmt.Sprint(info.Header.UnitWeight))
+			case "Pretare":
+				headerData = append(headerData, fmt.Sprint(info.Header.Pretare))
+			case "LimitHigh":
+				headerData = append(headerData, fmt.Sprint(info.Header.LimitHigh))
+			case "LimitLow":
+				headerData = append(headerData, fmt.Sprint(info.Header.LimitLow))
+			case "User Name":
+				headerData = append(headerData, fmt.Sprint(info.Header.UserName))
+			case "Date Time":
+				headerData = append(headerData, createdAtFormatted)
+			}
 		}
+
 		if err := writer.Write(headerData); err != nil {
 			mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
 			return
@@ -2840,29 +3171,50 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 		if len(info.Details) > 0 {
 			for _, detail := range info.Details {
 				// 假设明细和表头字段相同，若不同需要调整
-				headerData := []string{
-					"",
-					fmt.Sprint(detail.ScaleModel),
-					fmt.Sprint(detail.ScaleSn),
-					"",
-					"",
-					"",
-					"",
-					"",
-					"",
-					"",
-					"",
-					"",
-					"",
-					"",
-					"",
-					fmt.Sprint(detail.Weight),
-					fmt.Sprint(detail.WeightUnit),
-					"",
-					"",
-					fmt.Sprint(detail.ScaleName),
-					createdAtFormatted,
+
+				headerData := []string{}
+
+				for _, field := range selFields {
+					switch field {
+					case "Id":
+						headerData = append(headerData, "")
+					case "Weight":
+						headerData = append(headerData, fmt.Sprint(detail.Weight))
+					case "Weight Unit":
+						headerData = append(headerData, fmt.Sprint(detail.WeightUnit))
+					case "Scale Name":
+						headerData = append(headerData, fmt.Sprint(detail.ScaleName))
+					case "PLU":
+						headerData = append(headerData, "")
+					case "PLU Name":
+						headerData = append(headerData, "")
+					case "Price":
+						headerData = append(headerData, "")
+					case "Product Code":
+						headerData = append(headerData, "")
+					case "Item Code":
+						headerData = append(headerData, "")
+					case "Category":
+						headerData = append(headerData, "")
+					case "GeneralUnit":
+						headerData = append(headerData, "")
+					case "TaxType":
+						headerData = append(headerData, "")
+					case "UnitWeight":
+						headerData = append(headerData, "")
+					case "Pretare":
+						headerData = append(headerData, "")
+					case "LimitHigh":
+						headerData = append(headerData, "")
+					case "LimitLow":
+						headerData = append(headerData, "")
+					case "User Name":
+						headerData = append(headerData, "")
+					case "Date Time":
+						headerData = append(headerData, createdAtFormatted)
+					}
 				}
+
 				if err := writer.Write(headerData); err != nil {
 					mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: err.Error()}
 					return
@@ -2872,8 +3224,15 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 	}
 
 	// 发送成功消息
-	mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: "ok"}
+	mgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_ALL_RECS, MsgBody: "ok," + payload.Path}
 	//TODO: 增加日志记录
+}
+
+func getTranslation(trans map[string]string, field string) string {
+	if val, ok := trans[field]; ok {
+		return val
+	}
+	return field
 }
 
 //获取自动下一步设置
