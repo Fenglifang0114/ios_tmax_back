@@ -1007,6 +1007,7 @@ const (
 	SREQ_GET_ZERO_TRACKING    SReqType = "get_zero_tracking"    //20250716
 	SREQ_SET_GRAV_ACC         SReqType = "set_grav_acc"         //20250716
 	SREQ_GET_GRAV_ACC         SReqType = "get_grav_acc"         //20250716
+	SREQ_SET_FORCE_UNTARE     SReqType = "force_untare"         //20251104
 
 )
 

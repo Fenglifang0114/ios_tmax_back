@@ -4672,6 +4672,15 @@ func ReqGetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_GRAV_ACC, m.GET_GRAV_ACC_RESP)
 }
 
+// 强制解除扣重
+func ReqSetForceUnTare(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_FORCE_UNTARE_RESP, "fail", c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_SET_FORCE_UNTARE, m.SET_FORCE_UNTARE_RESP)
+}
+
 func retreiveRespMsgC51(scaleId int64, data []byte) (*ScaleRespMsg, error) {
 	// checkHead, get msgid, get msgtype, check if return code is 0x06, for success
 	var err error

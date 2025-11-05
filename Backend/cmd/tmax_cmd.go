@@ -220,6 +220,8 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getSetSw15ParameterCmdTMAX(CMDID_SET_WGT_UNIT_TMAX, cmdData.Data.(string)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	case m.CMD_GET_GRAV_ACC:
 		return composeCmd(CMDID_GET_GRAVITY_ACCEL_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_FORCE_UNTARE:
+		return composeCmd(CMDID_SET_FORCE_UNTARE_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	case m.CMD_SET_GRAV_ACC:
 		dataInt := cmdData.Data.(int)
 		return setSw15CmdTax_4Byte(CMDID_SET_GRAVITY_ACCEL_TMAX, uint32(dataInt)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
@@ -318,6 +320,7 @@ const (
 	CMDID_GET_INIT_ZERO_TMAX        = 0xE32E //读取初始置零
 	CMDID_SET_GRAVITY_ACCEL_TMAX    = 0xE332 //设置重力加速度
 	CMDID_GET_GRAVITY_ACCEL_TMAX    = 0xE333 //读取重力加速度
+	CMDID_SET_FORCE_UNTARE_TMAX     = 0xE33A //强制解除扣重
 
 )
 

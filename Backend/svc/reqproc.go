@@ -364,6 +364,10 @@ func procGetGravAcc(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetGravAcc(scale, req)
 }
 
+func procSetForceUnTare(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetForceUnTare(scale, req)
+}
+
 func procCalWeight(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqCalWeight(scale, req)
 }
@@ -769,6 +773,7 @@ func init() {
 		SREQ_GET_ZERO_TRACKING:    procGetZeroTracking,
 		SREQ_SET_GRAV_ACC:         procSetGravAcc,
 		SREQ_GET_GRAV_ACC:         procGetGravAcc,
+		SREQ_SET_FORCE_UNTARE:     procSetForceUnTare,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

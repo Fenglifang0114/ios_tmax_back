@@ -111,6 +111,7 @@ const (
 	CMD_GET_INITIAL_ZERO
 	CMD_GET_ZERO_TRACKING
 	CMD_SET_ZERO_TRACKING
+	CMD_SET_FORCE_UNTARE
 )
 
 type DataType int
@@ -271,6 +272,7 @@ const (
 	GET_MANUAL_ZERO_RESP   RespMsgType = "resp_get_manual_zero"
 	GET_ZERO_TRACKING_RESP RespMsgType = "resp_get_zero_tracking"
 	GET_GRAV_ACC_RESP      RespMsgType = "resp_get_grav_acc"
+	SET_FORCE_UNTARE_RESP  RespMsgType = "resp_force_untare"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )
