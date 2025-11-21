@@ -41,8 +41,9 @@ type RawMaterial struct {
 	// 备注
 	Remark string
 	// 备注1
-	Remark1 string
-	ScaleId int
+	Remark1   string
+	ScaleId   int
+	CheckCode string // 原料的条码
 }
 
 // FormulaCategory 配方类别表
@@ -355,6 +356,9 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 	if err := info.CreateSetAutoNext(); err != nil {
 		return nil, err
 	}
+
+	//检查RawMaterial表中的CheckCode字段是否是空，如果是空则更新为MaterialID的值
+	db.Exec("UPDATE raw_materials SET check_code = material_id WHERE check_code IS NULL OR check_code = ''")
 
 	return info, nil
 }
@@ -859,6 +863,7 @@ func (d *DbFormulaInfo) UpdateRawMaterial(material RawMaterial) error {
 		"remark":        material.Remark,
 		"remark1":       material.Remark1,
 		"scale_id":      material.ScaleId,
+		"check_code":    material.CheckCode,
 	}).Error
 }
 
@@ -1580,6 +1585,7 @@ type SetAutoNext struct {
 	AutoNext   bool `gorm:"not null"`
 	StableTime int  `gorm:"not null"`
 	AutoTare   bool `gorm:"default:0; not null"`
+	CheckCode  bool `gorm:"default:0; not null"`
 }
 
 // 暂存配方的表头
@@ -1689,7 +1695,7 @@ func (d *DbFormulaInfo) CreateSetAutoNext() error {
 }
 
 // 修改SetAutoNext
-func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int, autoTare bool) error {
+func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int, autoTare bool, checkCode bool) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1712,6 +1718,7 @@ func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int, autoTar
 		"auto_next":   autoNext,
 		"stable_time": stableTime,
 		"auto_tare":   autoTare,
+		"check_code":  checkCode,
 	}).Error; err != nil {
 		tx.Rollback()
 		return err

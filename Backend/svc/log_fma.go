@@ -15,6 +15,7 @@ type SaveAddRawData struct {
 	Category   string
 	Ingredient string
 	ScaleName  string
+	CheckCode  string
 }
 
 func GetScaleName(id int) string {
@@ -31,6 +32,7 @@ func SaveFmaRawDataLog(payload ReqAddRawData) {
 		Category:   rawType.CategoryName,
 		Ingredient: payload.Ingredient,
 		ScaleName:  scaleName,
+		CheckCode:  payload.CheckCode,
 	}
 	jsonStr, _ := json.MarshalToString(saveData)
 	LogSysOperation(MenuFormulaManage, SubFmaRawAdd, OpAddStr, jsonStr, "ok", "")
@@ -70,6 +72,11 @@ func SaveUpdateFmaRawDataLog(payload ReqEditRawData, data []RawMaterial) {
 	if oldRaw.ScaleId != payload.ScaleId {
 		updateFields["ScaleName"] = GetScaleName(payload.ScaleId)
 		originalFields["ScaleName"] = GetScaleName(oldRaw.ScaleId)
+	}
+
+	if oldRaw.CheckCode != payload.CheckCode {
+		updateFields["CheckCode"] = payload.CheckCode
+		originalFields["CheckCode"] = oldRaw.CheckCode
 	}
 
 	if len(updateFields) <= 0 {

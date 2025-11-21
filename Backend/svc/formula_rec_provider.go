@@ -228,7 +228,7 @@ func (p *FormulaRecProvider) GetSetAutoNext() (*SetAutoNext, error) {
 
 // 更新配方秤中的自动下一步设置
 func (p *FormulaRecProvider) UpdateSetAutoNext(rec SetAutoNext) error {
-	return p.infoPb.UpdateSetAutoNext(rec.AutoNext, rec.StableTime, rec.AutoTare)
+	return p.infoPb.UpdateSetAutoNext(rec.AutoNext, rec.StableTime, rec.AutoTare, rec.CheckCode)
 }
 
 // 创建暂存配方称重记录

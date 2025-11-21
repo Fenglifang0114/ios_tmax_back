@@ -290,6 +290,7 @@ type ReqUpdateAutoNext struct {
 	AutoNext   bool
 	StableTime int
 	AutoTare   bool
+	CheckCode  bool
 }
 
 type ReqDeleteDraftFmaWgtRec struct {
@@ -310,6 +311,7 @@ type ReqAddRawData struct {
 	Remark       string
 	Remark1      string
 	ScaleId      int
+	CheckCode    string
 }
 
 type ReqImportRawList struct {
@@ -325,6 +327,7 @@ type ReqAddRawInfo struct {
 	ScaleName    string
 	CategoryId   int
 	ScaleId      int
+	CheckCode    string
 }
 
 type ReqImportFmaList struct {
@@ -361,6 +364,7 @@ type ReqEditRawData struct {
 	Remark       string
 	Remark1      string
 	ScaleId      int
+	CheckCode    string
 }
 type ReqDelRawData struct {
 	RecId int

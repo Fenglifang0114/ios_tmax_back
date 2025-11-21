@@ -142,6 +142,11 @@ func initAdmin(sysUser *DbSysUser) error {
 		defer sqlDB.Close()
 	}
 	db.Model(&SysUser{}).Count(&count)
+	if count > 1 {
+		//修改管理员的isChanged为true
+		db.Model(&SysUser{}).Where("user_id = ?", 1).Update("is_changed", true)
+		return nil
+	}
 	if count > 0 {
 		return nil
 	}

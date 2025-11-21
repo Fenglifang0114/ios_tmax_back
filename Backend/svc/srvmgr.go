@@ -1884,6 +1884,11 @@ func (p getFormulaTypeListNotifier) Handle(mgr *SrvMgr) {
 func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
 	// Do something for this event
 	l.Log.Debug("Handle addRawTypeNotifier called")
+	var checkCode string
+	checkCode = payload.CheckCode
+	if checkCode == "" {
+		checkCode = payload.MaterialID
+	}
 	var rec RawMaterial = RawMaterial{
 		MaterialID:   payload.MaterialID,
 		MaterialName: payload.MaterialName,
@@ -1894,6 +1899,7 @@ func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
 		CreatedBy:    payload.CreatedBy,
 		UpdatedBy:    payload.UpdatedBy,
 		ScaleId:      payload.ScaleId,
+		CheckCode:    checkCode,
 	}
 	if err := NewFormulaRecProvider().InsertRawInfo(rec); err != nil {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: "failed to get max raw id"}
@@ -1957,6 +1963,12 @@ func (p rawListImportedNotifier) Handle(mgr *SrvMgr, payload ReqImportRawList) {
 
 		}
 
+		var checkCode string
+		checkCode = v.CheckCode
+		if v.CheckCode == "" {
+			checkCode = v.MaterialID
+		}
+
 		rec := RawMaterial{
 			MaterialID:   v.MaterialID,
 			MaterialName: v.MaterialName,
@@ -1967,6 +1979,7 @@ func (p rawListImportedNotifier) Handle(mgr *SrvMgr, payload ReqImportRawList) {
 			CreatedBy:    payload.CreatedBy,
 			UpdatedBy:    payload.CreatedBy,
 			ScaleId:      v.ScaleId,
+			CheckCode:    checkCode,
 		}
 
 		rawList = append(rawList, rec)
@@ -2218,6 +2231,12 @@ func (p rawDataEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawData) {
 	l.Log.Debug("Handle rawDataEditedNotifier called")
 
 	oldRawData, _ := NewFormulaRecProvider().GetRawData(payload.RecId)
+	var checkCode string
+	checkCode = payload.CheckCode
+
+	if checkCode == "" {
+		checkCode = payload.MaterialID
+	}
 
 	var rec RawMaterial = RawMaterial{
 		RecId:        payload.RecId,
@@ -2230,6 +2249,7 @@ func (p rawDataEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawData) {
 		CreatedBy:    payload.CreatedBy,
 		UpdatedBy:    payload.UpdatedBy,
 		ScaleId:      payload.ScaleId,
+		CheckCode:    checkCode,
 	}
 
 	if err := NewFormulaRecProvider().UpdateRawInfo(rec); err != nil {
@@ -3261,6 +3281,7 @@ func (p updateAutoNextNotifier) Handle(mgr *SrvMgr, payload ReqUpdateAutoNext) {
 		AutoNext:   payload.AutoNext,
 		StableTime: payload.StableTime,
 		AutoTare:   payload.AutoTare,
+		CheckCode:  payload.CheckCode,
 	}
 	if err := NewFormulaRecProvider().UpdateSetAutoNext(setAutoNext); err != nil {
 		l.Log.Error(err)
@@ -3565,7 +3586,6 @@ func (p disableSysUserNotifier) Handle(mgr *SrvMgr, payload ReqEnabledSysUserId)
 
 // 密码修改
 func (p changePasswordNotifier) Handle(mgr *SrvMgr, payload ReqChangePassword) {
-	// Do something for this event
 	l.Log.Debug("Handle changePasswordNotifier called")
 
 	err := mSrvMgr.sysUserPd.UpdateUserPassword(payload.UserId, payload.NewPassword)
