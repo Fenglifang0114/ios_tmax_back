@@ -73,6 +73,9 @@ func EplZebraLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, path
 }
 
 func getZebraPageSize(pageDots string) string {
+	if strings.Contains(pageDots, "-") {
+		pageDots = "0"
+	}
 	num, err := strconv.ParseFloat(pageDots, 64)
 	if err != nil {
 		return pageDots

@@ -1751,6 +1751,9 @@ func extractWifiAPInfo(response string) (WifiAPInfo, error) {
 			if strings.HasPrefix(line, "+CWJAP_DEF:") {
 				data := line[len("+CWJAP_DEF:"):]
 				dataSplit := strings.Split(data, ",")
+				if len(dataSplit) < 4 {
+					continue
+				}
 				info.Ssid = dataSplit[0]
 				info.Bssid = dataSplit[1]
 				info.Channel = dataSplit[2]
@@ -1768,6 +1771,9 @@ func extractWifiAPInfo(response string) (WifiAPInfo, error) {
 			if strings.HasPrefix(line, "+CWJAP:") {
 				data := line[len("+CWJAP:"):]
 				dataSplit := strings.Split(data, ",")
+				if len(dataSplit) < 4 {
+					continue
+				}
 				info.Ssid = dataSplit[0]
 				info.Bssid = dataSplit[1]
 				info.Channel = dataSplit[2]

@@ -1232,19 +1232,16 @@ func (s *ScaleMgr) DelScale(id int64) error {
 	}
 
 	if scale.Conn.TMedia == MEDIA_NET {
-
 		client := s.srvMgr.clientOfScales[scale]
 		if client != nil && client.scaleId == id {
 			s.srvMgr.unregister <- client
 			if client.conn != nil {
 				client.conn.Close()
-			} // terminate the socket that associate with the scale
+			}
 		}
-		// remove the conn then add new one s.conns
 		if scale.MyNet != nil {
 			scale.MyNet.toQuit = true
 		}
-
 		time.Sleep(500 * time.Millisecond)
 		scale.Close()
 		s.srvMgr.removeScale <- scale
@@ -1253,7 +1250,6 @@ func (s *ScaleMgr) DelScale(id int64) error {
 			s.scales[scale.Id] = nil
 		}
 		s.DelMediaList(scale.Id, *conn)
-		//删除连接关系
 		s.connPb.DeleteSrvScaleRelByScaleId(scale.Id)
 		s.DelSrvScaleList(scale.Id)
 		return nil
@@ -1270,31 +1266,19 @@ func (s *ScaleMgr) UpdateScale(req ReqModifyScale) error {
 		return fmt.Errorf("can't find scale with id: %v", id)
 	}
 
-	// if scale.Model != req.ScaleModel {
-	// 	scale.Model = req.ScaleModel
-	// 	if strings.Contains(strings.ToLower(scale.Model), "tmax") {
-	// 		scale.ScaleCat = comm.SCALE_TMAX
-	// 	} else {
-	// 		scale.ScaleCat = comm.SCALE_T2200
-	// 	}
-
-	// }
-
 	composer := cmdComposerFuncMap[scale.ScaleCat]
 	scale.composer = &composer
 	conn := scale.Conn
 	if conn == nil {
 		return fmt.Errorf("can't find connection associated with the scale Id")
 	}
-	// if conn.MediaConf != req.MediaConf {
+
 	conn.MediaConf = req.MediaConf
 
 	s.scales[id].ModifyMedia(req.MediaConf)
 	s.srvMgr.scaleMgr.ModifyMediaList(id, conn.MediaConf)
-	// conn.ScaleCat = scale.ScaleCat
-	// conn.ScaleModel = scale.Model
+
 	s.connPb.connPb.UpdateScaleConn(*conn)
-	// }
 
 	return nil
 }

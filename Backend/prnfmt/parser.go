@@ -183,6 +183,8 @@ func ParserFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buf
 
 	binary.Write(buffer, binary.LittleEndian, dataCamp1.Bytes())
 
+	println(buffer)
+
 	return buffer
 }
 
@@ -207,17 +209,18 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 	// buff, _ := Utf8ToGb2312(utf8Buff)
 	buff := utf8Buff //用UTF8 做
 	var formatbuf *bytes.Buffer
-
 	if printerModel == "EPM205" {
 		dataCamp.Write(ESC_CHANGE_ESC_205)
 	}
-
-	formatbuf = ParseEscLines(buff, dataCamp, lastVarPos)
-
+	if printerModel == "LP50" { //此处对接的是OS2130打印机
+		formatbuf = ParseLP50Lines(buff, dataCamp, lastVarPos)
+	} else if printerModel == "ZEBRA" {
+		formatbuf = ParseRptZebraLines(buff, dataCamp, lastVarPos)
+	} else {
+		formatbuf = ParseEscLines(buff, dataCamp, lastVarPos)
+	}
 	everyBufLen = append(everyBufLen, formatbuf.Len())
-
 	fmt.Println(string(dataCamp.Bytes()))
-
 	totalbuffer.WriteString(formatbuf.String())
 	div := ((everyBufLen[TotalVarDataIndex] / 4) + 1) * 4
 	for i := formatbuf.Len(); i < div; i++ {
@@ -233,10 +236,17 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 
 	FinalRptFmtInfo.formatNum = 1 ///打印格式总数，根据打印格式文件数量决定
 	var prtName [23]byte
-	prtName[22] = 0x01
+	prtName[22] = 0x01 // 打印格式类型 0x01 票据格式 0x00 标签格式
 	tmpNameStr := ""
+	if printerModel == "LP50" {
+		printerModel = "LP50*31"
+	} else if printerModel == "ZEBRA" {
+		printerModel = "ZEBRA*44"
+	}
 	if len(printerModel) > 22 {
 		tmpNameStr = printerModel[:22]
+	} else {
+		tmpNameStr = printerModel
 	}
 	copy(prtName[:len(tmpNameStr)], []byte(tmpNameStr))
 	FinalRptFmtInfo.printerName = prtName

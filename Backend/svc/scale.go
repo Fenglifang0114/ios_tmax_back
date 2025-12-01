@@ -201,7 +201,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 		}
 
 	case MEDIA_NET:
-		//TODO:add new info
+
 		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &ncnf); err != nil {
 			l.Log.Errorf("error unmarshalling: %v", err)
 		}
@@ -634,7 +634,6 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 		}
 		s.Pcnf = pcnf
 	case MEDIA_NET:
-		//TODO: 要做修改IP    202406
 
 		var ncnf NetInfo
 		var err error
@@ -648,15 +647,19 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 			pickFun = s.MyNet.pickerFn
 			s.MyNet.Close()
 			s.MyNet = nil
+			time.Sleep(500 * time.Millisecond)
+
 		} else {
 			l.Log.Error("no net is assigned before")
 			return false
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 		if s.MyNet, err = NewNet(ncnf, pickFun, true); err != nil {
 			l.Log.Error(err.Error())
 		}
+		time.Sleep(500 * time.Millisecond)
 		s.Ncnf = ncnf
+		go s.keepNetState()
 
 	case MEDIA_BT:
 		//TODO: 要做修改蓝牙    202406
@@ -2142,6 +2145,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 
 		tempStr := decryptCsv(string(csvFmtContent))
+		println(tempStr)
 		if !strings.Contains(tempStr, "ROTATE") {
 			return &ScaleRespMsg{}, fmt.Errorf("format error,download fail! ")
 		}

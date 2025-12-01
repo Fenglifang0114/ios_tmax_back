@@ -74,35 +74,22 @@ func (tnet *TNet) Close() error {
 			return fmt.Errorf("tnet.conn closed error")
 		}
 	}
-
-	// waiting s.read() goroutine to quit
 	fmt.Println("关闭 conn")
-	tnet.wg.Wait() //20240801
+	tnet.wg.Wait()
 	fmt.Println("关闭 read")
-	// close recv/write channels
 	if !IsClosed(tnet.sendCh) {
 		close(tnet.sendCh)
 	}
-	// wait for goroutine quit
 	if !IsPacketChClosed(tnet.recvCh) {
 		close(tnet.recvCh)
 	}
-
 	if !tnet.toQuit {
 		tnet.toQuit = true
 	}
-
-	// close tcp connect
-
 	if tnet.conn == nil {
 		return fmt.Errorf("tnet.conn is nil")
 	}
 	log.Log.Info("close tcp connect")
-
-	// err = tnet.conn.Close()
-	// if err != nil {
-	// 	return fmt.Errorf("tnet.conn closed error")
-	// }
 
 	time.Sleep(50 * time.Millisecond) // to let tnet closed
 	return nil
