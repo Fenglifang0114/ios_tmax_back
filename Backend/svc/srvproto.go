@@ -862,7 +862,7 @@ type UsersListMsg struct {
 
 type ScaleConnMedia struct { // connection information will be stored in database
 	IsOnline   bool
-	ScaleModel string
+	ScaleModel string //默认与CustomModel 相同 但是，如果能从秤上读取到机种名，就存储秤上的机种名，并不显示给客户
 	ScaleCat   comm.ScaleCat
 	ScaleSn    string
 	ScaleId    int64
@@ -873,6 +873,10 @@ type ScaleConnMedia struct { // connection information will be stored in databas
 	ScaleName  string
 	// 为小服务新增字段
 	SendService bool // 是否发送数据给小服务
+	//新增字段 2025/12/1
+	CustomModel  string //客户机种名  显示的话，一直显示这个机种名
+	InnerModel   string //内部机种名
+	ProtocolName string //协议名
 
 }
 

@@ -21,6 +21,7 @@ var (
 	ZEBRA_LOOP_FLAG   = 0
 	ZEBRA_FONT_STR    = ",0,3,1,1,N,\"" //票据暂时设置都是这么大小的字体
 	ZEBRA_LINE_HEIGHT = 50.0            // 票据行高 50mm  斑马打印机的分辨率是302dpi 每毫米大约12个点
+	ZEBRA_LINE_MODE   = "Q0001,0\r\n"   //打印模式  Q0001,0 连续纸模式
 
 	//12 23 0F 打印机浓度  00-0F
 )
@@ -157,6 +158,7 @@ func parseRptZebraPage(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buf
 }
 
 func parseZebraPage(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
+	dataBuffer.WriteString(ZEBRA_LINE_MODE) //设置为连续纸打印
 	widthHead := "q"
 	tempRowArr[1] = strings.Replace(tempRowArr[1], "\r\n", "", 1)
 	dotsWidth := getZebraPageSize(tempRowArr[1])

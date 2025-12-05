@@ -119,6 +119,8 @@ func ParserFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buf
 
 	if printerModel == "ZEBRA" {
 		formatbuf = ParseEplZebraLines(buff, dataCamp, lastVarPos)
+	} else if printerModel == "LP50" {
+		formatbuf = ParseEplLp50Lines(buff, dataCamp, lastVarPos)
 	} else {
 		formatbuf = ParseEplLines(buff, dataCamp, lastVarPos)
 	}

@@ -90,7 +90,6 @@ func (tnet *TNet) Close() error {
 		return fmt.Errorf("tnet.conn is nil")
 	}
 	log.Log.Info("close tcp connect")
-
 	time.Sleep(50 * time.Millisecond) // to let tnet closed
 	return nil
 }
@@ -139,8 +138,10 @@ func (tnet *TNet) read() {
 			if err.Error() == "EOF" { // 20240801
 				log.Log.Errorf("EOF")
 				//20250901 断开TCP，重新连接
-				tnet.conn.Close()
-				tnet.reconnect()
+				if tnet.conn != nil {
+					tnet.conn.Close()
+					tnet.reconnect()
+				}
 				continue
 			}
 			if !IsPacketChClosed(tnet.recvCh) {
