@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"fmt"
 	"time"
 
 	"gorm.io/driver/sqlite"
@@ -17,6 +18,19 @@ type RawMaterialCategory struct {
 	CategoryID int `gorm:"primaryKey;autoincrement;not null"`
 	// 类别名称
 	CategoryName string `gorm:"not null"`
+}
+
+type UploadServerInfo struct {
+	RecId     int `gorm:"primaryKey;autoincrement;not null"`
+	Ip        string
+	ShareName string
+	Username  string
+	Password  string
+	Enable    bool `gorm:"default:false"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	CreatedBy string
+	UpdatedBy string
 }
 
 // RawMaterial 原料表
@@ -59,7 +73,7 @@ type FormulaHeader struct {
 	RecId int `gorm:"primaryKey;autoincrement;not null"`
 
 	FormulaKey int `gorm:"default:0"` // 设置为唯一标识主键
-	//加key的作用是不管如何删除和修改，这次生成的key是唯一的。便于查找关于此配方的称重记录
+	//加key的作用是不管如何删除和修改，这次生成的key是唯一的。便于查找关于此配方的称重记录  后来不需要分那么清楚，就没有用了
 	// 配方编号
 	FormulaID string `gorm:"not null"`
 	// 配方名称
@@ -99,7 +113,8 @@ type FormulaHeader struct {
 
 	//是否最新的
 	IsLatest bool `gorm:"default:true"` // 默认值为 true，表示未修改
-
+	//配方条码
+	FormulaBarcode string
 }
 
 // 配方头表的 BeforeSave 钩子
@@ -108,6 +123,7 @@ func (f *FormulaHeader) BeforeSave(tx *gorm.DB) error {
 		// 解引用并赋值
 		f.FormulaKey = f.RecId
 	}
+
 	return nil
 }
 
@@ -197,6 +213,8 @@ type FormulaWgtRecHeader struct {
 	ScaleName  string
 	ScaleModel string
 	ScaleSn    string
+	//配方条码
+	FormulaBarcode string
 }
 
 // FormulaWgtRecDetail 配方称重记录详情表
@@ -264,6 +282,8 @@ type FormulaWgtRecDetail struct {
 	ScaleModel string
 	//秤序列号
 	ScaleSn string
+	//原料条码
+	CheckCode string
 }
 
 type FormulaList struct {
@@ -294,12 +314,19 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 		&SetAutoNext{},
 		&DrafFmaWgtRecHeader{},
 		&DrafFmaWgtRecDetail{},
+		&SetReportPrint{},
+		&UploadServerInfo{},
 	); err != nil {
 		return nil, err
 	}
 
 	// 检查并更新现有数据
 	db.Exec("UPDATE formula_headers SET formula_key = rec_id WHERE formula_key = 0")
+	db.Exec("UPDATE formula_headers SET formula_barcode = formula_id WHERE formula_barcode IS NULL OR formula_barcode = ''")
+	db.Exec("UPDATE formula_wgt_rec_headers SET formula_barcode = formula_id WHERE formula_barcode IS NULL OR formula_barcode = ''")
+	db.Exec("UPDATE formula_wgt_rec_details SET check_code = material_id WHERE check_code IS NULL OR check_code = ''")
+	db.Exec("UPDATE raw_materials SET check_code = material_id WHERE check_code IS NULL OR check_code = ''")
+
 	info := &DbFormulaInfo{dbName: dbName}
 	// 通过实例调用方法
 	if err := info.UpdateFormulaKeyInWgtRecHeader(); err != nil {
@@ -357,8 +384,10 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 		return nil, err
 	}
 
-	//检查RawMaterial表中的CheckCode字段是否是空，如果是空则更新为MaterialID的值
-	db.Exec("UPDATE raw_materials SET check_code = material_id WHERE check_code IS NULL OR check_code = ''")
+	//新增一条设置
+	if err := info.CreateSetReportPrint(); err != nil {
+		return nil, err
+	}
 
 	return info, nil
 }
@@ -1110,6 +1139,96 @@ func (d *DbFormulaInfo) GetFormulaData(id int) ([]FormulaList, error) {
 
 }
 
+// 检查配方ID和条码是否匹配
+func (d *DbFormulaInfo) CheckFmaIdAndBarcode(recId int, formulaID string, formulaBarcode string) (bool, bool, error) {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return false, false, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return false, false, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var FormulaHeaders []FormulaHeader
+	var FormulaHeadersBarcode []FormulaHeader
+	// 查询配方头信息
+	err = db.Where("formula_id = ? AND is_used = ? AND is_latest = ?", formulaID, true, true).Find(&FormulaHeaders).Error
+	if err != nil {
+		return false, false, err
+	}
+	// 查询配方头信息
+	err = db.Where("formula_barcode = ? AND is_used = ? AND is_latest = ?", formulaBarcode, true, true).Find(&FormulaHeadersBarcode).Error
+	if err != nil {
+		return false, false, err
+	}
+	//新增时判断配方ID和条码是否存在
+	if recId == 0 {
+		idFlag := true
+		barcodeFlag := true
+		if len(FormulaHeaders) > 0 {
+			idFlag = false
+		}
+		if len(FormulaHeadersBarcode) > 0 {
+			barcodeFlag = false
+		}
+		return idFlag, barcodeFlag, nil
+	}
+
+	//判断ID和条码是否已经存在，且recId 与存在的RecID 不一致
+	//下面这个是修改配方时，判断配方ID和条码是否一致，ID是不能改的，所以，只需要判断条码是否存在即可
+	barcodeFlag := true
+	if len(FormulaHeadersBarcode) > 0 {
+		for _, header := range FormulaHeadersBarcode {
+			if header.RecId != recId {
+				barcodeFlag = false
+			}
+		}
+	}
+
+	return true, barcodeFlag, nil
+}
+
+//GetFormulaDataByBarcode
+
+func (d *DbFormulaInfo) GetFormulaDataByBarcode(barcode string) ([]FormulaList, error) {
+	var formulaLists []FormulaList
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var headers []FormulaHeader
+	// 查询配方头信息
+	err = db.Where("formula_barcode  = ? AND is_used = ? AND is_latest = ?", barcode, true, true).Find(&headers).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, header := range headers {
+		var formulaDetails []FormulaDetail
+		err = db.Where("formula_rec_id = ?", header.RecId).Find(&formulaDetails).Error
+		if err != nil {
+			return nil, err
+		}
+
+		formulaLists = append(formulaLists, FormulaList{
+			Header:  header,
+			Details: formulaDetails,
+		})
+	}
+	return formulaLists, nil
+}
+
 // 查询所有的 FormulaList
 func (d *DbFormulaInfo) GetAllFormulaLists() ([]FormulaList, error) {
 	var formulaLists []FormulaList
@@ -1145,6 +1264,123 @@ func (d *DbFormulaInfo) GetAllFormulaLists() ([]FormulaList, error) {
 	}
 
 	return formulaLists, nil
+}
+
+// 查询单个配方称重记录
+func (d *DbFormulaInfo) GetFmaWgtRecByOrderId(orderId string) (FormulaWgtRecList, error) {
+	var formulaWgtRecList FormulaWgtRecList
+
+	// 设置重试参数
+	maxRetries := 3
+	retryDelay := 500 * time.Millisecond
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// 每次重试都建立新的数据库连接
+		db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+		if err != nil {
+			// 如果是最后一次尝试，直接返回错误
+			if attempt == maxRetries {
+				return formulaWgtRecList, err
+			}
+			// 否则等待并继续重试
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		sqlDB, err := db.DB()
+		if err != nil {
+			db = nil
+			if attempt == maxRetries {
+				return formulaWgtRecList, err
+			}
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		// 确保数据库连接被关闭
+		defer sqlDB.Close()
+
+		var headers []FormulaWgtRecHeader
+		err = db.Where("record_id = ?", orderId).Find(&headers).Error
+		if err != nil {
+			// 如果是最后一次尝试，直接返回错误
+			if attempt == maxRetries {
+				return formulaWgtRecList, err
+			}
+			// 否则等待并继续重试
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		// 有且只能有一个记录
+		if len(headers) != 1 {
+			// 如果是最后一次尝试，返回特定错误
+			if attempt == maxRetries {
+				return formulaWgtRecList, fmt.Errorf("fail")
+			}
+			// 否则等待并继续重试
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		var details []FormulaWgtRecDetail
+		err = db.Where("record_id = ?", headers[0].RecordID).Find(&details).Error
+		if err != nil {
+			if attempt == maxRetries {
+				return formulaWgtRecList, err
+			}
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		// 查询成功，构造返回结果
+		formulaWgtRecList = FormulaWgtRecList{
+			Header:  headers[0],
+			Details: details,
+		}
+
+		// 成功获取数据，直接返回
+		return formulaWgtRecList, nil
+	}
+
+	// 如果所有重试都失败（理论上不会执行到这里）
+	return formulaWgtRecList, fmt.Errorf("fail: exceeded maximum retry attempts")
+}
+
+// 查询一个配方称重记录通过配方ID
+func (d *DbFormulaInfo) GetOneFormulaWgtRecLists(fmaId string) ([]FormulaWgtRecList, error) {
+	var formulaWgtRecLists []FormulaWgtRecList
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	var headers []FormulaWgtRecHeader
+	err = db.Where("formula_id = ?", fmaId).Find(&headers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, header := range headers {
+		var details []FormulaWgtRecDetail
+		err = db.Where("record_id = ?", header.RecordID).Find(&details).Error
+		if err != nil {
+			return nil, err
+		}
+		formulaWgtRecLists = append(formulaWgtRecLists, FormulaWgtRecList{
+			Header:  header,
+			Details: details,
+		})
+	}
+
+	return formulaWgtRecLists, nil
 }
 
 // 查询所有的 FormulaWgtRecList
@@ -1321,20 +1557,21 @@ func (d *DbFormulaInfo) UpdateFormula(header FormulaHeader, details []FormulaDet
 
 	// 更新配方头为新的数据
 	if err := tx.Model(&FormulaHeader{}).Where("formula_key = ? AND is_latest = ?", header.FormulaKey, true).Updates(map[string]any{
-		"formula_name":   header.FormulaName,
-		"category_id":    header.CategoryID,
-		"formula_mode":   header.FormulaMode,
-		"formula_unit":   header.FormulaUnit,
-		"total_weight":   header.TotalWeight,
-		"material_count": header.MaterialCount,
-		"is_encrypted":   header.IsEncrypted,
-		"need_container": header.NeedContainer,
-		"updated_at":     time.Now(),
-		"updated_by":     header.UpdatedBy,
-		"remark":         header.Remark,
-		"remark1":        header.Remark1,
-		"remark2":        header.Remark2,
-		"remark3":        header.Remark3,
+		"formula_name":    header.FormulaName,
+		"category_id":     header.CategoryID,
+		"formula_mode":    header.FormulaMode,
+		"formula_unit":    header.FormulaUnit,
+		"total_weight":    header.TotalWeight,
+		"material_count":  header.MaterialCount,
+		"is_encrypted":    header.IsEncrypted,
+		"need_container":  header.NeedContainer,
+		"updated_at":      time.Now(),
+		"updated_by":      header.UpdatedBy,
+		"remark":          header.Remark,
+		"remark1":         header.Remark1,
+		"remark2":         header.Remark2,
+		"remark3":         header.Remark3,
+		"formula_barcode": header.FormulaBarcode,
 	}).Error; err != nil {
 		tx.Rollback()
 		return err
@@ -1588,6 +1825,40 @@ type SetAutoNext struct {
 	CheckCode  bool `gorm:"default:0; not null"`
 }
 
+// 打印字段是否显示表
+type SetReportPrint struct {
+	// 编号（主键）
+	RecID int `gorm:"primaryKey;autoincrement;not null"`
+	// 配方ID
+	FormulaID bool `gorm:"default:1; not null"`
+	// 配方名称
+	FormulaName bool `gorm:"default:1; not null"`
+	//配方条码
+	FormulaBarcode bool `gorm:"default:1; not null"`
+	//单号
+	OrderId bool `gorm:"default:1; not null"`
+	//保存时间
+	SaveTime bool `gorm:"default:1; not null"`
+	// 操作员
+	Operator bool `gorm:"default:1; not null"`
+	//原料ID
+	RawId bool `gorm:"default:1; not null"`
+	//原料名称
+	RawName bool `gorm:"default:1; not null"`
+	//是否通过
+	Pass bool `gorm:"default:1; not null"`
+	//配方总重量
+	FmaTotalWgt bool `gorm:"default:1; not null"`
+	// 实际总重量
+	ActualTotalWgt bool `gorm:"default:1; not null"`
+	//设备名称
+	DeviceName bool `gorm:"default:1; not null"`
+	//实际误差
+	RawActualErr bool `gorm:"default:1; not null"`
+	//实际重量
+	RawActualWgt bool `gorm:"default:1; not null"`
+}
+
 // 暂存配方的表头
 type DrafFmaWgtRecHeader struct {
 	// 记录编号（主键）
@@ -1694,6 +1965,118 @@ func (d *DbFormulaInfo) CreateSetAutoNext() error {
 	return tx.Commit().Error
 }
 
+// 创建打印字段是否显示表
+func (d *DbFormulaInfo) CreateSetReportPrint() error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	var count int64
+	if err := tx.Model(&SetReportPrint{}).Count(&count).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 若没有数据，则插入一条
+	if count == 0 {
+		if err := tx.Create(&SetReportPrint{
+			FormulaID:      true,
+			FormulaName:    true,
+			FormulaBarcode: true,
+			OrderId:        true,
+			SaveTime:       true,
+			Operator:       true,
+			RawId:          true,
+			RawName:        true,
+			Pass:           true,
+			FmaTotalWgt:    true,
+			ActualTotalWgt: true,
+			DeviceName:     true,
+			RawActualErr:   true,
+			RawActualWgt:   true,
+		}).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit().Error
+}
+
+// 修改打印字段是否显示表
+func (d *DbFormulaInfo) UpdateSetReportPrint(setReportPrint SetReportPrint) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	// 更新 SetReportPrint 表
+	if err := tx.Model(&SetReportPrint{}).Where("rec_id = ?", 1).Updates(map[string]interface{}{
+		"formula_id":       setReportPrint.FormulaID,
+		"formula_name":     setReportPrint.FormulaName,
+		"formula_barcode":  setReportPrint.FormulaBarcode,
+		"order_id":         setReportPrint.OrderId,
+		"save_time":        setReportPrint.SaveTime,
+		"operator":         setReportPrint.Operator,
+		"raw_id":           setReportPrint.RawId,
+		"raw_name":         setReportPrint.RawName,
+		"pass":             setReportPrint.Pass,
+		"raw_actual_wgt":   setReportPrint.RawActualWgt,
+		"raw_actual_err":   setReportPrint.RawActualErr,
+		"fma_total_wgt":    setReportPrint.FmaTotalWgt,
+		"actual_total_wgt": setReportPrint.ActualTotalWgt,
+		"device_name":      setReportPrint.DeviceName,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// 查询SetReportPrint
+func (d *DbFormulaInfo) GetSetReportPrint() (*SetReportPrint, error) {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var setReportPrint SetReportPrint
+	if err := db.First(&setReportPrint).Error; err != nil {
+		return nil, err
+	}
+	return &setReportPrint, nil
+}
+
 // 修改SetAutoNext
 func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int, autoTare bool, checkCode bool) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -1742,21 +2125,12 @@ func (d *DbFormulaInfo) GetSetAutoNext() (*SetAutoNext, error) {
 		defer sqlDB.Close()
 	}
 
-	// 开启事务
-	tx := db.Begin()
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
 	// 查询
 	var setAutoNext SetAutoNext
-	if err := tx.First(&setAutoNext).Error; err != nil {
-		tx.Rollback()
+	if err := db.First(&setAutoNext).Error; err != nil {
 		return nil, err
 	}
-
-	// 提交事务
-	return &setAutoNext, tx.Commit().Error
+	return &setAutoNext, nil
 }
 
 //暂存配方的增删改查
@@ -2017,4 +2391,97 @@ func (d *DbFormulaInfo) GetRawDataByRawID(rawId string) (RawMaterial, error) {
 		return raw, err
 	}
 	return raw, nil
+}
+
+// 创建一个新的上传服务器信息 服务器信息只能有一个，如果有则覆盖
+func (d *DbFormulaInfo) CreateUploadServerInfo(info UploadServerInfo) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	// 检查上传服务器信息表是否已经存在数据
+	var count int64
+	db.Model(&UploadServerInfo{}).Count(&count)
+	if count > 0 {
+		// 如果存在数据，则删除旧数据
+		if err := tx.Delete(&UploadServerInfo{}).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	// 创建新的上传服务器信息
+	if err := tx.Create(&info).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// 获取上传服务器信息 如果不存在则返回空结构体
+func (d *DbFormulaInfo) GetUploadServerInfo() (UploadServerInfo, error) {
+	var info UploadServerInfo
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return info, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return info, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 查询上传服务器信息
+	if err := db.First(&info).Error; err != nil {
+		return info, err
+	}
+	return info, nil
+}
+
+// 修改上传服务器信息
+func (d *DbFormulaInfo) UpdateUploadServerInfo(info UploadServerInfo) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	// 更新上传服务器信息
+	if err := tx.Model(&UploadServerInfo{}).Where("rec_id = ?", 1).Updates(map[string]interface{}{
+		"ip":         info.Ip,
+		"share_name": info.ShareName,
+		"username":   info.Username,
+		"password":   info.Password,
+		"enable":     info.Enable,
+		"updated_at": time.Now(),
+		"updated_by": info.UpdatedBy,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	// 提交事务
+	return tx.Commit().Error
 }

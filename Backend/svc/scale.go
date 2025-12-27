@@ -4346,6 +4346,9 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 }
 
 func sendRespMsgScale(s *Scale) {
+	time.Sleep(500 * time.Millisecond)
+	perfCmdNwaitResult(s, cmd.ANSWER_ALIVE_CMD_TMAX, m.ANSWER_ALIVE_RESP, -1, 1)
+	time.Sleep(1 * time.Second)
 	perfCmdNwaitResult(s, cmd.ANSWER_ALIVE_CMD_TMAX, m.ANSWER_ALIVE_RESP, -1, 1)
 
 }

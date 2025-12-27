@@ -126,8 +126,17 @@ func (p *FormulaRecProvider) InsertFormulaBody(rec FormulaDetail) error {
 
 // 获取配方信息列表
 func (p *FormulaRecProvider) GetFormulaDataList() ([]FormulaList, error) {
-
 	return p.infoPb.GetAllFormulaLists()
+}
+
+// 通过条码获取配方数据
+func (p *FormulaRecProvider) GetFormulaDataByBarcode(barcode string) ([]FormulaList, error) {
+	return p.infoPb.GetFormulaDataByBarcode(barcode)
+}
+
+// 检查配方ID和条码是否匹配
+func (p *FormulaRecProvider) CheckFmaIdAndBarcode(recId int, formulaID string, formulaBarcode string) (bool, bool, error) {
+	return p.infoPb.CheckFmaIdAndBarcode(recId, formulaID, formulaBarcode)
 }
 
 // 获取单个配方信息
@@ -167,6 +176,17 @@ func (p *FormulaRecProvider) InsertFormulaWgtBody(rec FormulaWgtRecDetail) error
 func (p *FormulaRecProvider) GetFormulaWgtRecList() ([]FormulaWgtRecList, error) {
 	recs, err := p.infoPb.GetAllFormulaWgtRecLists()
 	return recs, err
+}
+
+// 获取配方称重记录列表
+func (p *FormulaRecProvider) GetOneFormulaWgtRecList(fmaId string) ([]FormulaWgtRecList, error) {
+	recs, err := p.infoPb.GetOneFormulaWgtRecLists(fmaId)
+	return recs, err
+}
+
+// 获取配方称重记录
+func (p *FormulaRecProvider) GetFmaWgtRecByOrderId(orderId string) (FormulaWgtRecList, error) {
+	return p.infoPb.GetFmaWgtRecByOrderId(orderId)
 }
 
 // 删除配方
@@ -275,4 +295,29 @@ func (p *FormulaRecProvider) CheckFormulaRawData(scaleId int) (bool, error) {
 // 获取原料名ByID
 func (p *FormulaRecProvider) GetRawDataByRawID(radId string) (RawMaterial, error) {
 	return p.infoPb.GetRawDataByRawID(radId)
+}
+
+// 修改打印报表字段设置
+func (p *FormulaRecProvider) UpdateSetReportPrint(rec SetReportPrint) error {
+	return p.infoPb.UpdateSetReportPrint(rec)
+}
+
+// 获取打印报表字段设置
+func (p *FormulaRecProvider) GetSetReportPrint() (*SetReportPrint, error) {
+	return p.infoPb.GetSetReportPrint()
+}
+
+// 获取上传服务器信息
+func (p *FormulaRecProvider) GetUploadServerInfo() (UploadServerInfo, error) {
+	return p.infoPb.GetUploadServerInfo()
+}
+
+// 更新上传服务器信息
+func (p *FormulaRecProvider) UpdateUploadServerInfo(rec UploadServerInfo) error {
+	return p.infoPb.UpdateUploadServerInfo(rec)
+}
+
+// 创建上传服务器信息
+func (p *FormulaRecProvider) CreateUploadServerInfo(rec UploadServerInfo) error {
+	return p.infoPb.CreateUploadServerInfo(rec)
 }

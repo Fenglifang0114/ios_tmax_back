@@ -211,6 +211,14 @@ func init() {
 	createFormulaRecListNotifier := getFormulaListNotifier{}
 	formulaRecList.Register(createFormulaRecListNotifier)
 
+	//获取配方数据by 条码
+	createGetFormulaByBarcodeNotifier := getFormulaByBarcodeNotifier{}
+	getFormulaByBarcode.Register(createGetFormulaByBarcodeNotifier)
+
+	//检查配方ID和条码是否匹配
+	createCheckFmaIdAndBarcodeNotifier := checkFmaIdAndBarcodeNotifier{}
+	checkFmaIdAndBarcode.Register(createCheckFmaIdAndBarcodeNotifier)
+
 	creategetFormulaDataNotifier := getFormulaDataNotifier{}
 	formulaData.Register(creategetFormulaDataNotifier)
 
@@ -222,6 +230,12 @@ func init() {
 
 	createFormulaWgtRecListNotifier := getFormulaWgtRecListNotifier{}
 	formulaWgtRecList.Register(createFormulaWgtRecListNotifier)
+
+	oneFormulaWgtRecListNotifier := getOneFormulaWgtRecListNotifier{}
+	oneFmaWgtRecList.Register(oneFormulaWgtRecListNotifier)
+
+	getFmaRecByOrderIdNotifier := getFmaRecByOrderIdNotifier{}
+	getFmaRecByOrderId.Register(getFmaRecByOrderIdNotifier)
 
 	createFmaDelNotifier := delFormulaNotifier{}
 	formulaDeleted.Register(createFmaDelNotifier)
@@ -349,6 +363,18 @@ func init() {
 	addCalRecordNotifier := addCalLogNotifier{}
 	addCalRecord.Register(addCalRecordNotifier)
 
+	createUpdateSetReportPrintNotifier := updateSetReportPrintNotifier{}
+	updateSetReportPrint.Register(createUpdateSetReportPrintNotifier)
+
+	createGetSetReportPrintNotifier := getSetReportPrintNotifier{}
+	getSetReportPrint.Register(createGetSetReportPrintNotifier)
+
+	creatEditUploadFmaServerNotifier := editUploadFmaServerNotifier{}
+	editUploadFmaServer.Register(creatEditUploadFmaServerNotifier)
+
+	createGetUploadFmaServerNotifier := getUploadFmaServerNotifier{}
+	getUploadFmaServer.Register(createGetUploadFmaServerNotifier)
+
 }
 
 type portListedNotifier struct{}
@@ -458,6 +484,11 @@ type editFormulaRecNotifier struct{}
 
 type getFormulaListNotifier struct{}
 
+type getFormulaByBarcodeNotifier struct{}
+
+// 检查配方ID和条码是否匹配
+type checkFmaIdAndBarcodeNotifier struct{}
+
 type getFormulaDataNotifier struct{}
 
 type getRawDataNotifier struct{}
@@ -465,6 +496,10 @@ type getRawDataNotifier struct{}
 type addFormulaWgtRecNotifier struct{}
 
 type getFormulaWgtRecListNotifier struct{}
+
+type getOneFormulaWgtRecListNotifier struct{}
+
+type getFmaRecByOrderIdNotifier struct{}
 
 type delFormulaNotifier struct{}
 
@@ -549,6 +584,14 @@ type exportCalLogNotifier struct{}
 type exportScaleLogNotifier struct{}
 
 type addCalLogNotifier struct{}
+
+type updateSetReportPrintNotifier struct{}
+
+type getSetReportPrintNotifier struct{}
+
+type editUploadFmaServerNotifier struct{}
+
+type getUploadFmaServerNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event
@@ -685,7 +728,7 @@ func (p scaleSrvListNotifier) Handle(scaleMgr *ScaleMgr, srvIdStr string) {
 	if relsStr, err = json.MarshalToString(srvScaleList); err != nil {
 		log.Log.Errorf("%v\n", err)
 	}
-	// send ports list back to requestee
+
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_SCALE_SRV_LIST, MsgBody: relsStr}
 }
 
@@ -700,11 +743,11 @@ func (p setScaleSrvValNotifier) Handle(scaleMgr *ScaleMgr, rel SrvScaleRel) {
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SET_SCALE_SRV_VAL, MsgBody: "ok"}
 }
 
-func (p delScaleNotifier) Handle(payload ReqDelScale) { //修改秤的属性
+func (p delScaleNotifier) Handle(mgr *SrvMgr, payload ReqDelScale) { //修改秤的属性
 	// Do something for this event
 	log.Log.Debug("Handle delScaleNotifier called")
 	//先判断是否有配方使用了这个秤，使用了，不能删除
-	isUsed, err := NewFormulaRecProvider().CheckFormulaRawData(int(payload.ScaleId))
+	isUsed, err := mgr.formulaPd.CheckFormulaRawData(int(payload.ScaleId))
 	if err != nil {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_DEL, MsgBody: "fail,open db error"}
 		return
@@ -944,7 +987,9 @@ func (s *ScaleMgr) UpdateSrvScaleVal(relInfo SrvScaleRel) error {
 
 	result := []*SrvScaleRel{}
 	for _, rel := range s.srvMgr.srvScaleRel {
-		if rel.ScaleId != relInfo.ScaleId && rel.SrvId != relInfo.SrvId {
+		if rel.ScaleId == relInfo.ScaleId && rel.SrvId == relInfo.SrvId {
+			continue
+		} else {
 			result = append(result, rel)
 		}
 	}

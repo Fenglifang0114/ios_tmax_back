@@ -119,18 +119,22 @@ func (u ScaleNameModified) Trigger(payload ReqModifyScaleName) {
 var scaleDeleted ScaleDeleted
 
 type ScaleDeleted struct {
-	handlers []interface{ Handle(payload ReqDelScale) }
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqDelScale)
+	}
 }
 
 // Register adds an event handler for this event
-func (u *ScaleDeleted) Register(handler interface{ Handle(payload ReqDelScale) }) {
+func (u *ScaleDeleted) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqDelScale)
+}) {
 	u.handlers = append(u.handlers, handler)
 }
 
 // Trigger sends out an event with the payload
-func (u ScaleDeleted) Trigger(payload ReqDelScale) {
+func (u ScaleDeleted) Trigger(mgr *SrvMgr, payload ReqDelScale) {
 	for _, handler := range u.handlers {
-		go handler.Handle(payload)
+		go handler.Handle(mgr, payload)
 	}
 }
 
@@ -1120,6 +1124,52 @@ func (u FormulaDataEdited) Trigger(mgr *SrvMgr, payload ReqAddFormulaData) {
 	}
 }
 
+// 检查配方ID和条码是否匹配
+var checkFmaIdAndBarcode CheckFmaIdAndBarcode
+
+type CheckFmaIdAndBarcode struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqCheckFmaIdAndBarcode)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *CheckFmaIdAndBarcode) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqCheckFmaIdAndBarcode)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u CheckFmaIdAndBarcode) Trigger(mgr *SrvMgr, payload ReqCheckFmaIdAndBarcode) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取配方数据by 条码
+var getFormulaByBarcode GetFormulaByBarcode
+
+type GetFormulaByBarcode struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqGetFormulaByBarcode)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetFormulaByBarcode) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqGetFormulaByBarcode)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetFormulaByBarcode) Trigger(mgr *SrvMgr, payload ReqGetFormulaByBarcode) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
 var formulaRecList FormulaRecListed
 
 type FormulaRecListed struct {
@@ -1202,6 +1252,52 @@ func (u *FormulaWgtRecAdded) Register(handler interface {
 
 // Trigger sends out an event with the payload
 func (u FormulaWgtRecAdded) Trigger(mgr *SrvMgr, payload ReqFormulaWgtRec) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 根据订单号获取配方称重记录
+var getFmaRecByOrderId GetFmaRecByOrderId
+
+type GetFmaRecByOrderId struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetFmaRecByOrderId) Register(handler interface {
+	Handle(mgr *SrvMgr, payload string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetFmaRecByOrderId) Trigger(mgr *SrvMgr, payload string) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取配方称重记录列表
+var oneFmaWgtRecList OneFmaWgtRecListed
+
+type OneFmaWgtRecListed struct {
+	handlers []interface {
+		Handle(srvMgr *SrvMgr, payload string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *OneFmaWgtRecListed) Register(handler interface {
+	Handle(srvMgr *SrvMgr, payload string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u OneFmaWgtRecListed) Trigger(mgr *SrvMgr, payload string) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
 	}
@@ -1540,6 +1636,86 @@ func (u *UpdateAutoNext) Register(handler interface {
 func (u UpdateAutoNext) Trigger(mgr *SrvMgr, payload ReqUpdateAutoNext) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
+	}
+}
+
+var updateSetReportPrint UpdateSetReportPrint
+
+type UpdateSetReportPrint struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload SetReportPrint)
+	}
+}
+
+func (u *UpdateSetReportPrint) Register(handler interface {
+	Handle(mgr *SrvMgr, payload SetReportPrint)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+func (u UpdateSetReportPrint) Trigger(mgr *SrvMgr, payload SetReportPrint) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取上传服务器信息
+var getUploadFmaServer GetUploadFmaServer
+
+type GetUploadFmaServer struct {
+	handlers []interface{ Handle(mgr *SrvMgr) }
+}
+
+// Register adds an event handler for this event
+func (u *GetUploadFmaServer) Register(handler interface{ Handle(mgr *SrvMgr) }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetUploadFmaServer) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
+	}
+}
+
+// 修改上传服务器信息
+var editUploadFmaServer EditUploadFmaServer
+
+type EditUploadFmaServer struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload UploadServerInfo)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *EditUploadFmaServer) Register(handler interface {
+	Handle(mgr *SrvMgr, payload UploadServerInfo)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u EditUploadFmaServer) Trigger(mgr *SrvMgr, payload UploadServerInfo) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取报表打印设置
+var getSetReportPrint GetSetReportPrint
+
+type GetSetReportPrint struct {
+	handlers []interface{ Handle(mgr *SrvMgr) }
+}
+
+// Register adds an event handler for this event
+func (u *GetSetReportPrint) Register(handler interface{ Handle(mgr *SrvMgr) }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetSetReportPrint) Trigger(mgr *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr)
 	}
 }
 

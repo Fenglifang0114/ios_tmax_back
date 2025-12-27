@@ -69,6 +69,8 @@ const (
 	SubFmaWgtRecAdd = "fma_wgt_rec_add" // 重量记录管理模块新增
 	SubFmaWgtRecDel = "fma_wgt_rec_del" // 重量记录管理模块删除
 
+	SubFmaWgtRecUpload = "fma_wgt_rec_upload" // 重量记录管理模块上传
+
 	SubFmaDarftAdd    = "fma_draft_add"    // 草稿管理模块新增
 	SubFmaDarftDel    = "fma_draft_del"    // 草稿管理模块删除
 	SubFmaDarftUpdate = "fma_draft_update" // 草稿管理模块更新
@@ -103,6 +105,7 @@ const (
 	OpImportStr  = "import"  // 导入
 	OpExportStr  = "export"  // 导出
 	OpSetStr     = "setting" // 设置
+	OpUploadStr  = "upload"  // 上传
 )
 
 // LogSysOperation 统一操作日志记录接口

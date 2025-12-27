@@ -68,46 +68,59 @@ const (
 	REQ_GET_SCALE_SRV_LIST    ReqType = "get_scale_srv_list"
 	REQ_SET_SCALE_SRV_VAL     ReqType = "set_scale_srv_val"
 	REQ_SET_DO_SERVICE_ACTION ReqType = "do_service_action"
-	REQ_ADD_RAW_TYPE          ReqType = "add_raw_type"          //添加原料类型
-	REQ_DEL_UNUSED_FMA_TYPE   ReqType = "del_unused_fma_type"   //删除未使用的配方类型
-	REQ_DEL_UNUSED_RAW_TYPE   ReqType = "del_unused_raw_type"   //删除未使用的原料类型
-	REQ_DEL_RAW_TYPE          ReqType = "del_raw_type"          //删除原料类型
-	REQ_EDIT_RAW_TYPE         ReqType = "edit_raw_type"         //修改原料类型
-	REQ_GET_RAW_TYPE_LIST     ReqType = "get_raw_type_list"     //获取原料类型列表
-	REQ_ADD_FORMULA_TYPE      ReqType = "add_formula_type"      //添加配方类型
-	REQ_DEL_FORMULA_TYPE      ReqType = "del_formula_type"      //删除配方类型
-	REQ_EDIT_FORMULA_TYPE     ReqType = "edit_formula_type"     //修改配方类型
-	REQ_GET_FORMULA_TYPE_LIST ReqType = "get_formula_type_list" //获取配方类型列表
-	REQ_IMPORT_RAW_LIST       ReqType = "import_raw_list"       //导入原料列表
-	REQ_IMPORT_FMA_LIST       ReqType = "import_fma_list"       //导入配方列表
-	REQ_ADD_RAW_DATA          ReqType = "add_raw_data"          //添加原始数据
-	REQ_DEL_RAW_DATA          ReqType = "del_raw_data"          //删除原始数据
-	REQ_EDIT_RAW_DATA         ReqType = "edit_raw_data"         //修改原始数据
-	REQ_GET_RAW_DATA_LIST     ReqType = "get_raw_data_list"     //获取原始数据列表
-	REQ_DELETE_RAW_DATA       ReqType = "delete_raw_data"       //删除原料数据
-	REQ_ADD_FORMULA_DATA      ReqType = "add_formula_data"      //新增配方信息
-	REQ_EDIT_FORMULA_DATA     ReqType = "edit_formula_data"     //修改配方信息
-	REQ_GET_FORMULA_LIST      ReqType = "get_formula_list"      //获取配方信息列表
-	REQ_GET_FORMULA_DATA      ReqType = "get_fma_data"          //获取配方数据
-	REQ_GET_RAW_DATA          ReqType = "get_raw_data"          //获取原料数据
-	REQ_DELETE_FORMULA_DATA   ReqType = "delete_formula_data"   //删除配方信息
-	REQ_DELETE_MANY_FORMULA   ReqType = "del_many_fma"          //删除所有配方
-	REQ_DEL_MANY_RAW_DATA     ReqType = "del_many_raw"          //删除所有原料数据
-	REQ_DEL_MANY_DRAFT_FMA    ReqType = "del_many_draft_fma"    //删除所有暂存配方
-	REQ_ADD_FORMULA_REC       ReqType = "add_formula_rec"       //新增配方称重记录
-	REQ_GET_FORMULA_REC_LIST  ReqType = "get_formula_rec_list"  //获取配方称重记录列表
-	REQ_ADD_FLOW_RATE         ReqType = "add_flow_rate"         //新增流速
-	REQ_GET_FLOW_RATE_LIST    ReqType = "get_flow_rate_list"    //获取流速列表
+
+	///////////
+	REQ_ADD_RAW_TYPE             ReqType = "add_raw_type"          //添加原料类型
+	REQ_DEL_UNUSED_FMA_TYPE      ReqType = "del_unused_fma_type"   //删除未使用的配方类型
+	REQ_DEL_UNUSED_RAW_TYPE      ReqType = "del_unused_raw_type"   //删除未使用的原料类型
+	REQ_DEL_RAW_TYPE             ReqType = "del_raw_type"          //删除原料类型
+	REQ_EDIT_RAW_TYPE            ReqType = "edit_raw_type"         //修改原料类型
+	REQ_GET_RAW_TYPE_LIST        ReqType = "get_raw_type_list"     //获取原料类型列表
+	REQ_ADD_FORMULA_TYPE         ReqType = "add_formula_type"      //添加配方类型
+	REQ_DEL_FORMULA_TYPE         ReqType = "del_formula_type"      //删除配方类型
+	REQ_EDIT_FORMULA_TYPE        ReqType = "edit_formula_type"     //修改配方类型
+	REQ_GET_FORMULA_TYPE_LIST    ReqType = "get_formula_type_list" //获取配方类型列表
+	REQ_IMPORT_RAW_LIST          ReqType = "import_raw_list"       //导入原料列表
+	REQ_IMPORT_FMA_LIST          ReqType = "import_fma_list"       //导入配方列表
+	REQ_ADD_RAW_DATA             ReqType = "add_raw_data"          //添加原始数据
+	REQ_DEL_RAW_DATA             ReqType = "del_raw_data"          //删除原始数据
+	REQ_EDIT_RAW_DATA            ReqType = "edit_raw_data"         //修改原始数据
+	REQ_GET_RAW_DATA_LIST        ReqType = "get_raw_data_list"     //获取原始数据列表
+	REQ_DELETE_RAW_DATA          ReqType = "delete_raw_data"       //删除原料数据
+	REQ_ADD_FORMULA_DATA         ReqType = "add_formula_data"      //新增配方信息
+	REQ_EDIT_FORMULA_DATA        ReqType = "edit_formula_data"     //修改配方信息
+	REQ_GET_FORMULA_LIST         ReqType = "get_formula_list"      //获取配方信息列表
+	REQ_GET_FORMULA_DATA         ReqType = "get_fma_data"          //获取配方数据
+	REQ_GET_RAW_DATA             ReqType = "get_raw_data"          //获取原料数据
+	REQ_DELETE_FORMULA_DATA      ReqType = "delete_formula_data"   //删除配方信息
+	REQ_DELETE_MANY_FORMULA      ReqType = "del_many_fma"          //删除所有配方
+	REQ_DEL_MANY_RAW_DATA        ReqType = "del_many_raw"          //删除所有原料数据
+	REQ_DEL_MANY_DRAFT_FMA       ReqType = "del_many_draft_fma"    //删除所有暂存配方
+	REQ_ADD_FORMULA_REC          ReqType = "add_formula_rec"       //新增配方称重记录
+	REQ_GET_FORMULA_REC_LIST     ReqType = "get_formula_rec_list"  //获取配方称重记录列表
+	REQ_GET_ONE_FORMULA_REC_LIST ReqType = "get_fma_rec_by_id"     //获取配方称重记录列表
+	REQ_GET_FMA_REC_BY_ORDER     ReqType = "get_fma_rec_by_order"  //根据订单号获取配方称重记录
+	REQ_ADD_FLOW_RATE            ReqType = "add_flow_rate"         //新增流速
+	REQ_GET_FLOW_RATE_LIST       ReqType = "get_flow_rate_list"    //获取流速列表
 	//获取称重记录，不按秤来，总体的记录
-	REQ_GET_ALL_WGT_REC_LIST ReqType = "get_all_wgt_rec_list" //获取称重记录列表  要分类型(重量收集，检重，加法，减法)
-	REQ_GET_SEARCH_REC_LIST  ReqType = "get_search_rec_list"  //获取搜索记录列表  (搜索字段)
-	REQ_ADD_WGT_REC          ReqType = "add_wgt_rec"          //添加称重记录(汇总的称重记录)
-	REQ_DEL_WGT_REC          ReqType = "del_wgt_rec"          //删除称重记录  根据称重类型删除所有的数据
-	REQ_DEL_WGT_REC_BY_ID    ReqType = "del_wgt_rec_by_id"    //根据称重记录recID 删除称重记录
-	REQ_EXPORT_ALL_RECS      ReqType = "export_all_recs"      //导出所有记录
-	REQ_KILL_BOOT_COMMANDER  ReqType = "kill_boot_commander"  //杀掉boot_commander进程
-	REQ_GET_AUTO_NEXT        ReqType = "get_auto_next"        //获取自动下一步设置
-	REQ_UPDATE_AUTO_NEXT     ReqType = "update_auto_next"     //更新自动下一步设置
+	REQ_GET_ALL_WGT_REC_LIST     ReqType = "get_all_wgt_rec_list"     //获取称重记录列表  要分类型(重量收集，检重，加法，减法)
+	REQ_GET_SEARCH_REC_LIST      ReqType = "get_search_rec_list"      //获取搜索记录列表  (搜索字段)
+	REQ_ADD_WGT_REC              ReqType = "add_wgt_rec"              //添加称重记录(汇总的称重记录)
+	REQ_DEL_WGT_REC              ReqType = "del_wgt_rec"              //删除称重记录  根据称重类型删除所有的数据
+	REQ_DEL_WGT_REC_BY_ID        ReqType = "del_wgt_rec_by_id"        //根据称重记录recID 删除称重记录
+	REQ_EXPORT_ALL_RECS          ReqType = "export_all_recs"          //导出所有记录
+	REQ_KILL_BOOT_COMMANDER      ReqType = "kill_boot_commander"      //杀掉boot_commander进程
+	REQ_GET_AUTO_NEXT            ReqType = "get_auto_next"            //获取自动下一步设置
+	REQ_UPDATE_AUTO_NEXT         ReqType = "update_auto_next"         //更新自动下一步设置
+	REQ_GET_FORMULA_BY_BARCODE   ReqType = "get_formula_by_barcode"   //根据条码获取配方信息
+	REQ_CHECK_FMA_ID_AND_BARCODE ReqType = "check_fma_id_and_barcode" //检查配方ID和条码是否匹配
+
+	REQ_GET_REPORT_PRINT_SETTING    ReqType = "get_report_print_setting"    //获取报表打印设置
+	REQ_UPDATE_REPORT_PRINT_SETTING ReqType = "update_report_print_setting" //更新报表打印设置
+
+	REQ_UPLOAD_SERVER_GET  ReqType = "upload_server_get"  //获取上传服务器设置
+	REQ_UPLOAD_SERVER_EDIT ReqType = "upload_server_edit" //编辑上传服务器设置
+
 	//暂存配方称重记录
 	REQ_GET_DRAFT_FMA_WGT_REC_LIST ReqType = "get_draft_fma_wgt_rec_list" //获取草稿配方称重记录列表
 	REQ_UPDATE_DRAFT_FMA_WGT_REC   ReqType = "update_draft_fma_wgt_rec"   //更新草稿配方称重记录
@@ -344,6 +357,7 @@ type ReqAddFmaInfo struct {
 	NeedContainer  bool
 	Ingredients    []ReqAddFmaIngredient
 	Notes          string
+	Barcode        string
 }
 type ReqAddFmaIngredient struct {
 	IngredientNo    int
@@ -380,6 +394,16 @@ type ReqDelFmaData struct {
 
 type ReqDelAllFmaData struct {
 	RecID []int
+}
+
+type ReqGetFormulaByBarcode struct {
+	Barcode string
+}
+
+type ReqCheckFmaIdAndBarcode struct {
+	RecId          int
+	FormulaID      string
+	FormulaBarcode string
 }
 
 type ReqAddFormulaData struct {
@@ -538,6 +562,8 @@ type ReqAddFormulaHeader struct {
 	UpdatedBy string
 	// 备注
 	Remark string
+	//配方条码
+	FormulaBarcode string
 }
 
 // 配方明细表
@@ -588,11 +614,11 @@ type ReqFormulaWgtRecHeader struct {
 	IsQualified string
 	//配方实际需要的重量
 	ActualFmaTotalWgt float64
-
-	ScaleId    int
-	ScaleName  string
-	ScaleModel string
-	ScaleSn    string
+	ScaleId           int
+	ScaleName         string
+	ScaleModel        string
+	ScaleSn           string
+	FormulaBarcode    string
 }
 
 // FormulaWgtRecDetail 配方称重记录详情表
@@ -628,6 +654,7 @@ type ReqFormulaWgtRecDetail struct {
 	ScaleName  string
 	ScaleModel string
 	ScaleSn    string
+	CheckCode  string
 }
 
 type ReqFlowRateRec struct {
@@ -652,8 +679,7 @@ type ReqFlowRateDetail struct {
 	Time float64
 }
 
-//公共接口去拿所有称重的数据（分称重类型）
-
+// 公共接口去拿所有称重的数据（分称重类型）
 type ReqGetAllWgtRecList struct {
 	Mode       int //按称重模式 重量收集:0  加法秤:，减法秤: ，检重秤:
 	Page       int
@@ -767,29 +793,34 @@ const (
 	SCALE_MGR_RESP_DO_SERVICE_ACTION  ScaleMgrRespMsgType = "resp_do_service_action"  // with response
 
 	//配方秤
-	SCALE_MGR_RESP_RAW_TYPE_ADD                  ScaleMgrRespMsgType = "resp_raw_type_add"
-	SCALE_MGR_RESP_RAW_TYPE_EDIT                 ScaleMgrRespMsgType = "resp_raw_type_edit"
-	SCALE_MGR_RESP_RAW_TYPE_DELETE               ScaleMgrRespMsgType = "resp_raw_type_delete"
-	SCALE_MGR_RESP_FMA_TYPE_EDIT                 ScaleMgrRespMsgType = "resp_fma_type_edit"
-	SCALE_MGR_RESP_FMA_TYPE_DELETE               ScaleMgrRespMsgType = "resp_fma_type_delete"
-	SCALE_MGR_RESP_FORMULA_TYPE_ADD              ScaleMgrRespMsgType = "resp_formula_type_add"
-	SCALE_MGR_RESP_RAW_TYPE_DEL_UNUSED           ScaleMgrRespMsgType = "resp_raw_type_unused_del"
-	SCALE_MGR_RESP_FORMULA_TYPE_DEL_UNUSED       ScaleMgrRespMsgType = "resp_fma_type_unused_del"
-	SCALE_MGR_RESP_FORMULA_TYPE_LIST             ScaleMgrRespMsgType = "resp_formula_type_list"
-	SCALE_MGR_RESP_RAW_TYPE_LIST                 ScaleMgrRespMsgType = "resp_raw_type_list"
-	SCALE_MGR_RESP_RAW_LIST                      ScaleMgrRespMsgType = "resp_raw_list"
-	SCALE_MGR_RESP_RAW_DATA_EDIT                 ScaleMgrRespMsgType = "resp_raw_data_edit"
-	SCALE_MGR_RESP_RAW_DATA_DELETE               ScaleMgrRespMsgType = "resp_raw_data_delete"
-	SCALE_MGR_RESP_RAW_DATA_ADD                  ScaleMgrRespMsgType = "resp_raw_data_add"
-	SCALE_MGR_RESP_RAW_LIST_IMPORT               ScaleMgrRespMsgType = "resp_raw_list_import"
-	SCALE_MGR_RESP_FMA_LIST_IMPORT               ScaleMgrRespMsgType = "resp_fma_list_import"
-	SCALE_MGR_RESP_FORMULA_ADD                   ScaleMgrRespMsgType = "resp_formula_add"
-	SCALE_MGR_RESP_FORMULA_UPDATE                ScaleMgrRespMsgType = "resp_formula_update"
-	SCALE_MGR_RESP_FORMULA_LIST                  ScaleMgrRespMsgType = "resp_formula_list"
+	SCALE_MGR_RESP_RAW_TYPE_ADD             ScaleMgrRespMsgType = "resp_raw_type_add"
+	SCALE_MGR_RESP_RAW_TYPE_EDIT            ScaleMgrRespMsgType = "resp_raw_type_edit"
+	SCALE_MGR_RESP_RAW_TYPE_DELETE          ScaleMgrRespMsgType = "resp_raw_type_delete"
+	SCALE_MGR_RESP_FMA_TYPE_EDIT            ScaleMgrRespMsgType = "resp_fma_type_edit"
+	SCALE_MGR_RESP_FMA_TYPE_DELETE          ScaleMgrRespMsgType = "resp_fma_type_delete"
+	SCALE_MGR_RESP_FORMULA_TYPE_ADD         ScaleMgrRespMsgType = "resp_formula_type_add"
+	SCALE_MGR_RESP_RAW_TYPE_DEL_UNUSED      ScaleMgrRespMsgType = "resp_raw_type_unused_del"
+	SCALE_MGR_RESP_FORMULA_TYPE_DEL_UNUSED  ScaleMgrRespMsgType = "resp_fma_type_unused_del"
+	SCALE_MGR_RESP_FORMULA_TYPE_LIST        ScaleMgrRespMsgType = "resp_formula_type_list"
+	SCALE_MGR_RESP_RAW_TYPE_LIST            ScaleMgrRespMsgType = "resp_raw_type_list"
+	SCALE_MGR_RESP_RAW_LIST                 ScaleMgrRespMsgType = "resp_raw_list"
+	SCALE_MGR_RESP_RAW_DATA_EDIT            ScaleMgrRespMsgType = "resp_raw_data_edit"
+	SCALE_MGR_RESP_RAW_DATA_DELETE          ScaleMgrRespMsgType = "resp_raw_data_delete"
+	SCALE_MGR_RESP_RAW_DATA_ADD             ScaleMgrRespMsgType = "resp_raw_data_add"
+	SCALE_MGR_RESP_RAW_LIST_IMPORT          ScaleMgrRespMsgType = "resp_raw_list_import"
+	SCALE_MGR_RESP_FMA_LIST_IMPORT          ScaleMgrRespMsgType = "resp_fma_list_import"
+	SCALE_MGR_RESP_FORMULA_ADD              ScaleMgrRespMsgType = "resp_formula_add"
+	SCALE_MGR_RESP_FORMULA_UPDATE           ScaleMgrRespMsgType = "resp_formula_update"
+	SCALE_MGR_RESP_FORMULA_LIST             ScaleMgrRespMsgType = "resp_formula_list"
+	SCALE_MGR_RESP_FORMULA_LIST_BY_BARCODE  ScaleMgrRespMsgType = "resp_formula_list_by_barcode"
+	SCALE_MGR_RESP_CHECK_FMA_ID_AND_BARCODE ScaleMgrRespMsgType = "resp_check_fma_id_and_barcode"
+
 	SCALE_MGR_RESP_FORMULA                       ScaleMgrRespMsgType = "resp_formula_data"
 	SCALE_MGR_RESP_RAW                           ScaleMgrRespMsgType = "resp_raw_data"
 	SCALE_MGR_RESP_FORMULA_REC_ADD               ScaleMgrRespMsgType = "resp_formula_rec_add"
 	SCALE_MGR_RESP_FORMULA_REC_LIST              ScaleMgrRespMsgType = "resp_formula_rec_list"
+	SCALE_MGR_RESP_ONE_FORMULA_REC_LIST          ScaleMgrRespMsgType = "resp_one_fma_rec_list"
+	SCALE_MGR_RESP_FORMULA_REC_BY_ORDER          ScaleMgrRespMsgType = "resp_formula_rec_by_order"
 	SCALE_MGR_RESP_FORMULA_DELETE                ScaleMgrRespMsgType = "resp_formula_delete"
 	SCALE_MGR_RESP_MANY_FMA_DELETE               ScaleMgrRespMsgType = "resp_many_fma_del"
 	SCALE_MGR_RESP_MANY_RAW_DELETE               ScaleMgrRespMsgType = "resp_many_raw_del"
@@ -807,6 +838,11 @@ const (
 	SCALE_MGR_RESP_KILL_BOOT_COMMANDER           ScaleMgrRespMsgType = "resp_kill_boot_commander" // without parameter
 	SCALE_MGR_RESP_GET_AUTO_NEXT                 ScaleMgrRespMsgType = "resp_get_auto_next"
 	SCALE_MGR_RESP_UPDATE_AUTO_NEXT              ScaleMgrRespMsgType = "resp_update_auto_next"
+	SCALE_MGR_RESP_UPDATE_SET_REPORT_PRINT       ScaleMgrRespMsgType = "resp_update_set_report_print" //更新报表打印设置
+	SCALE_MGR_RESP_GET_SET_REPORT_PRINT          ScaleMgrRespMsgType = "resp_get_set_report_print"
+
+	SCALE_MGR_RESP_UPLOAD_SERVER_EDIT ScaleMgrRespMsgType = "resp_upload_server_edit" //编辑上传配方称重记录服务器
+	SCALE_MGR_RESP_UPLOAD_SERVER_GET  ScaleMgrRespMsgType = "resp_upload_server_get"  //获取上传配方称重记录服务器
 
 	SCALE_MGR_RESP_GET_DRAFT_FMA_WGT_REC_LIST ScaleMgrRespMsgType = "resp_get_draft_fma_wgt_rec_list"    //获取草稿配方称重记录列表
 	SCALE_MGR_RESP_UPDATE_DRAFT_FMA_WGT_REC   ScaleMgrRespMsgType = "resp_update_draft_fma_wgt_rec_list" //更新草稿配方称重记录列表

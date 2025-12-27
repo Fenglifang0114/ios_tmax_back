@@ -269,6 +269,11 @@ func SaveUpdateFmaDataLog(newData ReqAddFormulaData, oldData FormulaList) {
 		updateFields["Remark"] = newData.Header.Remark
 		originalFields["Remark"] = oldData.Header.Remark
 	}
+	//配方条码
+	if newData.Header.FormulaBarcode != oldData.Header.FormulaBarcode {
+		updateFields["Barcode"] = newData.Header.FormulaBarcode
+		originalFields["Barcode"] = oldData.Header.FormulaBarcode
+	}
 
 	oldDetails := getOldFmaDetails(oldData.Details)
 	newDetails := getNewFmaDetails(newData.Detail)
@@ -385,6 +390,7 @@ func SaveFmaDarftAddLog(payload DrafFmaWgtRecInfo) {
 	saveData := getSaveDarftFma(payload)
 	jsonStr, _ := json.MarshalToString(saveData)
 	LogSysOperation(MenuFormulaManage, SubFmaDarftAdd, OpAddStr, jsonStr, "ok", "")
+
 }
 
 func SaveFmaDarftUpdateLog(newDarft DrafFmaWgtRecInfo, oldDarft []DrafFmaWgtRecInfo) {
@@ -425,4 +431,27 @@ func SaveFmaDarftDelLog(draft []DrafFmaWgtRecInfo) {
 	saveData := getSaveDarftFma(draft[0])
 	jsonStr, _ := json.MarshalToString(saveData)
 	LogSysOperation(MenuFormulaManage, SubFmaDarftDel, OpDeleteStr, jsonStr, "ok", "")
+}
+
+func SaveFmaWgtRecLog(recInfo FormulaWgtRecList) {
+	jsonStr, _ := json.MarshalToString(recInfo)
+	LogSysOperation(MenuFormulaManage, SubFmaWgtRecAdd, OpAddStr, jsonStr, "ok", "")
+
+}
+
+// 上传配方称重记录CSV日志
+type UploadFmaWgtRecCsv struct {
+	Ip        string
+	ShareName string
+	Result    string
+}
+
+func UploadFmaWgtRecCsvLog(ip string, shareName string, res string) {
+	record := UploadFmaWgtRecCsv{
+		Ip:        ip,
+		ShareName: shareName,
+		Result:    res,
+	}
+	jsonStr, _ := json.MarshalToString(record)
+	LogSysOperation(MenuFormulaManage, SubFmaWgtRecUpload, OpUploadStr, jsonStr, "", "")
 }
