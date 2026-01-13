@@ -37,6 +37,9 @@ var (
 	PAY_BILL_ON_CMD_TMAX      []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x09, 0x01, 0x22, 0xad, 0x50, 0xe6, 0xa5, 0x5a} //20240829@FLF结账发送开启
 	ANSWER_ALIVE_CMD_TMAX     []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xFF, 0x00, 0x96, 0x88, 0xAB, 0xAA, 0xa5, 0x5a}
 	CAL_HEART_CMD_TMAX        []byte = []byte{0x5a, 0xa5, 0x00, 0x0b, 0xe1, 0x34, 0x00, 0x0b, 0xeb, 0x43, 0x43, 0xa5, 0x5a}
+
+	GET_WIRED_IP_CMD_TMAX   []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0x6A, 0x00, 0x93, 0x68, 0x08, 0x54, 0xA5, 0x5A}
+	GET_WIRED_DHCP_CMD_TMAX []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0x6D, 0x00, 0xA4, 0xA7, 0x76, 0x2E, 0xA5, 0x5A}
 )
 
 func NewComposerTMAX() *m.CmdComposer {
@@ -79,7 +82,6 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return GET_SCALE_TIME_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil //20230926@FLF
 	case m.CMD_READ_EEPROM_256:
 		return READ_EEPROM_256_CMD_TMAX, CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240125@FLF
-
 	case m.CMD_READ_EEPROM_8:
 		addr := parseReadAddrTMAX(cmdData.Data.(string))
 		return readDataCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil //20240703@FLF
@@ -233,8 +235,33 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getSetSw15ParameterCmdTMAX(CMDID_SET_INIT_ZERO_TMAX, cmdData.Data.(string)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 	case m.CMD_GET_INITIAL_ZERO:
 		return composeCmd(CMDID_GET_INIT_ZERO_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_WIRED_IP:
+		return GET_WIRED_IP_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_GET_WIRED_DHCP:
+		return GET_WIRED_DHCP_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_WIRED_IP:
+
+		return setWiredIpCmdTMAX(CMDID_SET_WIRED_IP_TMAX, cmdData.Data.(string)), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_WIRED_DHCP:
+		dataInt := cmdData.Data.(int)
+		return composeCmd(CMDID_SET_WIRED_DHCP_TMAX, 0, []byte{byte(dataInt)}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+
+	case m.CMD_GET_SEAL_STATUS:
+		return composeCmd(CMDID_GET_SEAL_STATUS_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_SET_SOFT_SEAL:
+		data, _ := hex.DecodeString(cmdData.Data.(string))
+		return composeCmd(CMDID_SET_SOFT_SEAL_TMAX, 0, data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_REMOVE_SOFT_SEAL:
+		data, _ := hex.DecodeString(cmdData.Data.(string))
+		return composeCmd(CMDID_REMOVE_SOFT_SEAL_TMAX, 0, data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+
+	case m.CMD_REMOVE_SOFT_SEAL_ONCE:
+		return composeCmd(CMDID_REMOVE_SOFT_SEAL_ONCE_TMX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+
 	}
+
 	return nil, CMD_TIMEOUT_IMMEDIATE, nil
+
 }
 
 var GET_AT_VERSION_CMD []byte = []byte("AT+GMR\r\n") //查看wifi 模块的版本信息会包含 ESP32 等信息
@@ -343,6 +370,15 @@ const (
 	CMDID_GET_BASIC_DATA_TMAX    = 0x05F8
 	CMDID_ANSWER_ALIVE_TMAX      = 0x05FF //秤会问是否活着
 
+	CMDID_GET_WIRED_IP_TMAX   = 0x056A
+	CMDID_SET_WIRED_IP_TMAX   = 0x056B
+	CMDID_SET_WIRED_DHCP_TMAX = 0x056C
+	CMDID_GET_WIRED_DHCP_TMAX = 0x056D
+
+	CMDID_GET_SEAL_STATUS_TMAX      = 0x0570
+	CMDID_SET_SOFT_SEAL_TMAX        = 0x0571
+	CMDID_REMOVE_SOFT_SEAL_TMAX     = 0x0572
+	CMDID_REMOVE_SOFT_SEAL_ONCE_TMX = 0x0573
 )
 const (
 	CMDID_READ_FLASH_TMAX        = 0xF101
@@ -773,6 +809,14 @@ func getSetSw15ParameterCmdTMAX(cmdID uint16, data string) []byte {
 	// 转换为单字节数据
 	data1 := []byte{byte(num)}
 	return composeCmd(cmdID, 0, []byte(data1))
+}
+
+func setWiredIpCmdTMAX(cmdID uint16, data string) []byte {
+	l.Log.Debug("compose set sw15 parameter cmd")
+	//将16进制的字符串转换为字节数组
+
+	dataByte, _ := hex.DecodeString(data)
+	return composeCmd(cmdID, 0, dataByte)
 }
 
 func getSetGaduationValueCmdTMAX(data string) []byte {

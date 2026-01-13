@@ -112,6 +112,14 @@ const (
 	CMD_GET_ZERO_TRACKING
 	CMD_SET_ZERO_TRACKING
 	CMD_SET_FORCE_UNTARE
+	CMD_GET_WIRED_IP
+	CMD_GET_WIRED_DHCP
+	CMD_SET_WIRED_IP
+	CMD_SET_WIRED_DHCP
+	CMD_GET_SEAL_STATUS
+	CMD_SET_SOFT_SEAL
+	CMD_REMOVE_SOFT_SEAL
+	CMD_REMOVE_SOFT_SEAL_ONCE
 )
 
 type DataType int
@@ -249,11 +257,10 @@ const (
 	SET_CAL_WGT_RESP              RespMsgType = "resp_cal_weight"
 	SET_DECIMAL_VALUE_RESP        RespMsgType = "resp_set_decimal_value"
 	GET_DECIMAL_VALUE_RESP        RespMsgType = "resp_get_decimal_value"
-
-	SET_MAX_RANGE1_RESP RespMsgType = "resp_set_max_range1"
-	GET_MAX_RANGE1_RESP RespMsgType = "resp_get_max_range1"
-	SET_MAX_RANGE2_RESP RespMsgType = "resp_set_max_range2"
-	GET_MAX_RANGE2_RESP RespMsgType = "resp_get_max_range2"
+	SET_MAX_RANGE1_RESP           RespMsgType = "resp_set_max_range1"
+	GET_MAX_RANGE1_RESP           RespMsgType = "resp_get_max_range1"
+	SET_MAX_RANGE2_RESP           RespMsgType = "resp_set_max_range2"
+	GET_MAX_RANGE2_RESP           RespMsgType = "resp_get_max_range2"
 
 	SET_GADUATION1_VALUE_RESP RespMsgType = "resp_set_gaduation1_value"
 	GET_GADUATION1_VALUE_RESP RespMsgType = "resp_get_gaduation1_value"
@@ -273,6 +280,16 @@ const (
 	GET_ZERO_TRACKING_RESP RespMsgType = "resp_get_zero_tracking"
 	GET_GRAV_ACC_RESP      RespMsgType = "resp_get_grav_acc"
 	SET_FORCE_UNTARE_RESP  RespMsgType = "resp_force_untare"
+
+	GET_SEAL_STATUS_RESP  RespMsgType = "resp_get_seal_status"
+	SOFT_SEAL_RESP        RespMsgType = "resp_soft_seal"
+	REMOVE_SOFT_SEAL_RESP RespMsgType = "resp_remove_soft_seal"
+
+	GET_WIRED_IP_RESP          RespMsgType = "resp_get_wired_ip"
+	SET_WIRED_IP_RESP          RespMsgType = "resp_set_wired_ip"
+	SET_WIRED_DHCP_RESP        RespMsgType = "resp_set_wired_dhcp"
+	GET_WIRED_DHCP_RESP        RespMsgType = "resp_get_wired_dhcp"
+	REMOVE_SOFT_SEAL_ONCE_RESP RespMsgType = "resp_remove_soft_seal_once"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

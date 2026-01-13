@@ -368,6 +368,36 @@ func procSetForceUnTare(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetForceUnTare(scale, req)
 }
 
+func procGetSealStatus(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetSealStatus(scale, req)
+}
+
+func procSoftSeal(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSoftSeal(scale, req)
+}
+
+func procRemoveSoftSeal(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqRemoveSoftSeal(scale, req)
+}
+
+func procRemoveSoftSealOnce(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqRemoveSoftSealOnce(scale, req)
+}
+
+func procGetWiredIp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetWiredIp(scale, req)
+}
+
+func procSetWiredIp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetWiredIp(scale, req)
+}
+func procSetWiredDhcp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqSetWiredDhcp(scale, req)
+}
+func procGetWiredDhcp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetWiredDhcp(scale, req)
+}
+
 func procCalWeight(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqCalWeight(scale, req)
 }
@@ -755,25 +785,33 @@ func init() {
 		SREQ_GET_MAX_RANGE1:           procGetMaxRange1,
 		SREQ_GET_MAX_RANGE2:           procGetMaxRange2,
 
-		SREQ_CAL_WGT:              procCalWeight,
-		SREQ_SEND_CAL_HEART_BEAT:  procSendCalHeart,
-		SREQ_SET_DECIMAL_VALUE:    procSetDecimalValue,
-		SREQ_SET_GADUATION1_VALUE: procSetGaduation1Value,
-		SREQ_SET_GADUATION2_VALUE: procSetGaduation2Value,
-		SREQ_GET_GADUATION1_VALUE: procGetGaduation1Value,
-		SREQ_GET_GADUATION2_VALUE: procGetGaduation2Value,
-		SREQ_GET_DECIMAL_VALUE:    procGetDecimalValue,
-		SREQ_SET_WEIGHT_UNIT:      procSetWeightUnit,
-		SREQ_GET_WEIGHT_UNIT:      procGetWeightUnit,
-		SREQ_SET_INITIAL_ZERO:     procSetInitialZero,
-		SREQ_GET_INITIAL_ZERO:     procGetInitialZero,
-		SREQ_SET_MANUAL_ZERO:      procSetManualZero,
-		SREQ_GET_MANUAL_ZERO:      procGetManualZero,
-		SREQ_SET_ZERO_TRACKING:    procSetZeroTracking,
-		SREQ_GET_ZERO_TRACKING:    procGetZeroTracking,
-		SREQ_SET_GRAV_ACC:         procSetGravAcc,
-		SREQ_GET_GRAV_ACC:         procGetGravAcc,
-		SREQ_SET_FORCE_UNTARE:     procSetForceUnTare,
+		SREQ_CAL_WGT:               procCalWeight,
+		SREQ_SEND_CAL_HEART_BEAT:   procSendCalHeart,
+		SREQ_SET_DECIMAL_VALUE:     procSetDecimalValue,
+		SREQ_SET_GADUATION1_VALUE:  procSetGaduation1Value,
+		SREQ_SET_GADUATION2_VALUE:  procSetGaduation2Value,
+		SREQ_GET_GADUATION1_VALUE:  procGetGaduation1Value,
+		SREQ_GET_GADUATION2_VALUE:  procGetGaduation2Value,
+		SREQ_GET_DECIMAL_VALUE:     procGetDecimalValue,
+		SREQ_SET_WEIGHT_UNIT:       procSetWeightUnit,
+		SREQ_GET_WEIGHT_UNIT:       procGetWeightUnit,
+		SREQ_SET_INITIAL_ZERO:      procSetInitialZero,
+		SREQ_GET_INITIAL_ZERO:      procGetInitialZero,
+		SREQ_SET_MANUAL_ZERO:       procSetManualZero,
+		SREQ_GET_MANUAL_ZERO:       procGetManualZero,
+		SREQ_SET_ZERO_TRACKING:     procSetZeroTracking,
+		SREQ_GET_ZERO_TRACKING:     procGetZeroTracking,
+		SREQ_SET_GRAV_ACC:          procSetGravAcc,
+		SREQ_GET_GRAV_ACC:          procGetGravAcc,
+		SREQ_SET_FORCE_UNTARE:      procSetForceUnTare,
+		SREQ_GET_SEAL_STATUS:       procGetSealStatus,
+		SREQ_SOFT_SEAL:             procSoftSeal,
+		SREQ_REMOVE_SOFT_SEAL:      procRemoveSoftSeal,
+		SREQ_REMOVE_SOFT_SEAL_ONCE: procRemoveSoftSealOnce,
+		SREQ_GET_WIRED_IP:          procGetWiredIp,
+		SREQ_SET_WIRED_IP:          procSetWiredIp,
+		SREQ_SET_WIRED_DHCP:        procSetWiredDhcp,
+		SREQ_GET_WIRED_DHCP:        procGetWiredDhcp,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -833,5 +871,14 @@ func init() {
 		SREQ_CLOSE_SERIAL_PORT:        m.CLOSE_SERIAL_PORT_RESP,
 		SREQ_OPEN_SERIAL_PORT:         m.OPEN_SERIAL_PORT_RESP,
 		SREQ_EXPORT_RECS:              m.EXPORT_RECS_RESP,
+
+		SREQ_GET_SEAL_STATUS:       m.GET_SEAL_STATUS_RESP,
+		SREQ_SOFT_SEAL:             m.SOFT_SEAL_RESP,
+		SREQ_REMOVE_SOFT_SEAL:      m.REMOVE_SOFT_SEAL_RESP,
+		SREQ_GET_WIRED_IP:          m.GET_WIRED_IP_RESP,
+		SREQ_SET_WIRED_IP:          m.SET_WIRED_IP_RESP,
+		SREQ_SET_WIRED_DHCP:        m.SET_WIRED_DHCP_RESP,
+		SREQ_GET_WIRED_DHCP:        m.GET_WIRED_DHCP_RESP,
+		SREQ_REMOVE_SOFT_SEAL_ONCE: m.REMOVE_SOFT_SEAL_ONCE_RESP,
 	}
 }

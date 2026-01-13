@@ -1053,6 +1053,15 @@ const (
 	SREQ_GET_GRAV_ACC         SReqType = "get_grav_acc"         //20250716
 	SREQ_SET_FORCE_UNTARE     SReqType = "force_untare"         //20251104
 
+	SREQ_GET_SEAL_STATUS       SReqType = "get_seal_status"
+	SREQ_SOFT_SEAL             SReqType = "soft_seal"
+	SREQ_REMOVE_SOFT_SEAL      SReqType = "remove_soft_seal"
+	SREQ_REMOVE_SOFT_SEAL_ONCE SReqType = "remove_soft_seal_once"
+
+	SREQ_GET_WIRED_IP   SReqType = "get_wired_ip"
+	SREQ_SET_WIRED_IP   SReqType = "set_wired_ip"
+	SREQ_SET_WIRED_DHCP SReqType = "set_wired_dhcp"
+	SREQ_GET_WIRED_DHCP SReqType = "get_wired_dhcp"
 )
 
 type ReqScaleRec struct {

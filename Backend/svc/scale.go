@@ -4679,6 +4679,123 @@ func ReqGetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_GRAV_ACC, m.GET_GRAV_ACC_RESP)
 }
 
+func convertIPConfigToHex(inInfo IpInfo) (string, error) {
+	// 解析 IP 地址
+	ip := net.ParseIP(inInfo.Ip)
+	if ip == nil {
+		return "", fmt.Errorf("invalid IP address: %s", inInfo.Ip)
+	}
+	ip = ip.To4()
+	if ip == nil {
+		return "", fmt.Errorf("IP address is not IPv4: %s", inInfo.Ip)
+	}
+
+	// 解析网关
+	gateway := net.ParseIP(inInfo.Gateway)
+	if gateway == nil {
+		return "", fmt.Errorf("invalid gateway: %s", inInfo.Gateway)
+	}
+	gateway = gateway.To4()
+	if gateway == nil {
+		return "", fmt.Errorf("gateway is not IPv4: %s", inInfo.Gateway)
+	}
+
+	// 解析子网掩码（正确方式）
+	var mask net.IPMask
+	if strings.Contains(inInfo.Netmask, ".") {
+		// 点分十进制格式：255.255.255.0
+		maskIP := net.ParseIP(inInfo.Netmask)
+		if maskIP == nil {
+			return "", fmt.Errorf("invalid netmask: %s", inInfo.Netmask)
+		}
+		mask = net.IPMask(maskIP.To4())
+		if mask == nil {
+			return "", fmt.Errorf("netmask is not IPv4: %s", inInfo.Netmask)
+		}
+	} else {
+		// CIDR 格式：24
+		prefixLen, err := strconv.Atoi(inInfo.Netmask)
+		if err != nil || prefixLen < 0 || prefixLen > 32 {
+			return "", fmt.Errorf("invalid netmask prefix: %s", inInfo.Netmask)
+		}
+		mask = net.CIDRMask(prefixLen, 32)
+	}
+
+	// 构建字节数组
+	data := make([]byte, 0, 12) // 3个IPv4地址 = 12字节
+	data = append(data, ip...)
+	data = append(data, gateway...)
+	data = append(data, mask...)
+
+	// 转为十六进制字符串
+	dataByteStr := fmt.Sprintf("%x", data)
+	return dataByteStr, nil
+}
+
+func ReqSetWiredIp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, "fail", c.Id}, nil
+	}
+	inInfo := IpInfo{}
+
+	err = json.Unmarshal([]byte(req.ReqData), &inInfo)
+	if err != nil {
+		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, fmt.Errorf("fail, data error"), c.Id}, nil
+	}
+
+	dataByteStr, _ := convertIPConfigToHex(inInfo)
+
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WIRED_IP, m.CmdData{Type: m.DATA_TYPE_STR, Data: dataByteStr})
+
+	println(fmt.Sprintf("%x", cmd))
+
+	if err != nil {
+		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	return perfCmdNwaitResult(c, cmd, m.SET_WIRED_IP_RESP, timeoutMs)
+}
+
+func ReqSetWiredDhcp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, "fail", c.Id}, nil
+	}
+
+	switch req.ReqData {
+	case "true":
+		cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WIRED_DHCP, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x01})
+		println(fmt.Sprintf("%x", cmd))
+		if err != nil {
+			return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, fmt.Errorf("fail"), c.Id}, nil
+		}
+		return perfCmdNwaitResult(c, cmd, m.SET_WIRED_DHCP_RESP, timeoutMs)
+	case "false":
+		cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WIRED_DHCP, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+		println(fmt.Sprintf("%x", cmd))
+		if err != nil {
+			return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, fmt.Errorf("fail"), c.Id}, nil
+		}
+		return perfCmdNwaitResult(c, cmd, m.SET_WIRED_DHCP_RESP, timeoutMs)
+	}
+
+	return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, fmt.Errorf("fail"), c.Id}, nil
+}
+func ReqGetWiredDhcp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_WIRED_DHCP_RESP, "fail", c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_WIRED_DHCP, m.GET_WIRED_DHCP_RESP)
+}
+func ReqGetWiredIp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_WIRED_IP_RESP, "fail", c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_WIRED_IP, m.GET_WIRED_IP_RESP)
+}
+
 // 强制解除扣重
 func ReqSetForceUnTare(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
@@ -4686,6 +4803,53 @@ func ReqSetForceUnTare(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{m.SET_FORCE_UNTARE_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_SET_FORCE_UNTARE, m.SET_FORCE_UNTARE_RESP)
+}
+
+// 获取封印状态
+func ReqGetSealStatus(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_SEAL_STATUS_RESP, "fail", c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_SEAL_STATUS, m.GET_SEAL_STATUS_RESP)
+}
+
+func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.SOFT_SEAL_RESP, "fail", c.Id}, nil
+	}
+
+	dataStr := req.ReqData
+	var hexStr string
+	for _, ch := range dataStr {
+		hexStr += fmt.Sprintf("%02X", ch-'0') // ch-'0' 将字符转换为数字值
+	}
+
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_SOFT_SEAL, m.CmdData{Type: m.DATA_TYPE_STR, Data: hexStr})
+	return perfCmdNwaitResult(c, cmd, m.SOFT_SEAL_RESP, timeoutMs)
+}
+
+func ReqRemoveSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_RESP, "fail", c.Id}, nil
+	}
+	dataStr := req.ReqData
+	var hexStr string
+	for _, ch := range dataStr {
+		hexStr += fmt.Sprintf("%02X", ch-'0') // ch-'0' 将字符转换为数字值
+	}
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_REMOVE_SOFT_SEAL, m.CmdData{Type: m.DATA_TYPE_STR, Data: hexStr})
+	return perfCmdNwaitResult(c, cmd, m.REMOVE_SOFT_SEAL_RESP, timeoutMs)
+}
+
+func ReqRemoveSoftSealOnce(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_ONCE_RESP, "fail", c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_REMOVE_SOFT_SEAL_ONCE, m.REMOVE_SOFT_SEAL_ONCE_RESP)
 }
 
 func retreiveRespMsgC51(scaleId int64, data []byte) (*ScaleRespMsg, error) {

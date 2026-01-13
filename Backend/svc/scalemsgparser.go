@@ -79,6 +79,10 @@ func init() {
 		cmd.CMDID_GET_FACTORY_INFO_TMAX:  m.GET_FACTORY_INFO_RESP,
 		cmd.CMDID_GET_RANDOM_DATA_TMAX:   m.GET_RANDOM_DATA_RESP,
 		cmd.CMDID_GET_BASIC_DATA_TMAX:    m.GET_BASIC_DATA_RESP,
+		cmd.CMDID_GET_WIRED_IP_TMAX:      m.GET_WIRED_IP_RESP,
+		cmd.CMDID_SET_WIRED_IP_TMAX:      m.SET_WIRED_IP_RESP,
+		cmd.CMDID_SET_WIRED_DHCP_TMAX:    m.SET_WIRED_DHCP_RESP,
+		cmd.CMDID_GET_WIRED_DHCP_TMAX:    m.GET_WIRED_DHCP_RESP,
 		cmd.CMDID_ANSWER_ALIVE_TMAX:      m.ANSWER_ALIVE_RESP,
 		cmd.CMDID_ERASE_FLASH_TMAX:       m.ERASE_FLASH_RESP, //FLF//
 		cmd.CMDID_WRITE_FLASH_TMAX:       m.WRITE_DATA_FLASH_RESP,
@@ -133,6 +137,11 @@ func init() {
 
 		cmd.CMDID_SET_WGT_UNIT_TMAX: m.SET_WEIGHT_UNIT_RESP,
 		cmd.CMDID_GET_WGT_UNIT_TMAX: m.GET_WEIGHT_UNIT_RESP,
+
+		cmd.CMDID_GET_SEAL_STATUS_TMAX:      m.GET_SEAL_STATUS_RESP,
+		cmd.CMDID_SET_SOFT_SEAL_TMAX:        m.SOFT_SEAL_RESP,
+		cmd.CMDID_REMOVE_SOFT_SEAL_TMAX:     m.REMOVE_SOFT_SEAL_RESP,
+		cmd.CMDID_REMOVE_SOFT_SEAL_ONCE_TMX: m.REMOVE_SOFT_SEAL_ONCE_RESP,
 
 		0xff25: m.UNKNOWN_DATA,
 	}
@@ -213,6 +222,16 @@ func init() {
 		m.GET_MANUAL_ZERO_RESP:      handleGetManualZeroResp,
 		m.GET_ZERO_TRACKING_RESP:    handleGetZeroTrackingResp,
 		m.GET_GRAV_ACC_RESP:         handleGetGravAccResp,
+
+		m.GET_WIRED_IP_RESP:   handleGetWiredIpResp,
+		m.GET_WIRED_DHCP_RESP: handleGetWiredDhcpResp,
+		m.SET_WIRED_IP_RESP:   handleSetWiredIpResp,
+		m.SET_WIRED_DHCP_RESP: handleSetWiredDhcpResp,
+
+		m.GET_SEAL_STATUS_RESP:       handleGetSealStatusResp,
+		m.SOFT_SEAL_RESP:             handleSoftSealResp,
+		m.REMOVE_SOFT_SEAL_RESP:      handleRemoveSoftSealResp,
+		m.REMOVE_SOFT_SEAL_ONCE_RESP: handleRemoveSoftSealOnceResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -593,6 +612,120 @@ func handleGetGravAccResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	gravStr := strconv.FormatFloat(gravDouble, 'f', 5, 64)
 	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_GRAV_ACC_RESP, MsgBody: gravStr}, len(data)
 
+}
+
+func formatIPv4(b []byte) string {
+	if len(b) != 4 {
+		return "0.0.0.0"
+	}
+	return fmt.Sprintf("%d.%d.%d.%d", b[0], b[1], b[2], b[3])
+}
+
+type IpInfo struct {
+	Ip      string `json:"Ip"`
+	Gateway string `json:"Gateway"`
+	Netmask string `json:"Netmask"`
+}
+
+func handleGetWiredIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) < 12 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WIRED_IP_RESP, MsgBody: "fail"}, len(data)
+	}
+	ip := formatIPv4(data[0:4])
+	gateway := formatIPv4(data[4:8])
+	netmask := formatIPv4(data[8:12])
+
+	IpInfo := IpInfo{
+		Ip:      ip,
+		Gateway: gateway,
+		Netmask: netmask,
+	}
+	jsonStr, _ := json.MarshalToString(IpInfo)
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WIRED_IP_RESP, MsgBody: jsonStr}, len(data)
+}
+
+func handleGetWiredDhcpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	if len(data) != 1 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WIRED_DHCP_RESP, MsgBody: "fail"}, len(data)
+	}
+
+	if data[0] == 0x00 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WIRED_DHCP_RESP, MsgBody: "false"}, len(data)
+	}
+
+	if data[0] == 0x01 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WIRED_DHCP_RESP, MsgBody: "true"}, len(data)
+	}
+
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WIRED_DHCP_RESP, MsgBody: "fail"}, len(data)
+}
+
+func handleSetWiredIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) != 1 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIRED_IP_RESP, MsgBody: "fail"}, len(data)
+	}
+
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIRED_IP_RESP, MsgBody: "ok"}, len(data)
+	}
+
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIRED_IP_RESP, MsgBody: "fail"}, len(data)
+}
+
+func handleSetWiredDhcpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) != 1 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIRED_DHCP_RESP, MsgBody: "fail"}, len(data)
+	}
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIRED_DHCP_RESP, MsgBody: "ok"}, len(data)
+	}
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIRED_DHCP_RESP, MsgBody: "fail"}, len(data)
+}
+
+func handleGetSealStatusResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) != 2 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_SEAL_STATUS_RESP, MsgBody: "fail"}, len(data)
+	}
+
+	status1 := data[0] != 0 // 第一个字节
+	status2 := data[1] != 0 // 第二个字节
+
+	msgBody := fmt.Sprintf("%v,%v", status1, status2)
+
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_SEAL_STATUS_RESP, MsgBody: msgBody}, len(data)
+
+}
+
+func handleSoftSealResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) != 1 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SOFT_SEAL_RESP, MsgBody: "fail"}, len(data)
+	}
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SOFT_SEAL_RESP, MsgBody: "ok"}, len(data)
+	}
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SOFT_SEAL_RESP, MsgBody: "fail"}, len(data)
+
+}
+
+func handleRemoveSoftSealResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) != 1 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_RESP, MsgBody: "fail"}, len(data)
+	}
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_RESP, MsgBody: "ok"}, len(data)
+	}
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_RESP, MsgBody: "fail"}, len(data)
+}
+
+func handleRemoveSoftSealOnceResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) != 1 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_ONCE_RESP, MsgBody: "fail"}, len(data)
+	}
+	if data[0] == 0x06 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_ONCE_RESP, MsgBody: "ok"}, len(data)
+	}
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_ONCE_RESP, MsgBody: "fail"}, len(data)
 }
 
 func handleSetDecimalValueResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
