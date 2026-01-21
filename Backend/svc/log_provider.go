@@ -120,3 +120,13 @@ func (p *LogRecProvider) GetCalibrationLogByID(RecIds []int) ([]CalibrationLog, 
 func (p *LogRecProvider) GetScaleLogByID(RecIds []int) ([]ScaleWgtLog, error) {
 	return p.infoPb.GetScaleLogByID(RecIds)
 }
+
+// 获取所有铅封日志记录
+func (p *LogRecProvider) GetAllSealLog(model string, sn string) ([]SealLog, error) {
+	return p.infoPb.ListSealLogs(model, sn)
+}
+
+// 创建铅封日志
+func (p *LogRecProvider) AddSealLog(rec SealLog) error {
+	return p.infoPb.CreateSealLog(&rec)
+}

@@ -115,7 +115,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	licKeyList = strings.Split(licKey, "\r\n")
 	for _, item := range licKeyList {
-		if len(item) == 74 || len(item) == 78 {
+		if len(item) == 74 || len(item) == 78 || len(item) == 94 {
 			gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
 			if gIsKeyValid {
 				gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
@@ -681,6 +681,19 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 	case REQ_UPLOAD_SERVER_GET:
 		getUploadFmaServer.Trigger(scaleMgr.srvMgr)
 
+	case REQ_GET_ALL_SEAL_LOG:
+		jsonStr := req.ReqData
+		var data GetSealLogReq
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			getAllSealLog.Trigger(scaleMgr.srvMgr, data)
+		}
+
+	case REQ_UNSEAL_BY_MASTER_KEY:
+		data := req.ReqData
+		unsealByMasterKey.Trigger(scaleMgr.srvMgr, data)
+
 	case REQ_UPDATE_REPORT_PRINT_SETTING:
 		jsonStr := req.ReqData
 		var data SetReportPrint
@@ -1118,7 +1131,7 @@ func getLicenseList() {
 
 	licKeyList = strings.Split(licKey, "\r\n")
 	for _, item := range licKeyList {
-		if len(item) == 74 || len(item) == 78 {
+		if len(item) == 74 || len(item) == 78 || len(item) == 94 {
 			gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
 			if gIsKeyValid {
 				newLicList = append(newLicList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
@@ -4363,4 +4376,123 @@ func (p getUploadFmaServerNotifier) Handle(mgr *SrvMgr) {
 	}
 
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPLOAD_SERVER_GET, MsgBody: typesStr}
+}
+
+// 获取所有铅封日志记录
+func (p getAllSealLogNotifier) Handle(mgr *SrvMgr, payload GetSealLogReq) {
+	l.Log.Debug("Handle getAllSealLogNotifier called")
+
+	sealLogs, err := mgr.sysLogPd.GetAllSealLog(payload.Model, payload.Sn)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_SEAL_LOG, MsgBody: "fail"}
+		return
+	}
+	typesStr, err := json.MarshalToString(sealLogs)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_SEAL_LOG, MsgBody: "fail"}
+		return
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_ALL_SEAL_LOG, MsgBody: typesStr}
+	return
+}
+
+// 万能钥匙解除铅封
+func (p unsealByMasterKeyNotifier) Handle(mgr *SrvMgr, payload string) {
+	l.Log.Debug("Handle unsealByMasterKeyNotifier called")
+
+	privateKey := `-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCiaVmdfO6DCcVh
+Gx+qYJ3v0xavdYAPbQ+LSV0oQLawnGYN4SzjfzoufMS5V3QDUmXNEkpMVOI/WZsT
+SfqAyr4EwK9zVE0JL/Q1jNbzw4H5iq0ryyURJqVXpVn+mlERvv3zphvBVvQMfnzT
+G6WwD3ijz3gAkZ6LziUay+KNIrA4nFXC7IQq2SHKGu/tlDYU5iab0xN/mfnVII8A
+MgxLyYdh1RI4I6s6h6AayPx8+/uRWQjKJZxRgUZl0EL6BZJWdHrIYQaqIGcXnyM/
+BD+c/pppb0XQc38sQ4H1xrpqQ2e4Uum51j76918IkFCk2wI9IVfjFyUCtKBzTHC2
+MQWaNqV5AgMBAAECggEAfvLwLI0J9n19vjCwaMIK0fpjAhVLW0N5YfufiKZE5vnp
+P7IiH1VEii/WqbU1Jp+SmWBRmSbEjpYhBEvQNjnDm/1tZy2e5a6JKg6Dupi4kPEX
++WJZ//UASukh1kSTV9a9tGTDzzWDn/yC35T9xwfg2dKCz5cDoe4pzK9Pz9gsfKJf
+xQeay1HMbWaqWaoNs4bkqsjQoCWYxvi1NMVQ8tw2w3rozW4ibxY9TfFHBKoVsFCc
+Z7QTEvULzX6OBpNT6700HIklmXFwNEzDf6LS5nE1stOuk/A4VBMf4q4jKYoGiuYn
+mFg2DF7NSLnNMMhUKhsVg60HuzFoy2jTxPFhfH5KTQKBgQDDB75+WhSmatupkFXb
+GzgE36qMYQMjGz8HHI7Q+KEIrzvZ3mYEyw9rO+A14/no5mZhDiGhFSSYqOq9oaqr
+I/1KakzAZ1ohWfw2u8ejGxORY01bk/K+tYxMU+HN8QMJbArzuDdRdSScFtdF6TFs
+TnezO13FrP9Ag9Zhr7Yyj6WygwKBgQDVLyG65n+CcoQ8F87kb1cWMpvCju8RT/bj
+f54lVJ8hFWNXlRb/qtHkbBjPhfUnKPMua/2H6VSIvqOMTknjvRY8XhKqJSzHtqpO
+VYTuN9Od7N0owqDS1SN7i+fc6yAdbXSCj0l9rH+m7SZZhgnCndWEVqJXrsacWC2G
+qxorD3wXUwKBgA6R5YlK8X/9O6vPPJrBzc2PaA5UsQdOYccGOyUhbeZYMQB1vOle
+wiggsP9VqLXdgIh/pcOC8Nj2xZKlITrn1WRZzKITFoinUFBGdwOYYj3aTU0qIFhe
+97w8CAJ6nt91UtwiRv+u4K1Ih4yRfz+4HPkm1jqOUgNf1gQ2PEZKtPZBAoGAKYyP
+EWM9NMpm9WNagnEk0wG4E9pRw9kG8F3+D56HiSYm/3niSqAbWl6rEz8zgZdclg6c
+EjIqtKAbNgxIIGfI/qkDEEBAkwgJ90x5pQgiaWQx0nDkcVLzIHArF4aH8tRTYeLV
+WvYUxw7va4FRQ6oJZEqSR26b7PrOnLGaXwwcjlsCgYAMzOWUpsmHgdwIfvLsVmP2
+8IFhFkm01e13FUzRyfRO/8SVzg1H764GDawN8XhusKYagobpBKtEmN3DXixqKw6r
+sc27fFJGwCCLfWHk/pfzyZqJbzdKNNa0KfsbwCkXNLmGc64EpkJtlys0YHmNzREE
+pTolgx1VELrkotW1tuLGJA==
+-----END PRIVATE KEY-----`
+
+	cipherText := payload
+	// 尝试用OAEP模式解密（对应C#默认的true）
+	decrypted, err := RSADecrypt(privateKey, cipherText, true)
+	if err != nil {
+		fmt.Printf("OAEP解密失败: %v\n", err)
+		// 如果OAEP失败，尝试PKCS1模式
+		decrypted, err = RSADecrypt(privateKey, cipherText, false)
+		if err != nil {
+			fmt.Printf("PKCS1解密失败: %v\n", err)
+			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UNSEAL_BY_MASTER_KEY, MsgBody: "fail,invalid ciphertext"}
+			return
+		}
+
+	}
+	println(decrypted)
+
+	MasterKeyResp := MasterKeyResp{}
+	err = json.Unmarshal([]byte(decrypted), &MasterKeyResp)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UNSEAL_BY_MASTER_KEY, MsgBody: "fail,invalid json"}
+		return
+	}
+
+	//获取时间戳，比较两个时间戳
+	currentTimestamp := time.Now().Unix()
+
+	// 转换时间戳字符串为int64
+	timestamp, err := strconv.ParseInt(MasterKeyResp.TimeStamp, 10, 64)
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UNSEAL_BY_MASTER_KEY, MsgBody: "fail,invalid timestamp"}
+		return
+	}
+
+	// 检查时间戳是否在48小时以内
+	if !IsWithin48Hours(currentTimestamp, timestamp) {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UNSEAL_BY_MASTER_KEY, MsgBody: "fail,timestamp expired"}
+		return
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UNSEAL_BY_MASTER_KEY, MsgBody: "ok"}
+	return
+}
+
+type MasterKeyResp struct {
+	Code      string `json:"Code"`
+	TimeStamp string `json:"TimeStamp"`
+}
+
+// IsWithin48Hours 判断两个10位时间戳是否在48小时以内
+func IsWithin48Hours(timestamp1, timestamp2 int64) bool {
+	// 计算时间差的绝对值（秒）
+	diff := timestamp1 - timestamp2
+	if diff < 0 {
+		diff = -diff
+	}
+
+	// 48小时 = 48 * 3600 秒
+	const hours48InSeconds = 48 * 3600
+
+	// 如果时间差小于48小时的秒数，说明在48小时以内
+	return diff < hours48InSeconds
 }

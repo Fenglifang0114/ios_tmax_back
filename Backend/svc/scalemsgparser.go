@@ -716,6 +716,7 @@ func handleRemoveSoftSealResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_RESP, MsgBody: "ok"}, len(data)
 	}
 	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_RESP, MsgBody: "fail"}, len(data)
+	
 }
 
 func handleRemoveSoftSealOnceResp(scaleId int64, data []byte) (ScaleRespMsg, int) {

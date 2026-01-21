@@ -121,6 +121,9 @@ const (
 	REQ_UPLOAD_SERVER_GET  ReqType = "upload_server_get"  //获取上传服务器设置
 	REQ_UPLOAD_SERVER_EDIT ReqType = "upload_server_edit" //编辑上传服务器设置
 
+	REQ_GET_ALL_SEAL_LOG     ReqType = "get_all_seal_log"     //获取所有铅封日志记录
+	REQ_UNSEAL_BY_MASTER_KEY ReqType = "unseal_by_master_key" //万能钥匙解封
+
 	//暂存配方称重记录
 	REQ_GET_DRAFT_FMA_WGT_REC_LIST ReqType = "get_draft_fma_wgt_rec_list" //获取草稿配方称重记录列表
 	REQ_UPDATE_DRAFT_FMA_WGT_REC   ReqType = "update_draft_fma_wgt_rec"   //更新草稿配方称重记录
@@ -526,6 +529,11 @@ type ReqGetLog struct {
 	Search    LogQuery
 }
 
+type GetSealLogReq struct {
+	Model string
+	Sn    string
+}
+
 type LogQuery struct {
 	Operator  string // 操作员
 	Module    string
@@ -877,6 +885,9 @@ const (
 	SCALE_MGR_RESP_EXPORT_SYS_LOG   ScaleMgrRespMsgType = "resp_export_sys_log"   //导出系统日志记录列表
 	SCALE_MGR_RESP_EXPORT_CAL_LOG   ScaleMgrRespMsgType = "resp_export_cal_log"   //导出校准日志记录列表
 	SCALE_MGR_RESP_EXPORT_SCALE_LOG ScaleMgrRespMsgType = "resp_export_scale_log" //导出称重日志记录列表
+
+	SCALE_MGR_RESP_GET_ALL_SEAL_LOG     ScaleMgrRespMsgType = "resp_get_all_seal_log"     //获取所有铅封日志记录
+	SCALE_MGR_RESP_UNSEAL_BY_MASTER_KEY ScaleMgrRespMsgType = "resp_unseal_by_master_key" //使用主密钥解封
 
 )
 

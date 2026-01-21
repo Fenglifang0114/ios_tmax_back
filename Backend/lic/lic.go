@@ -50,7 +50,7 @@ func IsKeyValid(licenseKey string) (bool, string, string, string) {
 		}
 		return true, machineIDStr[0:10], licenseKey[32:42], "T-Config"
 
-	} else {
+	} else if len(licenseKey) == 78 {
 		salt, _ := decrypt(key, myCipherSalt)
 		machineId := []byte(machineIDStr[0:10]) // e4e13e78c5
 		log.Log.Debugf("MachineId:%s\n", machineId)
@@ -77,6 +77,31 @@ func IsKeyValid(licenseKey string) (bool, string, string, string) {
 		}
 		return true, machineIDStr[0:10], licenseKey[36:46], licenseKey[32:36]
 
+	} else {
+		salt, _ := decrypt(key, myCipherSalt)
+		machineId := []byte(machineIDStr[0:10]) // e4e13e78c5
+		log.Log.Debugf("MachineId:%s\n", machineId)
+		saltedData := append([]byte(machineIDStr[0:10]), []byte(salt)...)
+		hash := md5.Sum(saltedData)
+		hashStr := hex.EncodeToString(hash[:])
+		if !reflect.DeepEqual(licenseKey[0:32], hashStr) {
+			return false, machineIDStr[0:10], "", ""
+		}
+		saltedDatav := append([]byte(licenseKey[32:42]), []byte(hashStr)...) // valid date
+		hashv := md5.Sum(saltedDatav)
+		hashStrv := hex.EncodeToString(hashv[:])
+		if !reflect.DeepEqual(licenseKey[42:74], hashStrv) {
+			return false, machineIDStr[0:10], "", ""
+		}
+		layout := "2006-01-02"
+		date, err := time.Parse(layout, licenseKey[32:42])
+		if err != nil || time.Now().After(date) {
+			fmt.Println(err)
+			return false, machineIDStr[0:10], licenseKey[32:42], ""
+		}
+
+		customerCode := licenseKey[74:94]
+		return true, machineIDStr[0:10], licenseKey[32:42], "T-Config" + "*" + customerCode
 	}
 
 }
@@ -154,7 +179,12 @@ func SaveKey(filePath string, content string) error {
 				}
 
 			}
-
+		} else if len(content) == 94 {
+			for _, item := range listContent {
+				if len(item) != 74 && len(item) != 94 {
+					result = append(result, item)
+				}
+			}
 		}
 	}
 

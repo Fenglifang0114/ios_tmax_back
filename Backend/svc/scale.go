@@ -4827,7 +4827,25 @@ func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_SOFT_SEAL, m.CmdData{Type: m.DATA_TYPE_STR, Data: hexStr})
-	return perfCmdNwaitResult(c, cmd, m.SOFT_SEAL_RESP, timeoutMs)
+
+	if res, err := perfCmdNwaitResult(c, cmd, m.SOFT_SEAL_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{m.SOFT_SEAL_RESP, "fail", c.Id}, nil
+	} else if res.MsgBody == "ok" {
+		_, username, roleID := GetCurrentUser()
+		SealLog := SealLog{
+			ScaleId:   int(c.Id),
+			Model:     c.Model,
+			Sn:        c.Sn,
+			Result:    "ok",
+			Operation: "seal", //seal  unseal
+			RoleId:    roleID,
+			Operator:  username,
+			Remark:    "",
+		}
+		c.scaleMgr.srvMgr.sysLogPd.AddSealLog(SealLog)
+		return &ScaleRespMsg{m.SOFT_SEAL_RESP, "ok", c.Id}, nil
+	}
+	return &ScaleRespMsg{m.SOFT_SEAL_RESP, "fail", c.Id}, nil
 }
 
 func ReqRemoveSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -4841,7 +4859,25 @@ func ReqRemoveSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		hexStr += fmt.Sprintf("%02X", ch-'0') // ch-'0' 将字符转换为数字值
 	}
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_REMOVE_SOFT_SEAL, m.CmdData{Type: m.DATA_TYPE_STR, Data: hexStr})
-	return perfCmdNwaitResult(c, cmd, m.REMOVE_SOFT_SEAL_RESP, timeoutMs)
+	println(fmt.Sprintf("%x", cmd))
+	if res, err := perfCmdNwaitResult(c, cmd, m.REMOVE_SOFT_SEAL_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_RESP, "fail", c.Id}, nil
+	} else if res.MsgBody == "ok" {
+		_, username, roleID := GetCurrentUser()
+		SealLog := SealLog{
+			ScaleId:   int(c.Id),
+			Model:     c.Model,
+			Sn:        c.Sn,
+			Result:    "ok",
+			Operation: "unseal", //seal  unseal
+			RoleId:    roleID,
+			Operator:  username,
+			Remark:    "",
+		}
+		c.scaleMgr.srvMgr.sysLogPd.AddSealLog(SealLog)
+		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_RESP, "ok", c.Id}, nil
+	}
+	return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_RESP, "fail", c.Id}, nil
 }
 
 func ReqRemoveSoftSealOnce(c *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -4849,7 +4885,23 @@ func ReqRemoveSoftSealOnce(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if err != nil || !res {
 		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_ONCE_RESP, "fail", c.Id}, nil
 	}
-	return excuteSimpCmd(c, m.CMD_REMOVE_SOFT_SEAL_ONCE, m.REMOVE_SOFT_SEAL_ONCE_RESP)
+	reqMsg, _ := excuteSimpCmd(c, m.CMD_REMOVE_SOFT_SEAL_ONCE, m.REMOVE_SOFT_SEAL_ONCE_RESP)
+	if reqMsg.MsgBody == "ok" {
+		_, username, roleID := GetCurrentUser()
+		SealLog := SealLog{
+			ScaleId:   int(c.Id),
+			Model:     c.Model,
+			Sn:        c.Sn,
+			Result:    "ok",
+			Operation: "seal", //seal  unseal
+			RoleId:    roleID,
+			Operator:  username,
+			Remark:    "key",
+		}
+		c.scaleMgr.srvMgr.sysLogPd.AddSealLog(SealLog)
+		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_ONCE_RESP, "ok", c.Id}, nil
+	}
+	return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_ONCE_RESP, "fail", c.Id}, nil
 }
 
 func retreiveRespMsgC51(scaleId int64, data []byte) (*ScaleRespMsg, error) {

@@ -281,6 +281,9 @@ const (
 	GET_GRAV_ACC_RESP      RespMsgType = "resp_get_grav_acc"
 	SET_FORCE_UNTARE_RESP  RespMsgType = "resp_force_untare"
 
+
+
+
 	GET_SEAL_STATUS_RESP  RespMsgType = "resp_get_seal_status"
 	SOFT_SEAL_RESP        RespMsgType = "resp_soft_seal"
 	REMOVE_SOFT_SEAL_RESP RespMsgType = "resp_remove_soft_seal"

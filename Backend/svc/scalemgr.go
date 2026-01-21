@@ -375,6 +375,12 @@ func init() {
 	createGetUploadFmaServerNotifier := getUploadFmaServerNotifier{}
 	getUploadFmaServer.Register(createGetUploadFmaServerNotifier)
 
+	createGetAllSealLogNotifier := getAllSealLogNotifier{}
+	getAllSealLog.Register(createGetAllSealLogNotifier)
+
+	creatUnsealByMasterKeyNotifier := unsealByMasterKeyNotifier{}
+	unsealByMasterKey.Register(creatUnsealByMasterKeyNotifier)
+
 }
 
 type portListedNotifier struct{}
@@ -592,6 +598,10 @@ type getSetReportPrintNotifier struct{}
 type editUploadFmaServerNotifier struct{}
 
 type getUploadFmaServerNotifier struct{}
+
+type getAllSealLogNotifier struct{}
+
+type unsealByMasterKeyNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event

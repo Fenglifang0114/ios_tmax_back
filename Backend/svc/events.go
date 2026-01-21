@@ -1677,6 +1677,53 @@ func (u GetUploadFmaServer) Trigger(mgr *SrvMgr) {
 	}
 }
 
+// 获取所有铅封日志记录
+var getAllSealLog GetAllSealLog
+
+type GetAllSealLog struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload GetSealLogReq)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetAllSealLog) Register(handler interface {
+	Handle(mgr *SrvMgr, payload GetSealLogReq)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetAllSealLog) Trigger(mgr *SrvMgr, payload GetSealLogReq) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+//万能钥匙解封
+
+var unsealByMasterKey UnsealByMasterKey
+
+type UnsealByMasterKey struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload string)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *UnsealByMasterKey) Register(handler interface {
+	Handle(mgr *SrvMgr, payload string)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u UnsealByMasterKey) Trigger(mgr *SrvMgr, payload string) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
 // 修改上传服务器信息
 var editUploadFmaServer EditUploadFmaServer
 

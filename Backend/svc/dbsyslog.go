@@ -30,6 +30,7 @@ func NewDbSyslogRec(dbName string) (*DbSyslogRec, error) {
 		&Syslog{},
 		&CalibrationLog{},
 		&ScaleWgtLog{},
+		&SealLog{},
 	); err != nil {
 		l.Log.Debug("failed to migrate database of scale connection")
 	}
@@ -860,4 +861,63 @@ func (d *DbSyslogRec) GetScaleLogByID(RecIds []int) ([]ScaleWgtLog, error) {
 		return nil, err
 	}
 	return scaleLogs, nil
+}
+
+type SealLog struct {
+	RecId         int `gorm:"primaryKey;not null;autoincrement;"`
+	Model         string
+	ScaleId       int
+	Sn            string
+	RoleId        int `gorm:"not null;"`
+	Operator      string
+	Operation     string    //seal unseal
+	OperationTime time.Time `gorm:"autoCreateTime"`
+	Remark        string
+	Result        string
+}
+
+func (d *DbSyslogRec) CreateSealLog(log *SealLog) error {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	if err = db.Create(log).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// 查询印章日志列表
+func (d *DbSyslogRec) ListSealLogs(model string, sn string) ([]SealLog, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return []SealLog{}, err
+
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return []SealLog{}, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	var logs []SealLog
+	result := db.Find(&logs).Where("model = ? and sn = ?", model, sn)
+	if result.Error != nil {
+		return []SealLog{}, err
+	}
+	if result.RowsAffected == 0 {
+		return []SealLog{}, err
+	}
+	return logs, result.Error
 }
