@@ -990,19 +990,31 @@ func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	msg, err := enablePassthrough(s, m.CHANGE_WIFI_MODE_RESP)
 
 	if msg.MsgBody != "ok" {
-		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
+		msg.MsgType = m.DIS_BT_CMD_RESP
 		return msg, err
 	}
-	//问了模式不对再切换模式
-	msg, err = getAtMode(s)
-	if err != nil {
+
+	// 如果机种是DPM 就初始化
+
+	if s.Model == "DPM" {
+		ReqInitWifi(s, req)
+	} else {
 		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
-		return msg, err
-	} else if msg.MsgBody != "ok" {
-		return ChangeWifiMode(s)
+
+		//问了模式不对再切换模式
+		msg, err = getAtMode(s)
+		if err != nil {
+			msg.MsgType = m.CHANGE_WIFI_MODE_RESP
+			return msg, err
+		} else if msg.MsgBody != "ok" {
+			return ChangeWifiMode(s)
+		}
+		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
+
 	}
-	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
-	return msg, err
+
+	return &ScaleRespMsg{m.CHANGE_WIFI_MODE_RESP, "ok", s.Id}, nil
+
 }
 
 func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
@@ -4788,6 +4800,273 @@ func ReqGetWiredDhcp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	return excuteSimpCmd(c, m.CMD_GET_WIRED_DHCP, m.GET_WIRED_DHCP_RESP)
 }
+
+func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	//关闭TCP服务器
+	GExpectWifiResp = m.CLOSE_SERVER_CMD_RESP
+
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_CLOSE_SERVER_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.CLOSE_SERVER_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+
+	//注销蓝牙
+	GExpectWifiResp = m.DIS_BT_CMD_RESP
+
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_BT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.DIS_BT_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.DIS_BT_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	//打开自动连接
+	GExpectWifiResp = m.EN_AUTO_CONN_CMD_RESP
+
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_EN_AUTO_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.EN_AUTO_CONN_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	//设置Wi-Fi模式为station
+	GExpectWifiResp = m.SET_WIFI_STATION_MODE_CMD_RESP
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_WIFI_STATION_MODE_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_WIFI_STATION_MODE_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	// //设置多连接
+	// GExpectWifiResp = m.SET_MULTI_CONN_CMD_RESP
+	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_MULTI_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	// println(fmt.Sprintf("%x", cmd))
+	// if err != nil {
+	// 	return &ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	// }
+	// if res, err := perfCmdNwaitResult(c, cmd, m.SET_MULTI_CONN_CMD_RESP, timeoutMs); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// } else if res.MsgBody != "ok" {
+	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	// }
+	// //设置单连接
+	// GExpectWifiResp = m.SET_SINGLE_CONN_CMD_RESP
+
+	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SINGLE_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	// println(fmt.Sprintf("%x", cmd))
+	// if err != nil {
+	// 	return &ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	// }
+	// if res, err := perfCmdNwaitResult(c, cmd, m.SET_SINGLE_CONN_CMD_RESP, timeoutMs); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// } else if res.MsgBody != "ok" {
+	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	// }
+	// //断开重连
+	// GExpectWifiResp = m.DIS_RECONN_CMD_RESP
+	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_RECONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	// println(fmt.Sprintf("%x", cmd))
+	// if err != nil {
+	// 	return &ScaleRespMsg{m.DIS_RECONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	// }
+	// if res, err := perfCmdNwaitResult(c, cmd, m.DIS_RECONN_CMD_RESP, timeoutMs); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// } else if res.MsgBody != "ok" {
+	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	// }
+	// //不提示对端IP及端口号
+	// GExpectWifiResp = m.DIS_IP_PORT_INFO_CMD_RESP
+	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_IP_PORT_INFO_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	// println(fmt.Sprintf("%x", cmd))
+	// if err != nil {
+	// 	return &ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	// }
+	// if res, err := perfCmdNwaitResult(c, cmd, m.DIS_IP_PORT_INFO_CMD_RESP, timeoutMs); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// } else if res.MsgBody != "ok" {
+	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	// }
+	// //设置端口号
+	// GExpectWifiResp = m.SET_TCP_SERVER_CMD_RESP
+
+	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_CONN_PORT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	// println(fmt.Sprintf("%x", cmd))
+	// if err != nil {
+	// 	return &ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	// }
+	// if res, err := perfCmdNwaitResult(c, cmd, m.SET_TCP_SERVER_CMD_RESP, timeoutMs); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// } else if res.MsgBody != "ok" {
+	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	// }
+	// //设置本地TCP服务器超时
+	// GExpectWifiResp = m.SET_TIME_OUT_CMD_RESP
+
+	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_TIME_OUT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	// println(fmt.Sprintf("%x", cmd))
+	// if err != nil {
+	// 	return &ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	// }
+	// if res, err := perfCmdNwaitResult(c, cmd, m.SET_TIME_OUT_CMD_RESP, timeoutMs); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// } else if res.MsgBody != "ok" {
+	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	// }
+	// //设置传输模式 0-普通 1-透传
+	// GExpectWifiResp = m.SET_PASSTH_MODE_CMD_RESP
+
+	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_PASSTH_MODE_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	// println(fmt.Sprintf("%x", cmd))
+	// if err != nil {
+	// 	return &ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	// }
+	// if res, err := perfCmdNwaitResult(c, cmd, m.SET_PASSTH_MODE_CMD_RESP, timeoutMs); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// } else if res.MsgBody != "ok" {
+	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	// }
+	//设置扫描AP参数
+	GExpectWifiResp = m.SET_SCAN_AP_PARAM_CMD_RESP
+
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_SCAN_AP_PARAM_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+
+	return &ScaleRespMsg{m.INIT_WIFI_RESP, "ok", c.Id}, nil
+
+}
+
+func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	//设置多连接
+	GExpectWifiResp = m.SET_MULTI_CONN_CMD_RESP
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_MULTI_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_MULTI_CONN_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	//设置单连接
+	GExpectWifiResp = m.SET_SINGLE_CONN_CMD_RESP
+
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SINGLE_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_SINGLE_CONN_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	//断开重连
+	GExpectWifiResp = m.DIS_RECONN_CMD_RESP
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_RECONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.DIS_RECONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.DIS_RECONN_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	//不提示对端IP及端口号
+	GExpectWifiResp = m.DIS_IP_PORT_INFO_CMD_RESP
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_IP_PORT_INFO_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.DIS_IP_PORT_INFO_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	//设置端口号
+	GExpectWifiResp = m.SET_TCP_SERVER_CMD_RESP
+
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_CONN_PORT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_TCP_SERVER_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	//设置本地TCP服务器超时
+	GExpectWifiResp = m.SET_TIME_OUT_CMD_RESP
+
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_TIME_OUT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_TIME_OUT_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	//设置传输模式 0-普通 1-透传
+	GExpectWifiResp = m.SET_PASSTH_MODE_CMD_RESP
+
+	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_PASSTH_MODE_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_PASSTH_MODE_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+	// //设置扫描AP参数
+	// GExpectWifiResp = m.SET_SCAN_AP_PARAM_CMD_RESP
+
+	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	// println(fmt.Sprintf("%x", cmd))
+	// if err != nil {
+	// 	return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	// }
+	// if res, err := perfCmdNwaitResult(c, cmd, m.SET_SCAN_AP_PARAM_CMD_RESP, timeoutMs); err != nil {
+	// 	return &ScaleRespMsg{}, err
+	// } else if res.MsgBody != "ok" {
+	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	// }
+	return &ScaleRespMsg{m.INIT_WIFI_RESP, "ok", c.Id}, nil
+}
+
 func ReqGetWiredIp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
@@ -4893,7 +5172,7 @@ func ReqRemoveSoftSealOnce(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			Model:     c.Model,
 			Sn:        c.Sn,
 			Result:    "ok",
-			Operation: "seal", //seal  unseal
+			Operation: "unseal", //seal  unseal
 			RoleId:    roleID,
 			Operator:  username,
 			Remark:    "key",

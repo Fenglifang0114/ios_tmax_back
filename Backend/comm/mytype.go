@@ -64,6 +64,19 @@ const (
 	CMD_WIFI_AT_VERSION
 	CMD_WIFI_AT_MODE
 
+	CMD_WIFI_CLOSE_SERVER_CMD
+	CMD_WIFI_DIS_BT_CMD
+	CMD_WIFI_EN_AUTO_CONN_CMD
+	CMD_WIFI_SET_WIFI_STATION_MODE_CMD
+	CMD_WIFI_SET_MULTI_CONN_CMD
+	CMD_WIFI_DIS_RECONN_CMD
+	CMD_WIFI_DIS_IP_PORT_INFO_CMD
+	CMD_WIFI_SET_SINGLE_CONN_CMD
+	CMD_WIFI_SET_CONN_PORT_CMD
+	CMD_WIFI_SET_TIME_OUT_CMD
+	CMD_WIFI_SET_PASSTH_MODE_CMD
+	CMD_WIFI_SET_SCAN_AP_PARAM_CMD
+
 	CMD_BT_DATA_PASSTH
 	CMD_MODIFY_BT_NAME
 	CMD_READ_EEPROM_8
@@ -281,9 +294,6 @@ const (
 	GET_GRAV_ACC_RESP      RespMsgType = "resp_get_grav_acc"
 	SET_FORCE_UNTARE_RESP  RespMsgType = "resp_force_untare"
 
-
-
-
 	GET_SEAL_STATUS_RESP  RespMsgType = "resp_get_seal_status"
 	SOFT_SEAL_RESP        RespMsgType = "resp_soft_seal"
 	REMOVE_SOFT_SEAL_RESP RespMsgType = "resp_remove_soft_seal"
@@ -293,6 +303,23 @@ const (
 	SET_WIRED_DHCP_RESP        RespMsgType = "resp_set_wired_dhcp"
 	GET_WIRED_DHCP_RESP        RespMsgType = "resp_get_wired_dhcp"
 	REMOVE_SOFT_SEAL_ONCE_RESP RespMsgType = "resp_remove_soft_seal_once"
+
+	CLOSE_SERVER_CMD_RESP          RespMsgType = "resp_close_server_cmd"
+	DIS_BT_CMD_RESP                RespMsgType = "resp_dis_bt_cmd"
+	EN_AUTO_CONN_CMD_RESP          RespMsgType = "resp_en_auto_conn_cmd"
+	SET_WIFI_STATION_MODE_CMD_RESP RespMsgType = "resp_set_wifi_station_mode_cmd"
+	SET_MULTI_CONN_CMD_RESP        RespMsgType = "resp_set_multi_conn_cmd"
+	DIS_RECONN_CMD_RESP            RespMsgType = "resp_dis_auto_reconn_cmd"
+	DIS_IP_PORT_INFO_CMD_RESP      RespMsgType = "resp_dis_ip_port_info_cmd"
+	SET_SINGLE_CONN_CMD_RESP       RespMsgType = "resp_set_single_conn_cmd"
+	SET_TCP_SERVER_CMD_RESP        RespMsgType = "resp_set_tcp_server_cmd"
+	SET_TIME_OUT_CMD_RESP          RespMsgType = "resp_set_time_out_cmd"
+	SET_PASSTH_MODE_CMD_RESP       RespMsgType = "resp_set_passth_mode_cmd"
+	SET_SCAN_AP_PARAM_CMD_RESP     RespMsgType = "resp_set_scan_ap_param_cmd"
+
+	INIT_WIFI_RESP RespMsgType = "resp_init_wifi"
+
+	SET_TCP_SERVER_RESP RespMsgType = "resp_set_tcp_server"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

@@ -78,6 +78,9 @@ func IsKeyValid(licenseKey string) (bool, string, string, string) {
 		return true, machineIDStr[0:10], licenseKey[36:46], licenseKey[32:36]
 
 	} else {
+		if !strings.Contains(licenseKey, "++==") {
+			return false, machineIDStr[0:10], "", ""
+		}
 		salt, _ := decrypt(key, myCipherSalt)
 		machineId := []byte(machineIDStr[0:10]) // e4e13e78c5
 		log.Log.Debugf("MachineId:%s\n", machineId)
@@ -100,7 +103,12 @@ func IsKeyValid(licenseKey string) (bool, string, string, string) {
 			return false, machineIDStr[0:10], licenseKey[32:42], ""
 		}
 
-		customerCode := licenseKey[74:94]
+		//++==分开取客户代码
+		split := strings.Split(licenseKey, "++==")
+		if len(split) < 2 {
+			return false, machineIDStr[0:10], licenseKey[32:42], ""
+		}
+		customerCode := split[1]
 		return true, machineIDStr[0:10], licenseKey[32:42], "T-Config" + "*" + customerCode
 	}
 
@@ -164,7 +172,7 @@ func SaveKey(filePath string, content string) error {
 		listContent = strings.Split(string(contentStr), "\r\n")
 		if len(content) == 74 {
 			for _, item := range listContent {
-				if len(item) != 74 && len(item) == 78 {
+				if len(item) == 78 {
 					result = append(result, item)
 				}
 
@@ -174,14 +182,14 @@ func SaveKey(filePath string, content string) error {
 			for _, item := range listContent {
 				if len(item) == 78 && item[32:36] != content[32:36] {
 					result = append(result, item)
-				} else if len(item) == 74 {
+				} else {
 					result = append(result, item)
 				}
 
 			}
-		} else if len(content) == 94 {
+		} else if strings.Contains(content, "++==") {
 			for _, item := range listContent {
-				if len(item) != 74 && len(item) != 94 {
+				if len(item) == 78 {
 					result = append(result, item)
 				}
 			}

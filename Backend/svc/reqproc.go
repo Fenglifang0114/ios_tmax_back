@@ -398,6 +398,10 @@ func procGetWiredDhcp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetWiredDhcp(scale, req)
 }
 
+func procInitWifi(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqInitWifi(scale, req)
+}
+
 func procCalWeight(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqCalWeight(scale, req)
 }
@@ -812,6 +816,7 @@ func init() {
 		SREQ_SET_WIRED_IP:          procSetWiredIp,
 		SREQ_SET_WIRED_DHCP:        procSetWiredDhcp,
 		SREQ_GET_WIRED_DHCP:        procGetWiredDhcp,
+		SREQ_INIT_WIFI:             procInitWifi,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

@@ -912,7 +912,8 @@ func (d *DbSyslogRec) ListSealLogs(model string, sn string) ([]SealLog, error) {
 		defer sqlDB.Close()
 	}
 	var logs []SealLog
-	result := db.Find(&logs).Where("model = ? and sn = ?", model, sn)
+
+	result := db.Where("model = ? and sn = ?", model, sn).Find(&logs)
 	if result.Error != nil {
 		return []SealLog{}, err
 	}

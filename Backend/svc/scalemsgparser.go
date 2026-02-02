@@ -716,7 +716,7 @@ func handleRemoveSoftSealResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_RESP, MsgBody: "ok"}, len(data)
 	}
 	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.REMOVE_SOFT_SEAL_RESP, MsgBody: "fail"}, len(data)
-	
+
 }
 
 func handleRemoveSoftSealOnceResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
@@ -1632,6 +1632,9 @@ func getEncryptType(security int) string {
 // <bgn>：802.11 b/g/n，若 bit 设为 1，则表示使能对应模式，若设为 0，则表示禁用对应模式
 // <wps>：wps flag
 // +CWLAP:<ecn>, <ssid>, <rssi>, <mac>, <ch>, <freq offset>, <freq calibration>  ESP8266
+
+//"LDM",-86,"c4:c0:63:9c:86:f0"   DPM 机种设置了三个参数
+
 func parseCWLAPResponse(data []byte) []CWLAPResponse {
 
 	response := bytes.NewBuffer(data).String()
@@ -1684,6 +1687,26 @@ func parseCWLAPResponse(data []byte) []CWLAPResponse {
 				}
 
 				results = append(results, result)
+			} else if len(fields) == 3 {
+				networkType := 0
+				ssid := strings.Trim(fields[0], "\"")
+				rssi, _ := strconv.Atoi(fields[1])
+				bssid := strings.Trim(fields[2], "\"")
+				channel := 0
+				offset := 0
+				security := 0
+
+				result := CWLAPResponse{
+					NetworkType: networkType,
+					SSID:        ssid,
+					RSSI:        rssi,
+					BSSID:       bssid,
+					Channel:     channel,
+					Offset:      offset,
+					Security:    security,
+				}
+				results = append(results, result)
+
 			}
 		}
 	}
@@ -1728,7 +1751,211 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	case m.GET_AT_MODE_RESP:
 		return handleGetWifiAtModeResp(scaleId, data)
 
+	case m.CLOSE_SERVER_CMD_RESP:
+		return handleCloseServerCmdResp(scaleId, data)
+	case m.DIS_BT_CMD_RESP:
+		return handleDisBtCmdResp(scaleId, data)
+	case m.EN_AUTO_CONN_CMD_RESP:
+		return handleEnAutoConnCmdResp(scaleId, data)
+	case m.SET_WIFI_STATION_MODE_CMD_RESP:
+		return handleSetWifiStationModeCmdResp(scaleId, data)
+	case m.SET_MULTI_CONN_CMD_RESP:
+		return handleSetMultiConnCmdResp(scaleId, data)
+	case m.DIS_RECONN_CMD_RESP:
+		return handleDisReconnCmdResp(scaleId, data)
+	case m.DIS_IP_PORT_INFO_CMD_RESP:
+		return handleDisIpPortInfoCmdResp(scaleId, data)
+	case m.SET_SINGLE_CONN_CMD_RESP:
+		return handleSetSingleConnCmdResp(scaleId, data)
+	case m.SET_TCP_SERVER_CMD_RESP:
+		return handleSetTcpServerCmdResp(scaleId, data)
+	case m.SET_TIME_OUT_CMD_RESP:
+		return handleSetTimeOutCmdResp(scaleId, data)
+	case m.SET_PASSTH_MODE_CMD_RESP:
+		return handleSetPassthModeCmdResp(scaleId, data)
+	case m.SET_SCAN_AP_PARAM_CMD_RESP:
+		return handleSetScanApParamCmdResp(scaleId, data)
+
 	default:
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleCloseServerCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CIPSERVER=0") {
+			return ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CLOSE_SERVER_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleDisBtCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+BLEINIT=0") {
+			return ScaleRespMsg{m.DIS_BT_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.DIS_BT_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_BT_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleEnAutoConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CWAUTOCONN=1") {
+			return ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_AUTO_CONN_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleSetWifiStationModeCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CWMODE=1,1") {
+			return ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_STATION_MODE_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleSetMultiConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CIPMUX=1") {
+			return ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MULTI_CONN_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleDisReconnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CWRECONNCFG=20,0") {
+			return ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "ok", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_RECONN_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleDisIpPortInfoCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CIPDINFO=0") {
+			return ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_IP_PORT_INFO_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleSetSingleConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CIPSERVERMAXCONN=1") {
+			return ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_SINGLE_CONN_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleSetTcpServerCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CIPSERVER=") {
+			return ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_TCP_SERVER_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+func handleSetTimeOutCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CIPSTO=0") {
+			return ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_TIME_OUT_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleSetPassthModeCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CIPMODE=0") {
+			return ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_PASSTH_MODE_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
+		return ScaleRespMsg{}, 0
+	}
+}
+
+func handleSetScanApParamCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
+		if strings.Contains(string(data), "AT+CWLAPOPT") {
+			return ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "ok", scaleId}, len(data)
+		} else {
+			return ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "fail", scaleId}, len(data)
+
+		}
+	} else if strings.Contains(string(data), "Error") { // fail
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_SCAN_AP_PARAM_CMD_RESP, MsgBody: "fail"}, len(data)
+	} else { // unkown
 		return ScaleRespMsg{}, 0
 	}
 }
@@ -1783,7 +2010,9 @@ func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	println("at get ap list resp:" + string(data))
 
 	if !bytes.Contains(data, []byte("OK")) {
-		return ScaleRespMsg{}, 0
+		if len(data) < 600 {
+			return ScaleRespMsg{}, 0
+		}
 	}
 
 	apList := parseCWLAPResponse(data)

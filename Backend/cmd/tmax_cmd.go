@@ -123,6 +123,35 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getAtVersionCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_AT_MODE:
 		return getAtModeCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+
+	//初始化WiFi模块命令
+
+	case m.CMD_WIFI_CLOSE_SERVER_CMD:
+		return closeServerCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+
+	case m.CMD_WIFI_DIS_BT_CMD:
+		return disBtCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_EN_AUTO_CONN_CMD:
+		return enAutoConnCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_SET_WIFI_STATION_MODE_CMD:
+		return setWifiStationModeCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_SET_MULTI_CONN_CMD:
+		return setMultiConnCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_DIS_RECONN_CMD:
+		return disAutoReconnCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_DIS_IP_PORT_INFO_CMD:
+		return disIpPortInfoCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_SET_SINGLE_CONN_CMD:
+		return setSingleConnCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_SET_CONN_PORT_CMD:
+		return setConnPortCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_SET_TIME_OUT_CMD:
+		return setTimeOutCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_SET_PASSTH_MODE_CMD:
+		return setPassthModeCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+	case m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD:
+		return setScanApParamCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+
 	case m.CMD_WIFI_EN_DHCP:
 		return EnWifiDhcpCmdTMAX(), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_EN_DHCP_32:
@@ -137,7 +166,6 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return getIpInfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_GET_IP_INFO_32:
 		return getIp32InfoCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
-
 	case m.CMD_CHANGE_WIFI_MODE:
 		return changeWifiModeCmdTMAX(), CMD_TIMEOUT_LONG_20000_MS, nil
 	case m.CMD_WIFI_GET_AP_INFO:
@@ -289,6 +317,25 @@ var CHANGE_WIFI_MODE_CMD []byte = []byte("AT+CWMODE=1\r\n")
 
 // var GET_AT_MODE_CMD []byte = []byte("AT+CWMODE?\r\n")
 var GET_AT_MODE_CMD []byte = []byte("AT+CWAUTOCONN?\r\n")
+
+// 初始化WiFi模块命令
+var CLOSE_SERVER_CMD []byte = []byte("AT+CIPSERVER=0\r\n") //关闭TCP服务器
+
+var DIS_BT_CMD []byte = []byte("AT+BLEINIT=0\r\n")                 //关闭蓝牙
+var EN_AUTO_CONN_CMD []byte = []byte("AT+CWAUTOCONN=1\r\n")        //打开自动连接
+var SET_WIFI_STATION_MODE_CMD []byte = []byte("AT+CWMODE=1,1\r\n") //设置Wi-Fi模式为station
+
+// 连上IP地址后，设置下面的参数
+var SET_MULTI_CONN_CMD []byte = []byte("AT+CIPMUX=1\r\n")                 //设置多连接
+var SET_MAX_CONN_CMD []byte = []byte("AT+CIPSERVERMAXCONN=1\r\n")         //设置最大连接数1
+var DIS_RECONN_CMD []byte = []byte("AT+CWRECONNCFG=20,0\r\n")             //断开重连
+var DIS_IP_PORT_INFO_CMD []byte = []byte("AT+CIPDINFO=0\r\n")             //不提示对端IP及端口号
+var SET_TCP_SERVER_CMD []byte = []byte("AT+CIPSERVER=1,8580,\"TCP\"\r\n") //设置TCP服务器，端口8580
+var SET_TIME_OUT_CMD []byte = []byte("AT+CIPSTO=0\r\n")                   //设置本地TCP服务器超时
+var SET_PASSTH_MODE_CMD []byte = []byte("AT+CIPMODE=0\r\n")               //设置传输模式 0-普通 1-透传
+var SET_SCAN_AP_PARAM_CMD []byte = []byte("AT+CWLAPOPT=1,14\r\n")         //设置扫描AP的参数
+
+//初始化WiFi模块命令
 
 const (
 	PACKET_HEAD_TMAX         = 0x5AA5
@@ -687,6 +734,67 @@ func getAtVersionCmdTMAX() []byte {
 func getAtModeCmdTMAX() []byte {
 	l.Log.Debug("compose Get AP list cmd")
 	return composeCmd(0xf202, 0, GET_AT_MODE_CMD)
+}
+
+// 关闭TCP服务器
+func closeServerCmdTMAX() []byte {
+	l.Log.Debug("compose close server cmd")
+	return composeCmd(0xf202, 0, CLOSE_SERVER_CMD)
+}
+
+func disBtCmdTMAX() []byte {
+	l.Log.Debug("compose disable BT cmd")
+	return composeCmd(0xf202, 0, DIS_BT_CMD)
+}
+
+func enAutoConnCmdTMAX() []byte {
+	l.Log.Debug("compose enable auto connect cmd")
+	return composeCmd(0xf202, 0, EN_AUTO_CONN_CMD)
+}
+
+func setWifiStationModeCmdTMAX() []byte {
+	l.Log.Debug("compose set wifi station mode cmd")
+	return composeCmd(0xf202, 0, SET_WIFI_STATION_MODE_CMD)
+}
+
+func setMultiConnCmdTMAX() []byte {
+	l.Log.Debug("compose set multi conn cmd")
+	return composeCmd(0xf202, 0, SET_MULTI_CONN_CMD)
+}
+
+func disAutoReconnCmdTMAX() []byte {
+	l.Log.Debug("compose disable auto reconnect cmd")
+	return composeCmd(0xf202, 0, DIS_RECONN_CMD)
+}
+
+func disIpPortInfoCmdTMAX() []byte {
+	l.Log.Debug("compose disable IP port info cmd")
+	return composeCmd(0xf202, 0, DIS_IP_PORT_INFO_CMD)
+}
+
+func setSingleConnCmdTMAX() []byte {
+	l.Log.Debug("compose set single conn cmd")
+	return composeCmd(0xf202, 0, SET_MAX_CONN_CMD)
+}
+
+func setConnPortCmdTMAX() []byte {
+	l.Log.Debug("compose get conn port cmd")
+	return composeCmd(0xf202, 0, SET_TCP_SERVER_CMD)
+}
+
+func setTimeOutCmdTMAX() []byte {
+	l.Log.Debug("compose set time out cmd")
+	return composeCmd(0xf202, 0, SET_TIME_OUT_CMD)
+}
+
+func setPassthModeCmdTMAX() []byte {
+	l.Log.Debug("compose set passth mode cmd")
+	return composeCmd(0xf202, 0, SET_PASSTH_MODE_CMD)
+}
+
+func setScanApParamCmdTMAX() []byte {
+	l.Log.Debug("compose set scan ap param cmd")
+	return composeCmd(0xf202, 0, SET_SCAN_AP_PARAM_CMD)
 }
 
 // Change Wifi Mode

@@ -115,7 +115,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	licKeyList = strings.Split(licKey, "\r\n")
 	for _, item := range licKeyList {
-		if len(item) == 74 || len(item) == 78 || len(item) == 94 {
+		if len(item) == 74 || len(item) == 78 || strings.Contains(item, "++==") {
 			gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
 			if gIsKeyValid {
 				gLicenseInfoList = append(gLicenseInfoList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})
@@ -1131,7 +1131,7 @@ func getLicenseList() {
 
 	licKeyList = strings.Split(licKey, "\r\n")
 	for _, item := range licKeyList {
-		if len(item) == 74 || len(item) == 78 || len(item) == 94 {
+		if len(item) == 74 || len(item) == 78 || strings.Contains(item, "++==") {
 			gIsKeyValid, gMachineId, gLicValidDate, gModuleName = lic.IsKeyValid(item)
 			if gIsKeyValid {
 				newLicList = append(newLicList, LicenseInfo{Id: gMachineId, ValidDate: gLicValidDate, ModuleName: gModuleName, IsValid: gIsKeyValid})

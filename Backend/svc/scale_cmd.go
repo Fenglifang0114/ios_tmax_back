@@ -587,33 +587,63 @@ func (c *Scale) ModifyBTName(name string) (*ScaleRespMsg, error) {
 var GExpectWifiResp m.RespMsgType
 
 // get At version
-func GetWifiAtVersion(c *Scale) (*ScaleRespMsg, error) {
+func GetWifiAtVersion(s *Scale) (*ScaleRespMsg, error) {
 	GExpectWifiResp = m.GET_AT_VERSION_RESP
-	return excuteSimpCmd(c, m.CMD_WIFI_AT_VERSION, m.GET_AT_VERSION_RESP)
+	// return excuteSimpCmd(c, m.CMD_WIFI_AT_VERSION, m.GET_AT_VERSION_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_AT_VERSION, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_AT_VERSION_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_AT_VERSION_RESP, timeoutMs)
 }
 
 // get At mode
-func GetWifiAtMode(c *Scale) (*ScaleRespMsg, error) {
+func GetWifiAtMode(s *Scale) (*ScaleRespMsg, error) {
 	GExpectWifiResp = m.GET_AT_MODE_RESP
-	return excuteSimpCmd(c, m.CMD_WIFI_AT_MODE, m.GET_AT_MODE_RESP)
+	// return excuteSimpCmd(c, m.CMD_WIFI_AT_MODE, m.GET_AT_MODE_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_AT_MODE, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_AT_MODE_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_AT_MODE_RESP, timeoutMs)
 }
 
 // Get AP list
-func GetApList(c *Scale) (*ScaleRespMsg, error) {
+func GetApList(s *Scale) (*ScaleRespMsg, error) {
 	GExpectWifiResp = m.GET_AP_LIST_RESP
-	return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_LIST, m.GET_AP_LIST_RESP)
+	// return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_LIST, m.GET_AP_LIST_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_GET_AP_LIST, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_AP_LIST_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_AP_LIST_RESP, timeoutMs)
 }
 
 // Get Wifi AP info ESP32
-func GetWifiApInfo32(c *Scale) (*ScaleRespMsg, error) {
+func GetWifiApInfo32(s *Scale) (*ScaleRespMsg, error) {
 	GExpectWifiResp = m.GET_WIFI_AP_INFO_RESP
-	return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_INFO_32, m.GET_WIFI_AP_INFO_RESP)
+	// return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_INFO_32, m.GET_WIFI_AP_INFO_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_GET_AP_INFO_32, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_WIFI_AP_INFO_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_WIFI_AP_INFO_RESP, timeoutMs)
 }
 
 // Get Wifi AP info
-func GetWifiApInfo(c *Scale) (*ScaleRespMsg, error) {
+func GetWifiApInfo(s *Scale) (*ScaleRespMsg, error) {
 	GExpectWifiResp = m.GET_WIFI_AP_INFO_RESP
-	return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_INFO, m.GET_WIFI_AP_INFO_RESP)
+	// return excuteSimpCmd(c, m.CMD_WIFI_GET_AP_INFO, m.GET_WIFI_AP_INFO_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_GET_AP_INFO, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_WIFI_AP_INFO_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_WIFI_AP_INFO_RESP, timeoutMs)
 }
 
 // Send data to BT
@@ -641,13 +671,25 @@ func SendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
 func SetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("set wifi to dynamic IP")
 	GExpectWifiResp = m.SET_WIFI_DYNAMIC_IP_RESP
-	return excuteSimpCmd(s, m.CMD_WIFI_EN_DHCP, m.SET_WIFI_DYNAMIC_IP_RESP, 1)
+	// return excuteSimpCmd(s, m.CMD_WIFI_EN_DHCP, m.SET_WIFI_DYNAMIC_IP_RESP, 1)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_EN_DHCP, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.SET_WIFI_DYNAMIC_IP_RESP
+	return perfCmdNwaitResult(s, cmd, m.SET_WIFI_DYNAMIC_IP_RESP, timeoutMs)
 }
 
 func SetWifiDynamicIp32(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("set wifi to dynamic IP")
 	GExpectWifiResp = m.SET_WIFI_DYNAMIC_IP_RESP
-	return excuteSimpCmd(s, m.CMD_WIFI_EN_DHCP_32, m.SET_WIFI_DYNAMIC_IP_RESP, 1)
+	// return excuteSimpCmd(s, m.CMD_WIFI_EN_DHCP_32, m.SET_WIFI_DYNAMIC_IP_RESP, 1)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_EN_DHCP_32, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.SET_WIFI_DYNAMIC_IP_RESP
+	return perfCmdNwaitResult(s, cmd, m.SET_WIFI_DYNAMIC_IP_RESP, timeoutMs)
 }
 
 func SetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
@@ -688,7 +730,21 @@ func ConnectWifiAp32(s *Scale, ssid string, passwd string, bssid string) (*Scale
 		return &ScaleRespMsg{}, err
 	}
 	GExpectWifiResp = m.CONNECT_AP_RESP
-	return perfCmdNwaitResult(s, cmd, m.CONNECT_AP_RESP, timeoutMs, 1)
+	msg, err := perfCmdNwaitResult(s, cmd, m.CONNECT_AP_RESP, timeoutMs, 1)
+	if err != nil {
+		return msg, err
+	}
+	if msg.MsgBody != "ok" {
+		return msg, err
+	}
+
+	if s.Model == "DPM" {
+		ReqSetServerMode(s, SRequest{})
+	} else {
+		return msg, nil
+	}
+
+	return msg, nil
 }
 
 func ConnectWifiApOneKey(s *Scale, ssid string, bssid string, passwd string) (*ScaleRespMsg, error) {
@@ -705,32 +761,63 @@ func ConnectWifiApOneKey(s *Scale, ssid string, bssid string, passwd string) (*S
 func GetIpInfo(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Get IP info from Scale")
 	GExpectWifiResp = m.GET_IP_INFO_RESP
-	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO, m.GET_IP_INFO_RESP)
+	// return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO, m.GET_IP_INFO_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_GET_IP_INFO, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_IP_INFO_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_IP_INFO_RESP, timeoutMs)
 }
 
 // Get IP info from scale
 func GetIpInfo32(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Get IP info from Scale")
 	GExpectWifiResp = m.GET_IP_INFO_RESP
-	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO_32, m.GET_IP_INFO_RESP)
+	// return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO_32, m.GET_IP_INFO_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_GET_IP_INFO_32, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_IP_INFO_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_IP_INFO_RESP, timeoutMs)
 }
 
 func ChangeWifiMode(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Change wifi mode from Scale")
 	GExpectWifiResp = m.CHANGE_WIFI_MODE_RESP
-	return excuteSimpCmd(s, m.CMD_CHANGE_WIFI_MODE, m.CHANGE_WIFI_MODE_RESP)
+	// return excuteSimpCmd(s, m.CMD_CHANGE_WIFI_MODE, m.CHANGE_WIFI_MODE_RESP)
+
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_CHANGE_WIFI_MODE, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.CHANGE_WIFI_MODE_RESP
+	return perfCmdNwaitResult(s, cmd, m.CHANGE_WIFI_MODE_RESP, timeoutMs)
 }
 
 func GetIpMode(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Get IP mode from Scale")
 	GExpectWifiResp = m.GET_IP_MODE_RESP
-	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_MODE, m.GET_IP_MODE_RESP)
+	// return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_MODE, m.GET_IP_MODE_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_GET_IP_MODE, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_IP_MODE_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_IP_MODE_RESP, timeoutMs)
 }
 
 func GetIpMode32(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Get IP mode from Scale")
 	GExpectWifiResp = m.GET_IP_MODE_RESP
-	return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_MODE_32, m.GET_IP_MODE_RESP)
+	// return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_MODE_32, m.GET_IP_MODE_RESP)
+	cmd, timeoutMs, err := s.composer.ComposeCmd(s.composer, m.CMD_WIFI_GET_IP_MODE_32, m.CmdData{Type: m.DATA_TYPE_STR, Data: ""})
+	if err != nil {
+		return &ScaleRespMsg{}, err
+	}
+	GExpectWifiResp = m.GET_IP_MODE_RESP
+	return perfCmdNwaitResult(s, cmd, m.GET_IP_MODE_RESP, timeoutMs)
 }
 
 // func perfCmd(c *Scale, cmd []byte) bool {

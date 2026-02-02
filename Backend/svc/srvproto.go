@@ -1073,6 +1073,8 @@ const (
 	SREQ_SET_WIRED_IP   SReqType = "set_wired_ip"
 	SREQ_SET_WIRED_DHCP SReqType = "set_wired_dhcp"
 	SREQ_GET_WIRED_DHCP SReqType = "get_wired_dhcp"
+
+	SREQ_INIT_WIFI SReqType = "init_wifi"
 )
 
 type ReqScaleRec struct {
