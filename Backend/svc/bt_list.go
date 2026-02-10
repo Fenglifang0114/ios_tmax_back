@@ -1,0 +1,474 @@
+package svc
+
+import (
+	"context"
+
+	"fmt"
+	"sync"
+	"time"
+
+	"tinygo.org/x/bluetooth"
+)
+
+// type BtInfoList struct {
+// 	Mac  string `json:"mac"`
+// 	Name string `json:"name"`
+// 	RSSI int    `json:"rssi"`
+// }
+
+var (
+	// 单例适配器，避免重复创建
+	btAdapter      *bluetooth.Adapter
+	adapterOnce    sync.Once
+	adapterInitErr error
+
+	// 扫描互斥锁，防止并发扫描
+	scanMutex  sync.Mutex
+	isScanning bool
+
+	// 用于停止当前扫描的上下文
+	currentScanCtx    context.Context
+	currentScanCancel context.CancelFunc
+)
+
+// 初始化适配器（只调用一次）
+func initAdapter() (*bluetooth.Adapter, error) {
+	adapterOnce.Do(func() {
+		btAdapter = bluetooth.DefaultAdapter
+		if err := btAdapter.Enable(); err != nil {
+			adapterInitErr = fmt.Errorf("enable adapter failed: %w", err)
+			return
+		}
+		fmt.Println("蓝牙适配器初始化成功")
+	})
+
+	if adapterInitErr != nil {
+		return nil, adapterInitErr
+	}
+
+	return btAdapter, nil
+}
+
+// 清理适配器状态
+func resetAdapter() {
+	scanMutex.Lock()
+	defer scanMutex.Unlock()
+
+	if btAdapter != nil {
+		// 停止扫描
+		btAdapter.StopScan()
+		isScanning = false
+
+		// 取消当前扫描上下文
+		if currentScanCancel != nil {
+			currentScanCancel()
+			currentScanCancel = nil
+		}
+
+		// 等待一段时间确保扫描完全停止
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// 强制停止扫描（外部可调用）
+func ForceStopScan() {
+	resetAdapter()
+}
+
+// 可独立使用的扫描函数
+func GetBtList() (string, error) {
+	// 防止并发扫描
+	scanMutex.Lock()
+	if isScanning {
+		scanMutex.Unlock()
+		return "", fmt.Errorf("扫描正在进行中，请稍后再试")
+	}
+	isScanning = true
+	scanMutex.Unlock()
+
+	// 确保扫描结束后重置状态
+	defer func() {
+		scanMutex.Lock()
+		isScanning = false
+		scanMutex.Unlock()
+	}()
+
+	// 1. 初始化适配器
+	adapter, err := initAdapter()
+	if err != nil {
+		return "", fmt.Errorf("初始化适配器失败: %w", err)
+	}
+
+	devices := make(map[string]bluetooth.ScanResult)
+	var results []bluetooth.ScanResult
+
+	// 创建扫描上下文（用于超时控制）
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+
+	// 保存当前扫描上下文，以便外部可以取消
+	scanMutex.Lock()
+	if currentScanCancel != nil {
+		currentScanCancel()
+	}
+	currentScanCtx = ctx
+	currentScanCancel = cancel
+	scanMutex.Unlock()
+
+	// 确保结束时取消上下文
+	defer cancel()
+
+	fmt.Println("正在扫描蓝牙设备（最多10秒）...")
+	start := time.Now()
+
+	// 使用通道来同步扫描完成
+	scanCompleted := make(chan bool, 1)
+	scanError := make(chan error, 1)
+
+	// 启动一个goroutine来执行扫描
+	go func() {
+		defer func() {
+			// 确保扫描停止
+			adapter.StopScan()
+			// 给系统一点时间停止扫描
+			time.Sleep(100 * time.Millisecond)
+		}()
+
+		// 开始扫描
+		err := adapter.Scan(func(adapter *bluetooth.Adapter, device bluetooth.ScanResult) {
+			// 检查上下文是否已取消
+			select {
+			case <-ctx.Done():
+				// 超时或被取消，停止扫描
+				adapter.StopScan()
+				return
+			default:
+			}
+
+			address := device.Address.String()
+			name := device.LocalName()
+
+			if existing, exists := devices[address]; exists {
+				if existing.LocalName() == "" && name != "" {
+					devices[address] = device
+					for i, d := range results {
+						if d.Address.String() == address {
+							results[i] = device
+							break
+						}
+					}
+				}
+			} else {
+				devices[address] = device
+				results = append(results, device)
+
+				if name == "" {
+					name = "No Name"
+				}
+
+				elapsed := time.Since(start).Seconds()
+				fmt.Printf("[%.1fs] 发现设备: %s, 名称: %s, RSSI: %d\n",
+					elapsed, address, name, device.RSSI)
+			}
+		})
+
+		if err != nil {
+			scanError <- fmt.Errorf("启动扫描失败: %v", err)
+			return
+		}
+
+		// 等待上下文完成（超时或被取消）
+		<-ctx.Done()
+
+		// 扫描完成
+		scanCompleted <- true
+	}()
+
+	// 等待扫描完成或出错
+	select {
+	case <-scanCompleted:
+		// 扫描正常完成
+		fmt.Printf("\n扫描完成，发现 %d 个设备\n", len(results))
+	case err := <-scanError:
+		// 扫描出错
+		return "", err
+	case <-ctx.Done():
+		// 超时
+		fmt.Printf("\n扫描超时，已发现 %d 个设备\n", len(results))
+	}
+
+	// 转换为 JSON
+	btInfoList := make([]BtInfoList, 0)
+	for _, device := range results {
+		btInfoList = append(btInfoList, BtInfoList{
+			Mac:  device.Address.String(),
+			Name: device.LocalName(),
+			RSSI: int(device.RSSI),
+		})
+	}
+
+	jsonBytes, err := json.Marshal(btInfoList)
+	if err != nil {
+		return "", fmt.Errorf("JSON序列化失败: %w", err)
+	}
+
+	return string(jsonBytes), nil
+}
+
+// 带手动停止的扫描函数
+func GetBtListWithStopControl() (string, context.CancelFunc, error) {
+	scanMutex.Lock()
+	if isScanning {
+		scanMutex.Unlock()
+		return "", nil, fmt.Errorf("扫描正在进行中，请稍后再试")
+	}
+	isScanning = true
+	scanMutex.Unlock()
+
+	// 创建可取消的上下文
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// 保存取消函数
+	scanMutex.Lock()
+	if currentScanCancel != nil {
+		currentScanCancel()
+	}
+	currentScanCtx = ctx
+	currentScanCancel = cancel
+	scanMutex.Unlock()
+
+	devices := make(map[string]bluetooth.ScanResult)
+	var results []bluetooth.ScanResult
+
+	adapter, err := initAdapter()
+	if err != nil {
+		cancel()
+		return "", nil, fmt.Errorf("初始化适配器失败: %w", err)
+	}
+
+	fmt.Println("正在扫描蓝牙设备（手动停止）...")
+	start := time.Now()
+
+	scanDone := make(chan struct{})
+	scanErr := make(chan error, 1)
+
+	go func() {
+		defer close(scanDone)
+		defer func() {
+			adapter.StopScan()
+			time.Sleep(100 * time.Millisecond)
+		}()
+
+		err := adapter.Scan(func(adapter *bluetooth.Adapter, device bluetooth.ScanResult) {
+			select {
+			case <-ctx.Done():
+				adapter.StopScan()
+				return
+			default:
+			}
+
+			address := device.Address.String()
+			name := device.LocalName()
+
+			if existing, exists := devices[address]; exists {
+				if existing.LocalName() == "" && name != "" {
+					devices[address] = device
+					for i, d := range results {
+						if d.Address.String() == address {
+							results[i] = device
+							break
+						}
+					}
+				}
+			} else {
+				devices[address] = device
+				results = append(results, device)
+
+				if name == "" {
+					name = "No Name"
+				}
+
+				elapsed := time.Since(start).Seconds()
+				fmt.Printf("[%.1fs] 发现设备: %s, 名称: %s, RSSI: %d\n",
+					elapsed, address, name, device.RSSI)
+			}
+		})
+
+		if err != nil {
+			scanErr <- err
+			return
+		}
+
+		<-ctx.Done()
+	}()
+
+	// 返回取消函数，让调用者可以随时停止扫描
+	stopFunc := func() {
+		cancel()
+		<-scanDone
+
+		scanMutex.Lock()
+		isScanning = false
+		currentScanCancel = nil
+		currentScanCtx = nil
+		scanMutex.Unlock()
+
+		fmt.Printf("\n扫描已手动停止，发现 %d 个设备\n", len(results))
+	}
+
+	// 在另一个goroutine中等待扫描完成
+	go func() {
+		select {
+		case <-scanDone:
+			// 扫描完成
+			scanMutex.Lock()
+			isScanning = false
+			currentScanCancel = nil
+			currentScanCtx = nil
+			scanMutex.Unlock()
+		case err := <-scanErr:
+			fmt.Printf("扫描错误: %v\n", err)
+			scanMutex.Lock()
+			isScanning = false
+			currentScanCancel = nil
+			currentScanCtx = nil
+			scanMutex.Unlock()
+		}
+	}()
+
+	// 立即返回，调用者可以通过cancelFunc停止扫描
+	return "", stopFunc, nil
+}
+
+// 带超时控制的扫描函数（更简洁版本）
+func GetBtListWithTimeout(timeout time.Duration) (string, error) {
+	scanMutex.Lock()
+	if isScanning {
+		scanMutex.Unlock()
+		return "", fmt.Errorf("扫描正在进行中，请稍后再试")
+	}
+	isScanning = true
+	scanMutex.Unlock()
+
+	defer func() {
+		scanMutex.Lock()
+		isScanning = false
+		scanMutex.Unlock()
+	}()
+
+	adapter, err := initAdapter()
+	if err != nil {
+		return "", err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	devices := make(map[string]bluetooth.ScanResult)
+	var results []bluetooth.ScanResult
+	var mu sync.Mutex
+
+	fmt.Printf("正在扫描蓝牙设备（最多%v）...\n", timeout)
+	start := time.Now()
+
+	// 使用WaitGroup确保扫描完全停止
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	scanErr := make(chan error, 1)
+
+	// 启动扫描
+	err = adapter.Scan(func(adapter *bluetooth.Adapter, device bluetooth.ScanResult) {
+		select {
+		case <-ctx.Done():
+			// 超时，停止扫描
+			adapter.StopScan()
+			wg.Done()
+			return
+		default:
+		}
+
+		mu.Lock()
+		defer mu.Unlock()
+
+		address := device.Address.String()
+		if _, exists := devices[address]; !exists {
+			devices[address] = device
+			results = append(results, device)
+
+			name := device.LocalName()
+			if name == "" {
+				name = "No Name"
+			}
+
+			elapsed := time.Since(start).Seconds()
+			fmt.Printf("[%.1fs] 发现设备: %s, 名称: %s, RSSI: %d\n",
+				elapsed, address, name, device.RSSI)
+		}
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("启动扫描失败: %v", err)
+	}
+
+	// 等待超时
+	go func() {
+		<-ctx.Done()
+		adapter.StopScan()
+		// 等待扫描回调完成
+		wg.Wait()
+		scanErr <- nil
+	}()
+
+	// 等待扫描停止
+	<-scanErr
+
+	fmt.Printf("\n扫描完成，发现 %d 个设备\n", len(results))
+
+	// 转换为JSON
+	btInfoList := make([]BtInfoList, 0)
+	for _, device := range results {
+		btInfoList = append(btInfoList, BtInfoList{
+			Mac:  device.Address.String(),
+			Name: device.LocalName(),
+			RSSI: int(device.RSSI),
+		})
+	}
+
+	jsonBytes, err := json.Marshal(btInfoList)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonBytes), nil
+}
+
+// 测试函数
+func TestScan() {
+	fmt.Println("=== 测试蓝牙扫描 ===")
+
+	// 测试1：正常扫描10秒
+	fmt.Println("\n1. 正常扫描10秒")
+	result, err := GetBtListWithTimeout(10 * time.Second)
+	if err != nil {
+		fmt.Printf("扫描失败: %v\n", err)
+	} else {
+		fmt.Printf("扫描成功，发现设备: %s\n", result)
+	}
+
+	// 等待2秒
+	time.Sleep(2 * time.Second)
+
+	// 测试2：快速扫描5秒
+	fmt.Println("\n2. 快速扫描5秒")
+	result, err = GetBtListWithTimeout(5 * time.Second)
+	if err != nil {
+		fmt.Printf("扫描失败: %v\n", err)
+	} else {
+		fmt.Printf("扫描成功，发现设备: %s\n", result)
+	}
+
+	// 测试3：检查扫描状态
+	scanMutex.Lock()
+	fmt.Printf("\n扫描状态: isScanning=%v\n", isScanning)
+	scanMutex.Unlock()
+}

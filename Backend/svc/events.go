@@ -18,6 +18,24 @@ func (u PortsListed) Trigger() {
 	}
 }
 
+var btListed BtListed
+
+type BtListed struct {
+	handlers []interface{ Handle() }
+}
+
+// Register adds an event handler for this event
+func (u *BtListed) Register(handler interface{ Handle() }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u BtListed) Trigger() {
+	for _, handler := range u.handlers {
+		go handler.Handle()
+	}
+}
+
 var scalesListedSrv ScaleListedSrv
 
 type ScaleListedSrv struct {

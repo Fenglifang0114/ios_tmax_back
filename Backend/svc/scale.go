@@ -129,7 +129,7 @@ type Scale struct {
 	MyNet    *TNet
 	// Network socket
 	// tcpSocket net.Socket
-	// Bluetooth
+	MyBluetooth *TBluetooth
 	// btConn BtCom
 	// scale Id
 	Id int64
@@ -165,6 +165,7 @@ type Scale struct {
 	composer *m.CmdComposer
 	Pcnf     ComInfo
 	Ncnf     NetInfo
+	BtInfo   BtInfo
 
 	isScalePassth    bool
 	IsScalePassthHex bool
@@ -181,6 +182,9 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 	var scale *Scale
 	var detailInfo DetailList
 	var packDetailMid []PackDetailMidData
+
+	var btInfo BtInfo
+	var bt *TBluetooth
 
 	switch conn.TMedia {
 	case MEDIA_COM:
@@ -201,7 +205,6 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 		}
 
 	case MEDIA_NET:
-
 		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &ncnf); err != nil {
 			l.Log.Errorf("error unmarshalling: %v", err)
 		}
@@ -215,6 +218,21 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 			detailInfo:    detailInfo,
 			packDetailMid: packDetailMid,
 		}
+
+	case MEDIA_BT:
+		if err := json.Unmarshal([]byte(conn.MediaConf.MediaInfoJson), &btInfo); err != nil {
+			l.Log.Errorf("error unmarshalling: %v", err)
+		}
+		picker := picker.GetPickerFn(scaleCat)
+		bt, _ = NewBluetoothConnection(btInfo.Mac, picker, conn.IsDefault, scaleMgr.bluetoothMgr.adapter)
+		scale = &Scale{
+			scaleMgr: scaleMgr, Conn: conn, ScaleCat: scaleCat, Model: model, Sn: sn, toScaleMsgCh: make(chan string, SCALE_SEND_CH_SIZE),
+			fromScaleMsgCh: make(chan string, SCALE_RECV_CH_SIZE), MyBluetooth: bt, BtInfo: btInfo,
+			quitProcScaleRespMessageCh: make(chan bool, 1), quitProcToScaleMsgCh: make(chan bool, 1),
+			detailInfo:    detailInfo,
+			packDetailMid: packDetailMid,
+		}
+
 	}
 
 	scale.respChansMap = map[m.RespMsgType][]chan *ScaleRespMsg{}
@@ -416,6 +434,10 @@ func (s *Scale) Close() error {
 	if s.MyNet != nil {
 		s.MyNet.Close() //20240801
 	}
+
+	if s.MyBluetooth != nil {
+		s.MyBluetooth.Close() //20260206
+	}
 	return nil
 }
 
@@ -514,6 +536,63 @@ func (s *Scale) procScaleRespMsg() {
 			case <-s.quitProcScaleRespMessageCh:
 				quit = true
 			case inPack := <-s.MyNet.recvCh:
+				if inPack.PayloadLen == 0 {
+					continue
+				}
+				// l.Log.Debugf("From net: %v", inPack)
+
+				if s.ScaleCat == m.SCALE_C51 {
+				} else if s.ScaleCat == m.SCALE_T2200 {
+					msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
+					if err != nil {
+						continue
+					}
+					sendMsgIntoChsOrWeightToClient(s, msg)
+				} else if s.ScaleCat == m.SCALE_TMAX || s.ScaleCat == m.SCALE_TMAX_PASSTH {
+					// find message buffer that associate to the message
+
+					if s.isScalePassth {
+						var cmdHex uint16 = cmd.CMDID_SCALE_PASSTH_DATA_TMAX
+						bufName := utils.CmdsRespMap[utils.CmdID(cmdHex)]
+						if bufName == "" {
+							l.Log.Errorf("error on getting bufName for the cmd: %v", cmdHex)
+							continue
+						}
+
+						// fmt.Println(bufName)
+						s.bufs.Write(string(bufName), inPack.Payload)
+						msg := extractScalePassthDataTMAX(s, s.bufs[string(bufName)], bufName)
+						sendMsgIntoChsOrWeightToClient(s, &msg) //20231023  @111
+						continue
+					}
+					var cmdHex uint16 = (uint16(inPack.CmdID) << 8) | uint16(inPack.CmdSubId)
+					bufName := utils.CmdsRespMap[utils.CmdID(cmdHex)]
+					if bufName == "" {
+						l.Log.Errorf("error on getting bufName for the cmd: %v", cmdHex)
+						continue
+					}
+					fmt.Println(bufName)
+					s.bufs.Write(string(bufName), inPack.Payload)
+					msg := extractMessageTMAX(s.Id, s.bufs[string(bufName)], bufName)
+					sendMsgIntoChsOrWeightToClient(s, &msg) //20231023  @111
+				} else {
+
+				}
+			default:
+				time.Sleep(time.Microsecond * 100)
+				continue
+			}
+		}
+
+	} else if s.MyBluetooth != nil {
+		for {
+			if quit {
+				break
+			}
+			select {
+			case <-s.quitProcScaleRespMessageCh:
+				quit = true
+			case inPack := <-s.MyBluetooth.recvCh:
 				if inPack.PayloadLen == 0 {
 					continue
 				}
@@ -995,23 +1074,33 @@ func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 
 	// 如果机种是DPM 就初始化
+	// if s.Model == "DPM" {
+	// 	ReqInitWifi(s, req)
+	// } else {
+	// 	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
 
-	if s.Model == "DPM" {
-		ReqInitWifi(s, req)
-	} else {
+	// 	//问了模式不对再切换模式
+	// 	msg, err = getAtMode(s)
+	// 	if err != nil {
+	// 		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
+	// 		return msg, err
+	// 	} else if msg.MsgBody != "ok" {
+	// 		return ChangeWifiMode(s)
+	// 	}
+	// 	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
+	// }
+
+	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
+
+	//问了模式不对再切换模式
+	msg, err = getAtMode(s)
+	if err != nil {
 		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
-
-		//问了模式不对再切换模式
-		msg, err = getAtMode(s)
-		if err != nil {
-			msg.MsgType = m.CHANGE_WIFI_MODE_RESP
-			return msg, err
-		} else if msg.MsgBody != "ok" {
-			return ChangeWifiMode(s)
-		}
-		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
-
+		return msg, err
+	} else if msg.MsgBody != "ok" {
+		return ChangeWifiMode(s)
 	}
+	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
 
 	return &ScaleRespMsg{m.CHANGE_WIFI_MODE_RESP, "ok", s.Id}, nil
 

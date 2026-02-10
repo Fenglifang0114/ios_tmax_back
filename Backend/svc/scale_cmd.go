@@ -738,11 +738,11 @@ func ConnectWifiAp32(s *Scale, ssid string, passwd string, bssid string) (*Scale
 		return msg, err
 	}
 
-	if s.Model == "DPM" {
-		ReqSetServerMode(s, SRequest{})
-	} else {
-		return msg, nil
-	}
+	// if s.Model == "DPM" {
+	// 	ReqSetServerMode(s, SRequest{})
+	// } else {
+	// 	return msg, nil
+	// }
 
 	return msg, nil
 }
@@ -932,8 +932,17 @@ func writeScale(c *Scale, data []byte) error {
 			c.MyNet.sendCh <- data //写数据到发送通道20250901
 		}
 	}
-	if c.MySerial == nil && c.MyNet == nil {
-		return fmt.Errorf("scale without a ComPort or net")
+
+	if c.MyBluetooth != nil && c.MyBluetooth.isDefault {
+		if c.MyBluetooth.toQuit {
+			return fmt.Errorf("bluetooth is closed")
+		}
+
+		if len(c.MyBluetooth.sendCh) > SEND_CH_SIZE {
+			return fmt.Errorf("bluetooth sendCh full")
+		}
+		c.MyBluetooth.sendCh <- data //写数据到发送通道20250901
+
 	}
 	return nil
 }

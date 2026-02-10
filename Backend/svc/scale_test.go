@@ -38,6 +38,39 @@ func TestNewScale(t *testing.T) {
 	}
 }
 
+// func TestNewScale(t *testing.T) {
+// 	mgr := NewScaleMgr()
+// 	mediaConf := `{"Mode":{"Mac":"48:F6:EE:59:A3:06","Name":""}}`
+
+// 	scaleConn := &ScaleConnMedia{ScaleModel: "ATP", ScaleSn: "123456", TMedia: MEDIA_COM, MediaConf: MediaConf{Type: MEDIA_BT, MediaInfoJson: mediaConf}}
+// 	type args struct {
+// 		scaleMgr *ScaleMgr
+// 		conn     *ScaleConnMedia
+// 		model    string
+// 		sn       string
+// 	}
+// 	tests := []struct {
+// 		name    string
+// 		args    args
+// 		want    *Scale
+// 		wantErr bool
+// 	}{
+// 		{name: "new scale test", args: args{scaleMgr: mgr, conn: scaleConn, model: ""}, want: nil, wantErr: false},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			got, err := NewScale(tt.args.scaleMgr, scaleConn, comm.SCALE_T2200, tt.args.model, tt.args.sn, true)
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("NewScale() error = %v, wantErr %v", err, tt.wantErr)
+// 				return
+// 			}
+// 			if got == nil {
+// 				t.Errorf("NewScale() return nil")
+// 			}
+// 		})
+// 	}
+// }
+
 // func Test_readScale(t *testing.T) {
 // 	scaleMgr := NewScaleMgr()
 // 	mediaConf := `{"Mode":{"BaudRate":9600,"DataBits":8,"Parity":0,"StopBits":0,"InitialStatusBits":null},"PortName":"COM6"}`

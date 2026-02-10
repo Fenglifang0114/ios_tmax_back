@@ -1,7 +1,6 @@
 package svc
 
 import (
-	"net"
 	"time"
 
 	"go.bug.st/serial"
@@ -19,6 +18,7 @@ type ReqType string
 
 const (
 	REQ_GET_PORT_LIST    ReqType = "get_port_list"    // without parameter
+	REQ_GET_BT_LIST      ReqType = "get_bt_list"      // without parameter
 	REQ_GET_SCALE_LIST   ReqType = "get_scale_list"   // without parameter
 	REQ_GET_PRODUCT_LIST ReqType = "get_product_list" // without parameter
 
@@ -761,6 +761,7 @@ type ScaleMgrRespMsgType string
 // 处理公用的回应
 const (
 	SCALE_MGR_RESP_PORTS_LIST    ScaleMgrRespMsgType = "resp_ports_list"   // with response of PortsListMsg
+	SCALE_MGR_RESP_BT_LIST       ScaleMgrRespMsgType = "resp_bt_list"      // with response of ScalesListMsg
 	SCALE_MGR_RESP_SCALES_LIST   ScaleMgrRespMsgType = "resp_scales_list"  // with response of ScalesListMsg
 	SCALE_MGR_RESP_SCALE_ADD     ScaleMgrRespMsgType = "resp_scale_add"    // with response of MgrRespMsg to indicate that status coreponding request procsssed
 	SCALE_MGR_RESP_SCALE_DEL     ScaleMgrRespMsgType = "resp_scale_del"    // same as SCALE_MGR_RESP_SCALE_Add
@@ -958,9 +959,10 @@ type NetInfo struct {
 	Port int    // value should be 1-65535
 }
 type BtInfo struct {
-	Mac  net.HardwareAddr
+	Mac  string
 	Name string
 }
+
 type MgrRespMsg struct {
 	IsAck   bool
 	AckData string

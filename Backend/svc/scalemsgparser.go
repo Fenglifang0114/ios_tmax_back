@@ -2010,7 +2010,7 @@ func handleGetApListResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	println("at get ap list resp:" + string(data))
 
 	if !bytes.Contains(data, []byte("OK")) {
-		if len(data) < 600 {
+		if len(data) < 800 {
 			return ScaleRespMsg{}, 0
 		}
 	}

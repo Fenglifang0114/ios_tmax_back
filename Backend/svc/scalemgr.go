@@ -25,6 +25,7 @@ type ScaleMgr struct {
 	recTakeOutPb      *ScaleRecTakeOutProvider
 	medias            []*ScaleConnMedia // scale connections meida
 	detailPb          *DetailRecProvider
+	bluetoothMgr      *BluetoothManager
 }
 
 func NewScaleMgr() *ScaleMgr {
@@ -40,7 +41,10 @@ func NewScaleMgr() *ScaleMgr {
 
 	detailPb := NewDetailRecProvider()
 
-	return &ScaleMgr{connPb: connPb, recPb: recPb, infoPb: infoPb, pluFilePb: pluFilePb, recCheckWeigherPb: recCheckWeigherPb, recTakeInPb: recTakeInPb, recTakeOutPb: recTakeOutPb, scales: scales, detailPb: detailPb}
+	bluetoothMgr := GetBluetoothManager()
+	bluetoothMgr.EnableAdapter()
+
+	return &ScaleMgr{connPb: connPb, recPb: recPb, infoPb: infoPb, pluFilePb: pluFilePb, recCheckWeigherPb: recCheckWeigherPb, recTakeInPb: recTakeInPb, recTakeOutPb: recTakeOutPb, scales: scales, detailPb: detailPb, bluetoothMgr: bluetoothMgr}
 }
 
 func (s *ScaleMgr) SetSrvMsg(srvMgr *SrvMgr) {
@@ -50,6 +54,9 @@ func (s *ScaleMgr) SetSrvMsg(srvMgr *SrvMgr) {
 func init() {
 	createNotifier := portListedNotifier{}
 	portsListed.Register(createNotifier)
+
+	createBtListNotifier := btListedNotifier{}
+	btListed.Register(createBtListNotifier)
 
 	createScaleListNotifier := scaleListedNotifier{}
 	scalesListed.Register(createScaleListNotifier)
@@ -385,6 +392,8 @@ func init() {
 
 type portListedNotifier struct{}
 
+type btListedNotifier struct{}
+
 type scaleListedNotifier struct{}
 
 type scaleListedNotifierSrv struct{}
@@ -616,6 +625,21 @@ func (p portListedNotifier) Handle() {
 	}
 	// send ports list back to requestee
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_PORTS_LIST, MsgBody: portsStr}
+}
+
+func (p btListedNotifier) Handle() {
+	// Do something for this event
+	log.Log.Debug("Handle btListedNotifier called")
+	// Do something with this event
+	btList, _ := GetBtList()
+	var btListStr string
+	var err error
+	if btListStr, err = json.MarshalToString(btList); err != nil {
+		fmt.Printf("%v\n", err)
+		// TODO: error handling
+	}
+	// send ports list back to requestee
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_BT_LIST, MsgBody: btListStr}
 }
 
 func (p scaleListedNotifier) Handle(scaleMgr *ScaleMgr) {
@@ -1185,6 +1209,64 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 		return nil
 	}
 
+	var reqBtInfo BtInfo
+	var btInfo BtInfo
+
+	if req.MediaConf.Type == MEDIA_BT {
+		if err := json.UnmarshalFromString(req.MediaConf.MediaInfoJson, &reqBtInfo); err != nil {
+			return err
+		}
+		for _, conn := range s.medias {
+			if conn.MediaConf.Type == MEDIA_NET {
+				if err := json.UnmarshalFromString(conn.MediaConf.MediaInfoJson, &btInfo); err != nil {
+					return err
+				}
+				if reqBtInfo.Mac == btInfo.Mac {
+					return fmt.Errorf("this address already exists")
+				}
+			}
+		}
+
+		if len(s.medias) == 0 {
+			nextScaleId = 1
+		} else {
+			maxScaleID := int64(0)
+			// 遍历 s.medias 找出最大的 ScaleId
+			for _, media := range s.medias {
+				if media.ScaleId > maxScaleID {
+					maxScaleID = media.ScaleId
+				}
+			}
+			nextScaleId = maxScaleID + 1
+		}
+		scaleCat := comm.SCALE_TMAX
+		if req.ScaleModel == "DC500" {
+			scaleCat = comm.SCALE_C51
+		}
+		scaleName := "Scale" + strconv.FormatInt(nextScaleId, 10)
+
+		var btInfo BtInfo = BtInfo{Mac: reqBtInfo.Mac, Name: reqBtInfo.Name}
+		var conf MediaConf = MediaConf{}
+		conf.Type = MEDIA_BT
+		conf.MediaInfoJson, _ = json.MarshalToString(btInfo)
+		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: scaleCat, ScaleId: nextScaleId, ScaleModel: "T-Max", ScaleSn: getSn(), TMedia: MEDIA_BT, MediaConf: conf, IsDefault: true, ScaleName: scaleName}
+		s.connPb.connPb.InsertScaleConn(*scaleConn)
+		s.AddMediaList(scaleConn.ScaleId, *scaleConn)
+
+		var scale *Scale
+
+		scale, _ = NewScale(s, scaleConn, scaleConn.ScaleCat, scaleConn.ScaleModel, scaleConn.ScaleSn, false)
+		scale.Id = scaleConn.ScaleId
+		scaleConn.scale = scale
+
+		s.scales[scale.Id] = scale
+		s.srvMgr.addScale <- scale // register new scale instance to srvMgr
+
+		s.AddSrvScaleList(scale.Id)
+
+		return nil
+	}
+
 	//下面是新增网络秤
 	var netInfo NetInfo
 	var reqNetInfo NetInfo
@@ -1307,6 +1389,40 @@ func (s *ScaleMgr) DelScale(id int64) error {
 		s.DelMediaList(scale.Id, *conn)
 		s.connPb.DeleteSrvScaleRelByScaleId(scale.Id)
 		s.DelSrvScaleList(scale.Id)
+		return nil
+
+	}
+
+	if scale.Conn.TMedia == MEDIA_BT {
+		// client := s.srvMgr.clientOfScales[scale]
+		// if client != nil && client.scaleId == id {
+		// 	s.srvMgr.unregister <- client
+		// 	if client.conn != nil {
+		// 		client.conn.Close()
+		// 	}
+		// }
+		if scale.MyBluetooth != nil {
+			scale.MyBluetooth.toQuit = true
+		}
+		time.Sleep(500 * time.Millisecond)
+		scale.Close()
+
+		client := s.srvMgr.clientOfScales[scale]
+		if client != nil && client.scaleId == id {
+			s.srvMgr.unregister <- client
+			if client.conn != nil {
+				client.conn.Close()
+			}
+		}
+		s.srvMgr.removeScale <- scale
+		s.connPb.connPb.DeleteScaleConn(*conn)
+		if s.scales[scale.Id] != nil { // scale not existing
+			s.scales[scale.Id] = nil
+		}
+		s.DelMediaList(scale.Id, *conn)
+		s.connPb.DeleteSrvScaleRelByScaleId(scale.Id)
+		s.DelSrvScaleList(scale.Id)
+
 		return nil
 
 	}
