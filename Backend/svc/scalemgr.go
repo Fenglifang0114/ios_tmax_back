@@ -180,6 +180,9 @@ func init() {
 	creategetAddRawDataNotifier := rawDataAddedNotifier{}
 	rawDataAdded.Register(creategetAddRawDataNotifier)
 
+	createGetRawOutputByFmaIdNotifier := getRawOutputByFmaIdNotifier{}
+	getRawOutputByFmaId.Register(createGetRawOutputByFmaIdNotifier)
+
 	creategetEditRawTypeNotifier := rawTypeEditedNotifier{}
 	rawTypeModified.Register(creategetEditRawTypeNotifier)
 
@@ -286,6 +289,12 @@ func init() {
 	createGetAutoNextNotifier := getAutoNextNotifier{}
 	getAutoNext.Register(createGetAutoNextNotifier)
 
+	createUpdateOutputPortNotifier := updateOutputPortNotifier{}
+	updateOutputPort.Register(createUpdateOutputPortNotifier)
+
+	createGetOutputPortNotifier := getOutputPortNotifier{}
+	getOutputPort.Register(createGetOutputPortNotifier)
+
 	createDraftFmaWgtRecNotifier := addDraftFmaWgtRecNotifier{}
 	addDraftFmaWgtRec.Register(createDraftFmaWgtRecNotifier)
 
@@ -388,6 +397,12 @@ func init() {
 	creatUnsealByMasterKeyNotifier := unsealByMasterKeyNotifier{}
 	unsealByMasterKey.Register(creatUnsealByMasterKeyNotifier)
 
+	creatReadOutputPortNotifier := readOutputPortNotifier{}
+	readOutputPort.Register(creatReadOutputPortNotifier)
+
+	createOpenOutputPortNotifier := openOutputPortNotifier{}
+	openOutputPort.Register(createOpenOutputPortNotifier)
+
 }
 
 type portListedNotifier struct{}
@@ -474,6 +489,8 @@ type getRawTypeListNotifier struct{}
 
 type rawDataAddedNotifier struct{}
 
+type getRawOutputByFmaIdNotifier struct{}
+
 type rawTypeEditedNotifier struct{}
 
 type rawTypeDeletedNotifier struct{}
@@ -544,6 +561,10 @@ type getAutoNextNotifier struct{}
 
 type updateAutoNextNotifier struct{}
 
+type updateOutputPortNotifier struct{}
+
+type getOutputPortNotifier struct{}
+
 type addDraftFmaWgtRecNotifier struct{}
 
 type deleteDraftFmaWgtRecNotifier struct{}
@@ -611,6 +632,10 @@ type getUploadFmaServerNotifier struct{}
 type getAllSealLogNotifier struct{}
 
 type unsealByMasterKeyNotifier struct{}
+
+type readOutputPortNotifier struct{}
+
+type openOutputPortNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event
@@ -1217,7 +1242,7 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 			return err
 		}
 		for _, conn := range s.medias {
-			if conn.MediaConf.Type == MEDIA_NET {
+			if conn.MediaConf.Type == MEDIA_BT {
 				if err := json.UnmarshalFromString(conn.MediaConf.MediaInfoJson, &btInfo); err != nil {
 					return err
 				}

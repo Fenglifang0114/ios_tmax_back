@@ -1090,6 +1090,8 @@ func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// 	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
 	// }
 
+	ReqInitWifiAPListRef(s, req)
+
 	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
 
 	//问了模式不对再切换模式
@@ -4888,6 +4890,26 @@ func ReqGetWiredDhcp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{m.GET_WIRED_DHCP_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_WIRED_DHCP, m.GET_WIRED_DHCP_RESP)
+}
+
+func ReqInitWifiAPListRef(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+
+	//设置扫描AP参数
+	GExpectWifiResp = m.SET_SCAN_AP_PARAM_CMD_RESP
+
+	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
+	println(fmt.Sprintf("%x", cmd))
+	if err != nil {
+		return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+	}
+	if res, err := perfCmdNwaitResult(c, cmd, m.SET_SCAN_AP_PARAM_CMD_RESP, timeoutMs); err != nil {
+		return &ScaleRespMsg{}, err
+	} else if res.MsgBody != "ok" {
+		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+	}
+
+	return &ScaleRespMsg{m.INIT_WIFI_RESP, "ok", c.Id}, nil
+
 }
 
 func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {

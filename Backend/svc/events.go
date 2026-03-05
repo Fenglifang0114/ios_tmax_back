@@ -969,6 +969,29 @@ func (u RawTypeListed) Trigger(payload *SrvMgr) {
 	}
 }
 
+// 根据配方ID获取原料输出端口
+var getRawOutputByFmaId GetRawOutputByFmaId
+
+type GetRawOutputByFmaId struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqGetRawOutputByFmaId)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *GetRawOutputByFmaId) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqGetRawOutputByFmaId)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetRawOutputByFmaId) Trigger(mgr *SrvMgr, payload ReqGetRawOutputByFmaId) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
 // 新增原料数据
 var rawDataAdded RawDataAdded
 
@@ -2172,6 +2195,54 @@ func (u GetAllCalLog) Trigger(mgr *SrvMgr, payload ReqGetLog) {
 	}
 }
 
+// 打开输出端口
+var openOutputPort OpenOutputPort
+
+type OpenOutputPort struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqPortInfo)
+	}
+}
+
+// Register adds an event handler for this event
+
+func (u *OpenOutputPort) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqPortInfo)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u OpenOutputPort) Trigger(mgr *SrvMgr, payload ReqPortInfo) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// readOutputPort
+// 读取输出端口
+var readOutputPort ReadOutputPort
+
+type ReadOutputPort struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload ReqPortInfo)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *ReadOutputPort) Register(handler interface {
+	Handle(mgr *SrvMgr, payload ReqPortInfo)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u ReadOutputPort) Trigger(mgr *SrvMgr, payload ReqPortInfo) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
 // 获取称重日志列表
 var getAllScaleLog GetAllScaleLog
 
@@ -2390,6 +2461,49 @@ func (u *AddCalRecord) Register(handler interface {
 	u.handlers = append(u.handlers, handler)
 }
 func (u AddCalRecord) Trigger(mgr *SrvMgr, payload CalibrationLog) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}
+
+// 获取自动下一步设置
+var getOutputPort GetOutputPort
+
+type GetOutputPort struct {
+	handlers []interface{ Handle(srvMgr *SrvMgr) }
+}
+
+// Register adds an event handler for this event
+func (u *GetOutputPort) Register(handler interface{ Handle(payload *SrvMgr) }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetOutputPort) Trigger(payload *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(payload)
+	}
+}
+
+//更新自动下一步
+
+var updateOutputPort UpdateOutputPort
+
+type UpdateOutputPort struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload []ReqUpdateOutputPort)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *UpdateOutputPort) Register(handler interface {
+	Handle(*SrvMgr, []ReqUpdateOutputPort)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u UpdateOutputPort) Trigger(mgr *SrvMgr, payload []ReqUpdateOutputPort) {
 	for _, handler := range u.handlers {
 		go handler.Handle(mgr, payload)
 	}

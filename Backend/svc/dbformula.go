@@ -33,6 +33,11 @@ type UploadServerInfo struct {
 	UpdatedBy string
 }
 
+type RawMaterialOutput struct {
+	MaterialId string
+	Output     int
+}
+
 // RawMaterial 原料表
 type RawMaterial struct {
 	RecId int `gorm:"primaryKey;autoincrement;not null"`
@@ -58,6 +63,7 @@ type RawMaterial struct {
 	Remark1   string
 	ScaleId   int
 	CheckCode string // 原料的条码
+	Output    int    `gorm:"default:0"` // 输出口
 }
 
 // FormulaCategory 配方类别表
@@ -312,6 +318,7 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 		&FormulaWgtRecHeader{},
 		&FormulaWgtRecDetail{},
 		&SetAutoNext{},
+		&SetOutputPort{},
 		&DrafFmaWgtRecHeader{},
 		&DrafFmaWgtRecDetail{},
 		&SetReportPrint{},
@@ -386,6 +393,11 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 
 	//新增一条设置
 	if err := info.CreateSetReportPrint(); err != nil {
+		return nil, err
+	}
+
+	//新增设置 配方秤输出口设置
+	if err := info.CreateSetOutputPort(); err != nil {
 		return nil, err
 	}
 
@@ -781,6 +793,50 @@ func (d *DbFormulaInfo) GetMaxRawRecId() (int, error) {
 	return maxId, nil
 }
 
+// 根据FMAID获取原料数据的输出口
+// 根据配方的ID 找到原料ID，再找到原料的输出口
+func (d *DbFormulaInfo) GetRawOutputByFmaId(fmaId string) ([]RawMaterialOutput, error) {
+	var err error
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return []RawMaterialOutput{}, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return []RawMaterialOutput{}, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	var outputs []RawMaterialOutput
+
+	// 1. 先根据 fmaId 查询配方头表，获取配方记录ID (RecId)
+	var formulaHeader FormulaHeader
+	err = db.Where("formula_id = ? AND is_used = ? AND is_latest = ?", fmaId, true, true).First(&formulaHeader).Error
+	if err != nil {
+		return []RawMaterialOutput{}, err
+	}
+
+	// 2. 如果找不到配方，返回空结果
+	if formulaHeader.RecId == 0 {
+		return outputs, nil
+	}
+
+	// 3. 联查配方明细表和原料表，获取原料ID和对应的输出口
+	err = db.Table("formula_details").
+		Select("raw_materials.material_id, raw_materials.output").
+		Joins("left join raw_materials on formula_details.material_id = raw_materials.material_id").
+		Where("formula_details.formula_rec_id = ?", formulaHeader.RecId).
+		Scan(&outputs).Error
+
+	if err != nil {
+		return []RawMaterialOutput{}, err
+	}
+
+	return outputs, nil
+}
+
 // 批量新增原料
 func (d *DbFormulaInfo) CreateRawMaterialList(materials []RawMaterial) error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -893,6 +949,7 @@ func (d *DbFormulaInfo) UpdateRawMaterial(material RawMaterial) error {
 		"remark1":       material.Remark1,
 		"scale_id":      material.ScaleId,
 		"check_code":    material.CheckCode,
+		"output":        material.Output,
 	}).Error
 }
 
@@ -1815,8 +1872,7 @@ func (d *DbFormulaInfo) DeleteAllFormulaByRecId(recIds []int) error {
 	return tx.Commit().Error
 }
 
-//配方秤中的自动下一步设置
-
+// 配方秤中的自动下一步设置
 type SetAutoNext struct {
 	RecID      int  `gorm:"primaryKey;autoincrement;not null"`
 	AutoNext   bool `gorm:"not null"`
@@ -1921,6 +1977,17 @@ type DrafFmaWgtRecInfo struct {
 	Header DrafFmaWgtRecHeader `gorm:"embedded"`
 	// 暂存配方称重记录详情
 	Details []DrafFmaWgtRecDetail `gorm:"foreignKey:OrderId;references:OrderId"`
+}
+
+// 配方秤中的输出口设置
+type SetOutputPort struct {
+	RecID     int     `gorm:"primaryKey;autoincrement;not null"`
+	Port      int     `gorm:"not null"`            //0-11   输出口
+	Status    bool    `gorm:"default:0; not null"` // 开关状态
+	StartTime int     `gorm:"not null"`            // 开始延迟时间，单位ms
+	EndValue  float64 `gorm:"not null"`            // 关闭阈值，距离目标差值小于这个值就关闭输出口 比如目标重量是1000g，EndValue是50g，当实际重量达到950g时就关闭输出口
+	Remark    string  // 备注
+	UpdateAt  time.Time
 }
 
 func (d *DbFormulaInfo) CreateSetAutoNext() error {
@@ -2482,6 +2549,121 @@ func (d *DbFormulaInfo) UpdateUploadServerInfo(info UploadServerInfo) error {
 		tx.Rollback()
 		return err
 	}
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// //////// 配方秤输出口设置的增删改查
+func (d *DbFormulaInfo) CreateSetOutputPort() error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 检查 SetOutputPort 表中是否有数据
+	var count int64
+	if err := tx.Model(&SetOutputPort{}).Count(&count).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 若没有数据，则插入一条
+	if count == 0 {
+		for i := 1; i <= 12; i++ {
+			if err := tx.Create(&SetOutputPort{
+				Port:      i,
+				Status:    false,
+				StartTime: 0,
+				EndValue:  0,
+			}).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
+func (d *DbFormulaInfo) GetSetOutputPort() ([]SetOutputPort, error) {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 查询 SetOutputPort 表中的所有数据
+	var ports []SetOutputPort
+	if err := db.Find(&ports).Error; err != nil {
+		return nil, err
+	}
+
+	return ports, nil
+}
+
+// SetOutputPort
+func (d *DbFormulaInfo) UpdateSetOutputPort(ports []SetOutputPort) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	for i := 0; i < len(ports); i++ {
+		// 检查记录是否存在
+		var count int64
+		if err := tx.Model(&SetOutputPort{}).Where("port = ?", ports[i].Port).Count(&count).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		if count > 0 {
+			// 存在则更新
+			if err := tx.Model(&SetOutputPort{}).Where("port = ?", ports[i].Port).Updates(map[string]interface{}{
+				"status":     ports[i].Status,
+				"start_time": ports[i].StartTime,
+				"end_value":  ports[i].EndValue,
+				"remark":     ports[i].Remark,
+				"update_at":  time.Now(),
+			}).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
 	// 提交事务
 	return tx.Commit().Error
 }

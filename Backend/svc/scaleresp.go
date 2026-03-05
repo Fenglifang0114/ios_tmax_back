@@ -116,6 +116,19 @@ func retreiveWeightC51(data []byte) (pack WeightMsg, err error) {
 // ST,NT- 492.5(5) ct格式
 // ST,NT-   98.5g  格式
 // ST,GS     0.0g  格式
+
+// 20260227 新的格式 ST,GS,   0.000,kg  待对接
+
+//   ST,GS,   0.000,kg
+//   ST,GS,       0, g
+//   ST,GS,   0.000, p
+//   ST,GS,   0.000, t
+//   ST,GS,   0.000, h
+//   ST,GS,   0.000,LB
+//   ST,GS,   0.000,oz
+//   GS   120.69%
+//   GS     1.15%
+
 func retreiveWeightNewC51(data []byte) (pack WeightMsg, err error) {
 	weightMsg := WeightMsg{}
 	dataStr := string(data)
@@ -124,7 +137,7 @@ func retreiveWeightNewC51(data []byte) (pack WeightMsg, err error) {
 	dataStr = strings.ReplaceAll(dataStr, "(", "")
 	dataStr = strings.ReplaceAll(dataStr, ")", "")
 
-	re := regexp.MustCompile(`^([A-Z]{2}),([A-Z]{2})(,?)\s*([+-]?)\s+([0-9]+\.[0-9]+(?:\.[0-9]+\.[0-9]+)?|[0-9]+)\s*([a-zA-Z%]+)\s*$|^(--(?:OL|UL)--|-{6,})\s*$`)
+	re := regexp.MustCompile(`^([A-Z]{2}),([A-Z]{2})(,?)\s*([+-]?)\s+([0-9]+\.[0-9]+(?:\.[0-9]+\.[0-9]+)?|[0-9]+)\s*,?\s*([a-zA-Z%]+)\s*$|^(--(?:OL|UL)--|-{6,})\s*$`)
 	matches := re.FindAllStringSubmatch(dataStr, -1)
 	if matches == nil || len(matches[0]) < 7 {
 		return weightMsg, fmt.Errorf("parse error on %v", string(data))

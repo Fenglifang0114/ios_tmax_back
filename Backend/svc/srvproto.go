@@ -70,48 +70,53 @@ const (
 	REQ_SET_DO_SERVICE_ACTION ReqType = "do_service_action"
 
 	///////////
-	REQ_ADD_RAW_TYPE             ReqType = "add_raw_type"          //添加原料类型
-	REQ_DEL_UNUSED_FMA_TYPE      ReqType = "del_unused_fma_type"   //删除未使用的配方类型
-	REQ_DEL_UNUSED_RAW_TYPE      ReqType = "del_unused_raw_type"   //删除未使用的原料类型
-	REQ_DEL_RAW_TYPE             ReqType = "del_raw_type"          //删除原料类型
-	REQ_EDIT_RAW_TYPE            ReqType = "edit_raw_type"         //修改原料类型
-	REQ_GET_RAW_TYPE_LIST        ReqType = "get_raw_type_list"     //获取原料类型列表
-	REQ_ADD_FORMULA_TYPE         ReqType = "add_formula_type"      //添加配方类型
-	REQ_DEL_FORMULA_TYPE         ReqType = "del_formula_type"      //删除配方类型
-	REQ_EDIT_FORMULA_TYPE        ReqType = "edit_formula_type"     //修改配方类型
-	REQ_GET_FORMULA_TYPE_LIST    ReqType = "get_formula_type_list" //获取配方类型列表
-	REQ_IMPORT_RAW_LIST          ReqType = "import_raw_list"       //导入原料列表
-	REQ_IMPORT_FMA_LIST          ReqType = "import_fma_list"       //导入配方列表
-	REQ_ADD_RAW_DATA             ReqType = "add_raw_data"          //添加原始数据
-	REQ_DEL_RAW_DATA             ReqType = "del_raw_data"          //删除原始数据
-	REQ_EDIT_RAW_DATA            ReqType = "edit_raw_data"         //修改原始数据
-	REQ_GET_RAW_DATA_LIST        ReqType = "get_raw_data_list"     //获取原始数据列表
-	REQ_DELETE_RAW_DATA          ReqType = "delete_raw_data"       //删除原料数据
-	REQ_ADD_FORMULA_DATA         ReqType = "add_formula_data"      //新增配方信息
-	REQ_EDIT_FORMULA_DATA        ReqType = "edit_formula_data"     //修改配方信息
-	REQ_GET_FORMULA_LIST         ReqType = "get_formula_list"      //获取配方信息列表
-	REQ_GET_FORMULA_DATA         ReqType = "get_fma_data"          //获取配方数据
-	REQ_GET_RAW_DATA             ReqType = "get_raw_data"          //获取原料数据
-	REQ_DELETE_FORMULA_DATA      ReqType = "delete_formula_data"   //删除配方信息
-	REQ_DELETE_MANY_FORMULA      ReqType = "del_many_fma"          //删除所有配方
-	REQ_DEL_MANY_RAW_DATA        ReqType = "del_many_raw"          //删除所有原料数据
-	REQ_DEL_MANY_DRAFT_FMA       ReqType = "del_many_draft_fma"    //删除所有暂存配方
-	REQ_ADD_FORMULA_REC          ReqType = "add_formula_rec"       //新增配方称重记录
-	REQ_GET_FORMULA_REC_LIST     ReqType = "get_formula_rec_list"  //获取配方称重记录列表
-	REQ_GET_ONE_FORMULA_REC_LIST ReqType = "get_fma_rec_by_id"     //获取配方称重记录列表
-	REQ_GET_FMA_REC_BY_ORDER     ReqType = "get_fma_rec_by_order"  //根据订单号获取配方称重记录
-	REQ_ADD_FLOW_RATE            ReqType = "add_flow_rate"         //新增流速
-	REQ_GET_FLOW_RATE_LIST       ReqType = "get_flow_rate_list"    //获取流速列表
+	REQ_ADD_RAW_TYPE             ReqType = "add_raw_type"             //添加原料类型
+	REQ_DEL_UNUSED_FMA_TYPE      ReqType = "del_unused_fma_type"      //删除未使用的配方类型
+	REQ_DEL_UNUSED_RAW_TYPE      ReqType = "del_unused_raw_type"      //删除未使用的原料类型
+	REQ_DEL_RAW_TYPE             ReqType = "del_raw_type"             //删除原料类型
+	REQ_EDIT_RAW_TYPE            ReqType = "edit_raw_type"            //修改原料类型
+	REQ_GET_RAW_TYPE_LIST        ReqType = "get_raw_type_list"        //获取原料类型列表
+	REQ_ADD_FORMULA_TYPE         ReqType = "add_formula_type"         //添加配方类型
+	REQ_DEL_FORMULA_TYPE         ReqType = "del_formula_type"         //删除配方类型
+	REQ_EDIT_FORMULA_TYPE        ReqType = "edit_formula_type"        //修改配方类型
+	REQ_GET_FORMULA_TYPE_LIST    ReqType = "get_formula_type_list"    //获取配方类型列表
+	REQ_IMPORT_RAW_LIST          ReqType = "import_raw_list"          //导入原料列表
+	REQ_IMPORT_FMA_LIST          ReqType = "import_fma_list"          //导入配方列表
+	REQ_ADD_RAW_DATA             ReqType = "add_raw_data"             //添加原始数据
+	REQ_DEL_RAW_DATA             ReqType = "del_raw_data"             //删除原始数据
+	REQ_EDIT_RAW_DATA            ReqType = "edit_raw_data"            //修改原始数据
+	REQ_GET_RAW_DATA_LIST        ReqType = "get_raw_data_list"        //获取原始数据列表
+	REQ_DELETE_RAW_DATA          ReqType = "delete_raw_data"          //删除原料数据
+	REQ_ADD_FORMULA_DATA         ReqType = "add_formula_data"         //新增配方信息
+	REQ_EDIT_FORMULA_DATA        ReqType = "edit_formula_data"        //修改配方信息
+	REQ_GET_FORMULA_LIST         ReqType = "get_formula_list"         //获取配方信息列表
+	REQ_GET_FORMULA_DATA         ReqType = "get_fma_data"             //获取配方数据
+	REQ_GET_RAW_DATA             ReqType = "get_raw_data"             //获取原料数据
+	REQ_DELETE_FORMULA_DATA      ReqType = "delete_formula_data"      //删除配方信息
+	REQ_DELETE_MANY_FORMULA      ReqType = "del_many_fma"             //删除所有配方
+	REQ_DEL_MANY_RAW_DATA        ReqType = "del_many_raw"             //删除所有原料数据
+	REQ_DEL_MANY_DRAFT_FMA       ReqType = "del_many_draft_fma"       //删除所有暂存配方
+	REQ_ADD_FORMULA_REC          ReqType = "add_formula_rec"          //新增配方称重记录
+	REQ_GET_FORMULA_REC_LIST     ReqType = "get_formula_rec_list"     //获取配方称重记录列表
+	REQ_GET_ONE_FORMULA_REC_LIST ReqType = "get_fma_rec_by_id"        //获取配方称重记录列表
+	REQ_GET_FMA_REC_BY_ORDER     ReqType = "get_fma_rec_by_order"     //根据订单号获取配方称重记录
+	REQ_ADD_FLOW_RATE            ReqType = "add_flow_rate"            //新增流速
+	REQ_GET_FLOW_RATE_LIST       ReqType = "get_flow_rate_list"       //获取流速列表
+	REQ_GET_RAW_OUTPUT_BY_FMA_ID ReqType = "get_raw_output_by_fma_id" //根据配方ID获取原料输出端口
+
 	//获取称重记录，不按秤来，总体的记录
-	REQ_GET_ALL_WGT_REC_LIST     ReqType = "get_all_wgt_rec_list"     //获取称重记录列表  要分类型(重量收集，检重，加法，减法)
-	REQ_GET_SEARCH_REC_LIST      ReqType = "get_search_rec_list"      //获取搜索记录列表  (搜索字段)
-	REQ_ADD_WGT_REC              ReqType = "add_wgt_rec"              //添加称重记录(汇总的称重记录)
-	REQ_DEL_WGT_REC              ReqType = "del_wgt_rec"              //删除称重记录  根据称重类型删除所有的数据
-	REQ_DEL_WGT_REC_BY_ID        ReqType = "del_wgt_rec_by_id"        //根据称重记录recID 删除称重记录
-	REQ_EXPORT_ALL_RECS          ReqType = "export_all_recs"          //导出所有记录
-	REQ_KILL_BOOT_COMMANDER      ReqType = "kill_boot_commander"      //杀掉boot_commander进程
-	REQ_GET_AUTO_NEXT            ReqType = "get_auto_next"            //获取自动下一步设置
-	REQ_UPDATE_AUTO_NEXT         ReqType = "update_auto_next"         //更新自动下一步设置
+	REQ_GET_ALL_WGT_REC_LIST ReqType = "get_all_wgt_rec_list" //获取称重记录列表  要分类型(重量收集，检重，加法，减法)
+	REQ_GET_SEARCH_REC_LIST  ReqType = "get_search_rec_list"  //获取搜索记录列表  (搜索字段)
+	REQ_ADD_WGT_REC          ReqType = "add_wgt_rec"          //添加称重记录(汇总的称重记录)
+	REQ_DEL_WGT_REC          ReqType = "del_wgt_rec"          //删除称重记录  根据称重类型删除所有的数据
+	REQ_DEL_WGT_REC_BY_ID    ReqType = "del_wgt_rec_by_id"    //根据称重记录recID 删除称重记录
+	REQ_EXPORT_ALL_RECS      ReqType = "export_all_recs"      //导出所有记录
+	REQ_KILL_BOOT_COMMANDER  ReqType = "kill_boot_commander"  //杀掉boot_commander进程
+	REQ_GET_AUTO_NEXT        ReqType = "get_auto_next"        //获取自动下一步设置
+	REQ_UPDATE_AUTO_NEXT     ReqType = "update_auto_next"     //更新自动下一步设置
+	REQ_GET_OUTPUT_PORT      ReqType = "get_output_port"      //获取输出端口状态
+	REQ_UPDATE_OUTPUT_PORT   ReqType = "update_output_port"   //更新输出端口状态
+
 	REQ_GET_FORMULA_BY_BARCODE   ReqType = "get_formula_by_barcode"   //根据条码获取配方信息
 	REQ_CHECK_FMA_ID_AND_BARCODE ReqType = "check_fma_id_and_barcode" //检查配方ID和条码是否匹配
 
@@ -155,6 +160,9 @@ const (
 	REQ_GET_SYS_LOG       ReqType = "get_sys_log"       //获取系统日志记录
 	REQ_GET_CAL_LOG       ReqType = "get_cal_log"       //获取校准日志记录
 	REQ_GET_SCALE_LOG     ReqType = "get_scale_log"     //获取称重日志记录
+
+	REQ_OPEN_OUTPUT_PORT ReqType = "open_output_port" // with parameter of PortInfo	//写modbus线圈
+	REQ_READ_OUTPUT_PORT ReqType = "read_output_port" // with parameter of PortInfo	//读modbus线圈
 
 )
 
@@ -309,12 +317,24 @@ type ReqUpdateAutoNext struct {
 	CheckCode  bool
 }
 
+type ReqUpdateOutputPort struct {
+	Port      int
+	Status    bool
+	StartTime int
+	EndValue  float64
+	Remark    string
+}
+
 type ReqDeleteDraftFmaWgtRec struct {
 	OrderId string
 }
 
 type ReqDeleteAllDraftFmaWgtRec struct {
 	OrderId []string
+}
+
+type ReqGetRawOutputByFmaId struct {
+	FormulaId string
 }
 
 type ReqAddRawData struct {
@@ -328,6 +348,7 @@ type ReqAddRawData struct {
 	Remark1      string
 	ScaleId      int
 	CheckCode    string
+	Output       int
 }
 
 type ReqImportRawList struct {
@@ -382,6 +403,7 @@ type ReqEditRawData struct {
 	Remark1      string
 	ScaleId      int
 	CheckCode    string
+	Output       int
 }
 type ReqDelRawData struct {
 	RecId int
@@ -527,6 +549,11 @@ type ReqGetLog struct {
 	FieldName string
 	Direction string
 	Search    LogQuery
+}
+
+type ReqPortInfo struct {
+	PortId int
+	Status bool
 }
 
 type GetSealLogReq struct {
@@ -816,6 +843,7 @@ const (
 	SCALE_MGR_RESP_RAW_DATA_EDIT            ScaleMgrRespMsgType = "resp_raw_data_edit"
 	SCALE_MGR_RESP_RAW_DATA_DELETE          ScaleMgrRespMsgType = "resp_raw_data_delete"
 	SCALE_MGR_RESP_RAW_DATA_ADD             ScaleMgrRespMsgType = "resp_raw_data_add"
+	SCALE_MGR_RESP_RAW_OUTPUT_BY_FMA_ID     ScaleMgrRespMsgType = "resp_raw_output_by_fma_id"
 	SCALE_MGR_RESP_RAW_LIST_IMPORT          ScaleMgrRespMsgType = "resp_raw_list_import"
 	SCALE_MGR_RESP_FMA_LIST_IMPORT          ScaleMgrRespMsgType = "resp_fma_list_import"
 	SCALE_MGR_RESP_FORMULA_ADD              ScaleMgrRespMsgType = "resp_formula_add"
@@ -847,6 +875,8 @@ const (
 	SCALE_MGR_RESP_KILL_BOOT_COMMANDER           ScaleMgrRespMsgType = "resp_kill_boot_commander" // without parameter
 	SCALE_MGR_RESP_GET_AUTO_NEXT                 ScaleMgrRespMsgType = "resp_get_auto_next"
 	SCALE_MGR_RESP_UPDATE_AUTO_NEXT              ScaleMgrRespMsgType = "resp_update_auto_next"
+	SCALE_MGR_RESP_GET_OUTPUT_PORT               ScaleMgrRespMsgType = "resp_get_output_port"         //获取输出端口状态
+	SCALE_MGR_RESP_UPDATE_OUTPUT_PORT            ScaleMgrRespMsgType = "resp_update_output_port"      //更新输出端口状态
 	SCALE_MGR_RESP_UPDATE_SET_REPORT_PRINT       ScaleMgrRespMsgType = "resp_update_set_report_print" //更新报表打印设置
 	SCALE_MGR_RESP_GET_SET_REPORT_PRINT          ScaleMgrRespMsgType = "resp_get_set_report_print"
 

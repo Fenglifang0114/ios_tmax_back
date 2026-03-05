@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
@@ -70,6 +71,42 @@ type SrvMgr struct {
 
 	//服务与秤的关系
 	srvScaleRel []*SrvScaleRel
+
+	// ========== 新增串口管理字段 ==========
+
+	// 串口实例
+	serialPort *SerialPort
+
+	// 串口配置
+	serialConfig *SerialConfigWrapper
+
+	// 串口命令通道
+	serialCmdChan chan *SerialCommand
+
+	// 串口数据通道
+	serialDataChan chan *SerialDataMessage
+
+	// 串口状态
+	serialStatus struct {
+		IsOpen        bool
+		LastError     string
+		LastErrorTime time.Time
+		BytesRead     uint64
+		BytesWritten  uint64
+		PacketsRecv   uint64
+	}
+
+	// 串口读写锁
+	serialMu sync.RWMutex
+
+	// 串口数据处理器映射
+	serialHandlers map[string]func(*SerialDataMessage)
+
+	// 配置文件路径
+	configPath string
+
+	// 是否自动打开串口
+	autoOpenSerial bool
 }
 
 var SrvIdList []int64 = []int64{999999999}
@@ -131,7 +168,12 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	}
 
-	return &SrvMgr{
+	configPath := "config.yaml" // 默认配置文件路径
+	configPath = filepath.Join(comm.GetExePath(), configPath)
+
+	l.Log.Debugf("configPath yaml:%s\n", configPath)
+
+	sm := &SrvMgr{
 		scaleMgr:           scaleMgr,
 		scales:             map[int64]*Scale{},
 		clientOfScales:     map[*Scale]*Client{},
@@ -157,7 +199,49 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		sysUserPd:          sysUserPb,
 		sysLogPd:           sysLogPb,
 		srvScaleRel:        make([]*SrvScaleRel, 0),
+
+		// 串口相关初始化
+		serialPort:     NewSerialPort(configPath),
+		serialConfig:   &SerialConfigWrapper{},
+		serialCmdChan:  make(chan *SerialCommand, 50),
+		serialDataChan: make(chan *SerialDataMessage, 200),
+		serialHandlers: make(map[string]func(*SerialDataMessage)),
+		configPath:     configPath,
+		autoOpenSerial: true,
 	}
+
+	// 加载配置
+	if err := sm.LoadSerialConfig(); err != nil {
+		fmt.Printf("加载串口配置失败: %v\n", err)
+	}
+
+	// 设置串口事件监听
+	sm.setupSerialEventListeners()
+
+	// 启动串口管理协程
+	go sm.serialManager()
+
+	// 启动串口数据分发协程
+	go sm.serialDataDispatcher()
+
+	// 注册默认处理器
+	sm.registerDefaultHandlers()
+
+	// 如果配置了自动打开，则打开串口
+
+	l.Log.Debugf("sm.autoOpenSerial:%s\n", sm.autoOpenSerial)
+	if sm.autoOpenSerial {
+		go func() {
+			time.Sleep(1 * time.Second) // 等待系统初始化完成
+			if err := sm.OpenSerial(); err != nil {
+				fmt.Printf("自动打开串口失败: %v\n", err)
+				l.Log.Debugf("自动打开串口失败:%s\n", err)
+			}
+		}()
+	}
+
+	return sm
+
 }
 
 func (h *SrvMgr) Run() {
@@ -647,6 +731,17 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		} else {
 			RawDataAdded.Trigger(rawDataAdded, scaleMgr.srvMgr, data)
 		}
+
+		//根据配方ID获取原料输出端口
+	case REQ_GET_RAW_OUTPUT_BY_FMA_ID:
+		jsonStr := req.ReqData
+		var data ReqGetRawOutputByFmaId
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			getRawOutputByFmaId.Trigger(scaleMgr.srvMgr, data)
+		}
+
 	case REQ_IMPORT_RAW_LIST:
 		jsonStr := req.ReqData
 		var data ReqImportRawList
@@ -665,6 +760,19 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		}
 	case REQ_GET_RAW_DATA_LIST:
 		rawDataListed.Trigger(scaleMgr.srvMgr)
+
+	case REQ_GET_OUTPUT_PORT:
+		getOutputPort.Trigger(scaleMgr.srvMgr)
+
+	case REQ_UPDATE_OUTPUT_PORT:
+		jsonStr := req.ReqData
+		var data []ReqUpdateOutputPort
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			updateOutputPort.Trigger(scaleMgr.srvMgr, data)
+		}
+
 	case REQ_GET_AUTO_NEXT:
 		getAutoNext.Trigger(scaleMgr.srvMgr)
 
@@ -1116,6 +1224,22 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			l.Log.Error(err)
 		} else {
 			getAllScaleLog.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_OPEN_OUTPUT_PORT:
+		jsonStr := req.ReqData
+		var data ReqPortInfo
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			openOutputPort.Trigger(scaleMgr.srvMgr, data)
+		}
+	case REQ_READ_OUTPUT_PORT:
+		jsonStr := req.ReqData
+		var data ReqPortInfo
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			readOutputPort.Trigger(scaleMgr.srvMgr, data)
 		}
 
 	}
@@ -1965,6 +2089,7 @@ func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
 		UpdatedBy:    payload.UpdatedBy,
 		ScaleId:      payload.ScaleId,
 		CheckCode:    checkCode,
+		Output:       payload.Output,
 	}
 	if err := mgr.formulaPd.InsertRawInfo(rec); err != nil {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: "failed to get max raw id"}
@@ -1979,6 +2104,24 @@ func (p rawDataAddedNotifier) Handle(mgr *SrvMgr, payload ReqAddRawData) {
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_DATA_ADD, MsgBody: "ok," + strconv.Itoa(maxId)}
 	SaveFmaRawDataLog(payload)
+}
+
+// 获取原料数据的输出口
+func (p getRawOutputByFmaIdNotifier) Handle(mgr *SrvMgr, payload ReqGetRawOutputByFmaId) {
+	// Do something for this event
+	l.Log.Debug("Handle getRawOutputByFmaIdNotifier called")
+	output, err := mgr.formulaPd.GetRawOutputByFmaId(payload.FormulaId)
+
+	outputStr := ""
+
+	if outputStr, err = json.MarshalToString(output); err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_OUTPUT_BY_FMA_ID, MsgBody: "failed to get raw output by fma id"}
+		return
+	}
+
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_RAW_OUTPUT_BY_FMA_ID, MsgBody: outputStr}
+
 }
 
 // //导入原料数据列表
@@ -2316,6 +2459,7 @@ func (p rawDataEditedNotifier) Handle(mgr *SrvMgr, payload ReqEditRawData) {
 		UpdatedBy:    payload.UpdatedBy,
 		ScaleId:      payload.ScaleId,
 		CheckCode:    checkCode,
+		Output:       payload.Output,
 	}
 
 	if err := mgr.formulaPd.UpdateRawInfo(rec); err != nil {
@@ -4497,4 +4641,115 @@ func IsWithin48Hours(timestamp1, timestamp2 int64) bool {
 
 	// 如果时间差小于48小时的秒数，说明在48小时以内
 	return diff < hours48InSeconds
+}
+
+func (p openOutputPortNotifier) Handle(mgr *SrvMgr, payload ReqPortInfo) {
+	l.Log.Debug("Handle openOutputPortNotifier called")
+
+	portStatus, err := mgr.GetSerialStatus()
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: "resp_open_output_port", MsgBody: "fail,get serial status failed"}
+		mgr.serialPort.Restart()
+		return
+	}
+
+	openFlag, ok := portStatus["isOpen"].(bool)
+	if !ok {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: "resp_open_output_port", MsgBody: "fail,get serial status failed"}
+		mgr.serialPort.Restart()
+		return
+	}
+
+	if !openFlag {
+		l.Log.Error("serial port is not open")
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: "resp_open_output_port", MsgBody: "fail,serial status is not open"}
+		mgr.serialPort.Restart()
+		return
+	}
+
+	status := byte(0x00)
+	if payload.Status {
+		status = byte(0xFF)
+	}
+
+	addr := byte(0x01)                              // 从站地址
+	funcCode := byte(0x05)                          // 功能码：写线圈
+	startAddr := []byte{0x00, byte(payload.PortId)} // 起始地址 9
+	quantity := []byte{status, 0x00}                // 读取1个线圈
+
+	mgr.SendModbusCommand([]byte{addr, funcCode}, startAddr, quantity)
+}
+
+func (p readOutputPortNotifier) Handle(mgr *SrvMgr, payload ReqPortInfo) {
+	l.Log.Debug("Handle readOutputPortNotifier called")
+	// mgr.WriteSerialHex("0101000900012DC8")
+
+	portStatus, err := mgr.GetSerialStatus()
+	if err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: "resp_read_output_port", MsgBody: "fail,get serial status failed"}
+		return
+	}
+
+	openFlag, ok := portStatus["isOpen"].(bool)
+	if !ok {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: "resp_read_output_port", MsgBody: "fail,get serial status failed"}
+	}
+
+	if !openFlag {
+		l.Log.Error("serial port is not open")
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: "resp_read_output_port", MsgBody: "fail,serial status is not open"}
+		return
+	}
+
+	addr := byte(0x01)                              // 从站地址
+	funcCode := byte(0x01)                          // 功能码：读线圈
+	startAddr := []byte{0x00, byte(payload.PortId)} // 起始地址 9
+	quantity := []byte{0x00, 0x01}                  // 读取1个线圈
+
+	mgr.SendModbusCommand([]byte{addr, funcCode}, startAddr, quantity)
+}
+
+// 获取输出端口设置
+func (p getOutputPortNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getOutputPortNotifier called")
+	formulaRecProvider := mgr.formulaPd
+	rec, _ := formulaRecProvider.GetSetOutput()
+
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(rec); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_OUTPUT_PORT, MsgBody: typesStr}
+}
+
+// 更新输出端口设置
+func (p updateOutputPortNotifier) Handle(mgr *SrvMgr, payload []ReqUpdateOutputPort) {
+	// Do something for this event
+	l.Log.Debug("Handle updateOutputPortNotifier called")
+
+	portList := payload
+
+	setPortList := []SetOutputPort{}
+
+	for i := 0; i < len(portList); i++ {
+		setPortList = append(setPortList, SetOutputPort{
+			Port:      portList[i].Port,
+			Status:    portList[i].Status,
+			StartTime: portList[i].StartTime,
+			EndValue:  portList[i].EndValue,
+			Remark:    portList[i].Remark,
+		})
+	}
+
+	if err := mgr.formulaPd.UpdateSetOutput(setPortList); err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_OUTPUT_PORT, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_OUTPUT_PORT, MsgBody: "ok"}
+	//TODO: 增加日志记录
 }

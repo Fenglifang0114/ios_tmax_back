@@ -455,10 +455,15 @@ func (bt *TBluetooth) connectDevice() error {
 			}
 
 			// 尝试连接
-
 			device, err = bt.adapterRef.Connect(bluetooth.Address{MACAddress: mac}, bluetooth.ConnectionParams{
 				ConnectionTimeout: bluetooth.NewDuration(10 * time.Second),
 			})
+
+			if err != nil {
+				// 重要：返回错误，不要继续执行
+				return fmt.Errorf("未找到设备 %s: %v", bt.deviceAddress, err)
+			}
+
 		} else {
 			// 后续尝试：扫描后连接
 			log.Log.Warnf("第%d次尝试：扫描后连接", attempt)

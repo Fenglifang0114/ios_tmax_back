@@ -53,6 +53,11 @@ func (p *FormulaRecProvider) GetMaxRawRecId() (int, error) {
 	return p.infoPb.GetMaxRawRecId()
 }
 
+// 根据FMAID获取原料数据的输出口
+func (p *FormulaRecProvider) GetRawOutputByFmaId(fmaId string) ([]RawMaterialOutput, error) {
+	return p.infoPb.GetRawOutputByFmaId(fmaId)
+}
+
 // 新增原料信息列表
 func (p *FormulaRecProvider) InsertRawInfoList(rec []RawMaterial) error {
 	return p.infoPb.CreateRawMaterialList(rec)
@@ -320,4 +325,14 @@ func (p *FormulaRecProvider) UpdateUploadServerInfo(rec UploadServerInfo) error 
 // 创建上传服务器信息
 func (p *FormulaRecProvider) CreateUploadServerInfo(rec UploadServerInfo) error {
 	return p.infoPb.CreateUploadServerInfo(rec)
+}
+
+// 更新配方秤中的输出设置
+func (p *FormulaRecProvider) UpdateSetOutput(recs []SetOutputPort) error {
+	return p.infoPb.UpdateSetOutputPort(recs)
+}
+
+// 获取配方秤中的输出设置
+func (p *FormulaRecProvider) GetSetOutput() ([]SetOutputPort, error) {
+	return p.infoPb.GetSetOutputPort()
 }

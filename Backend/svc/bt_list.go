@@ -10,12 +10,6 @@ import (
 	"tinygo.org/x/bluetooth"
 )
 
-// type BtInfoList struct {
-// 	Mac  string `json:"mac"`
-// 	Name string `json:"name"`
-// 	RSSI int    `json:"rssi"`
-// }
-
 var (
 	// 单例适配器，避免重复创建
 	btAdapter      *bluetooth.Adapter
