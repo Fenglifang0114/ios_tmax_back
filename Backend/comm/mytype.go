@@ -133,6 +133,7 @@ const (
 	CMD_SET_SOFT_SEAL
 	CMD_REMOVE_SOFT_SEAL
 	CMD_REMOVE_SOFT_SEAL_ONCE
+	CMD_GET_MODEL
 )
 
 type DataType int
@@ -293,6 +294,8 @@ const (
 	GET_ZERO_TRACKING_RESP RespMsgType = "resp_get_zero_tracking"
 	GET_GRAV_ACC_RESP      RespMsgType = "resp_get_grav_acc"
 	SET_FORCE_UNTARE_RESP  RespMsgType = "resp_force_untare"
+
+	GET_MODEL_RESP RespMsgType = "resp_get_model"
 
 	GET_SEAL_STATUS_RESP  RespMsgType = "resp_get_seal_status"
 	SOFT_SEAL_RESP        RespMsgType = "resp_soft_seal"

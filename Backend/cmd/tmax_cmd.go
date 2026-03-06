@@ -276,6 +276,10 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 
 	case m.CMD_GET_SEAL_STATUS:
 		return composeCmd(CMDID_GET_SEAL_STATUS_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+
+	case m.CMD_GET_MODEL:
+		return composeCmd(CMDID_GET_MODEL_TMAX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+
 	case m.CMD_SET_SOFT_SEAL:
 		data, _ := hex.DecodeString(cmdData.Data.(string))
 		return composeCmd(CMDID_SET_SOFT_SEAL_TMAX, 0, data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
@@ -421,6 +425,8 @@ const (
 	CMDID_SET_WIRED_IP_TMAX   = 0x056B
 	CMDID_SET_WIRED_DHCP_TMAX = 0x056C
 	CMDID_GET_WIRED_DHCP_TMAX = 0x056D
+
+	CMDID_GET_MODEL_TMAX = 0x0558 //读取型号 T-MAX
 
 	CMDID_GET_SEAL_STATUS_TMAX      = 0x0570
 	CMDID_SET_SOFT_SEAL_TMAX        = 0x0571

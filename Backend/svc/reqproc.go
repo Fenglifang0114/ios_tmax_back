@@ -372,6 +372,11 @@ func procGetSealStatus(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetSealStatus(scale, req)
 }
 
+// 获取型号
+func procGetModel(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetModel(scale, req)
+}
+
 func procSoftSeal(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSoftSeal(scale, req)
 }
@@ -817,6 +822,7 @@ func init() {
 		SREQ_SET_WIRED_DHCP:        procSetWiredDhcp,
 		SREQ_GET_WIRED_DHCP:        procGetWiredDhcp,
 		SREQ_INIT_WIFI:             procInitWifi,
+		SREQ_GET_MODEL:             procGetModel,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -885,5 +891,7 @@ func init() {
 		SREQ_SET_WIRED_DHCP:        m.SET_WIRED_DHCP_RESP,
 		SREQ_GET_WIRED_DHCP:        m.GET_WIRED_DHCP_RESP,
 		SREQ_REMOVE_SOFT_SEAL_ONCE: m.REMOVE_SOFT_SEAL_ONCE_RESP,
+
+		SREQ_GET_MODEL: m.GET_MODEL_RESP,
 	}
 }

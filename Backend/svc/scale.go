@@ -5204,6 +5204,15 @@ func ReqGetSealStatus(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_SEAL_STATUS, m.GET_SEAL_STATUS_RESP)
 }
 
+// 获取型号
+func ReqGetModel(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.GET_MODEL_RESP, "fail", c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_GET_MODEL, m.GET_MODEL_RESP)
+}
+
 func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {

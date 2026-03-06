@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<BSSignalRegistry xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Name>Modbus_IO_borad</Name>
+  <Latency>0</Latency>
+  <Signals>
+    <BSSignal>
+      <Name>回应进入升级模式</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>00 ff 02</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+    </BSSignal>
+    <BSSignal>
+      <Name>写线圈1ON</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>01 05 00 00 FF 00 8C 3A</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：01 05 00 00 FF 00 8C 3A</Description>
+    </BSSignal>
+    <BSSignal>
+      <Name>写线圈1OFF</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>01 05 00 00 00 00 CD CA</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：01 05 00 00 00 00 CD CA</Description>
+    </BSSignal>
+    <BSSignal>
+      <Name>读4个输入</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>01 02 00 00 00 04 79 c9</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：01 02 01 0C A1 8D </Description>
+    </BSSignal>
+    <BSSignal>
+      <Name>写线圈2ON</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>01 05 00 01 FF 00 DD FA</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：01 05 00 01 FF 00 DD FA </Description>
+    </BSSignal>
+    <BSSignal>
+      <Name>写线圈2OFF</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>01 05 00 01 00 00 9C 0A</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：01 05 00 01 00 00 9C 0A </Description>
+    </BSSignal>
+    <BSSignal>
+      <Name>读12个线圈</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>01 01 00 00 00 0C 3C 0F</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：01 01 02 03 0C B9 09 其中 02表示有2个字节的资料，资料03表示线圈1,2是开，资料0C表示线圈11,12是开；资料是以位元表示线圈开或是关</Description>
+    </BSSignal>
+    <BSSignal>
+      <Name>读第二个线圈</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>01 01 00 01 00 01 AC 0A</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：ON：01 01 01 01 90 48 OFF：01 01 01 00 51 88</Description>
+    </BSSignal>
+    <BSSignal>
+      <Name>Launch APP</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>fd e5 03</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：00 FF</Description>
+    </BSSignal>
+    <BSSignal>
+      <Name>重启</Name>
+      <DataFormat>Hex</DataFormat>
+      <Data>01 41 00 00 CA FE EA E5</Data>
+      <Latency>0</Latency>
+      <Active>false</Active>
+      <Description>回应：01 41 00 00 CA FE EA E5</Description>
+    </BSSignal>
+  </Signals>
+</BSSignalRegistry>

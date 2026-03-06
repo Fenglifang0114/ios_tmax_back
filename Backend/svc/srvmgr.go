@@ -4673,10 +4673,15 @@ func (p openOutputPortNotifier) Handle(mgr *SrvMgr, payload ReqPortInfo) {
 		status = byte(0xFF)
 	}
 
-	addr := byte(0x01)                              // 从站地址
-	funcCode := byte(0x05)                          // 功能码：写线圈
-	startAddr := []byte{0x00, byte(payload.PortId)} // 起始地址 9
-	quantity := []byte{status, 0x00}                // 读取1个线圈
+	port := 0
+	if payload.PortId > 0 {
+		port = payload.PortId - 1
+	}
+
+	addr := byte(0x01)                    // 从站地址
+	funcCode := byte(0x05)                // 功能码：写线圈
+	startAddr := []byte{0x00, byte(port)} // 起始地址 9
+	quantity := []byte{status, 0x00}      // 读取1个线圈
 
 	mgr.SendModbusCommand([]byte{addr, funcCode}, startAddr, quantity)
 }
@@ -4703,10 +4708,15 @@ func (p readOutputPortNotifier) Handle(mgr *SrvMgr, payload ReqPortInfo) {
 		return
 	}
 
-	addr := byte(0x01)                              // 从站地址
-	funcCode := byte(0x01)                          // 功能码：读线圈
-	startAddr := []byte{0x00, byte(payload.PortId)} // 起始地址 9
-	quantity := []byte{0x00, 0x01}                  // 读取1个线圈
+	port := 0
+	if payload.PortId > 0 {
+		port = payload.PortId - 1
+	}
+
+	addr := byte(0x01)                    // 从站地址
+	funcCode := byte(0x01)                // 功能码：读线圈
+	startAddr := []byte{0x00, byte(port)} // 起始地址 9
+	quantity := []byte{0x00, 0x01}        // 读取1个线圈
 
 	mgr.SendModbusCommand([]byte{addr, funcCode}, startAddr, quantity)
 }

@@ -143,6 +143,8 @@ func init() {
 		cmd.CMDID_REMOVE_SOFT_SEAL_TMAX:     m.REMOVE_SOFT_SEAL_RESP,
 		cmd.CMDID_REMOVE_SOFT_SEAL_ONCE_TMX: m.REMOVE_SOFT_SEAL_ONCE_RESP,
 
+		cmd.CMDID_GET_MODEL_TMAX: m.GET_MODEL_RESP,
+
 		0xff25: m.UNKNOWN_DATA,
 	}
 
@@ -232,6 +234,8 @@ func init() {
 		m.SOFT_SEAL_RESP:             handleSoftSealResp,
 		m.REMOVE_SOFT_SEAL_RESP:      handleRemoveSoftSealResp,
 		m.REMOVE_SOFT_SEAL_ONCE_RESP: handleRemoveSoftSealOnceResp,
+
+		m.GET_MODEL_RESP: handleGetModelResp,
 	}
 
 	// example usage: call the handler for the WEIGHT_DATA message
@@ -681,6 +685,15 @@ func handleSetWiredDhcpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIRED_DHCP_RESP, MsgBody: "ok"}, len(data)
 	}
 	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIRED_DHCP_RESP, MsgBody: "fail"}, len(data)
+}
+
+// 获取型号
+func handleGetModelResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	if len(data) < 1 {
+		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_MODEL_RESP, MsgBody: "fail"}, len(data)
+	}
+	model := string(data)
+	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_MODEL_RESP, MsgBody: model}, len(data)
 }
 
 func handleGetSealStatusResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
