@@ -1096,7 +1096,10 @@ const (
 	SREQ_GET_GRAV_ACC         SReqType = "get_grav_acc"         //20250716
 	SREQ_SET_FORCE_UNTARE     SReqType = "force_untare"         //20251104
 
-	SREQ_GET_MODEL SReqType = "get_model"
+	SREQ_GET_MODEL       SReqType = "get_model"
+	SREQ_EN_CODE         SReqType = "en_code"
+	SREQ_DIS_CODE        SReqType = "dis_code"
+	SREQ_ASK_ROM_VERSION SReqType = "ask_rom_version"
 
 	SREQ_GET_SEAL_STATUS       SReqType = "get_seal_status"
 	SREQ_SOFT_SEAL             SReqType = "soft_seal"
@@ -1190,4 +1193,9 @@ type WeightMsg struct {
 type RespRecs struct {
 	ScaleId int64
 	Recs    []ScaleRec
+}
+
+type CodeMsg struct {
+	IsStable bool
+	CodeVal  int64
 }

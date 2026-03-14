@@ -105,6 +105,7 @@ func ParseEplLp50Rotate(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Bu
 }
 
 // L,63,133,153,133,2,0,0
+// 打印机指令LS46,302,3,346,302
 func ParseEplLp50Line(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
 	dataBuffer.WriteString(EPL_LINE_HEAD)
 	dataBuffer.WriteString(tempRowArr[1])
@@ -197,6 +198,10 @@ func TextVarPosInfoLp50(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Bu
 	if tempRowArr[5] == "0" { // 字体大小不能为0
 		tempRowArr[5] = "4"
 	}
+	if len(tempRowArr) > 12 && containsGB2312(tempRowArr[11]) && tempRowArr[11] != "" {
+		tempRowArr[5] = "6"
+	}
+
 	dataBuffer.WriteString(tempRowArr[5]) // 字体大小
 	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
 	dataBuffer.WriteString(tempRowArr[6]) // 宽度倍数
@@ -217,6 +222,18 @@ func TextVarPosInfoLp50(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Bu
 		dataBuffer.WriteString(EPL_INNER_LINE_SEP)
 	}
 	return dataBuffer
+}
+
+func containsGB2312(s string) bool {
+	bytes := []byte(s)
+	for i := 0; i < len(bytes)-1; i++ {
+		first := bytes[i]
+		second := bytes[i+1]
+		if first >= 0xA1 && first <= 0xF7 && second >= 0xA1 && second <= 0xFE {
+			return true
+		}
+	}
+	return false
 }
 
 /*

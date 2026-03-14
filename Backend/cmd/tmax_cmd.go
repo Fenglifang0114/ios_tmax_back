@@ -40,6 +40,11 @@ var (
 
 	GET_WIRED_IP_CMD_TMAX   []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0x6A, 0x00, 0x93, 0x68, 0x08, 0x54, 0xA5, 0x5A}
 	GET_WIRED_DHCP_CMD_TMAX []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0x6D, 0x00, 0xA4, 0xA7, 0x76, 0x2E, 0xA5, 0x5A}
+
+	EN_CODE_CMD_TMAX         []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xE1, 0x13, 0x00, 0x1C, 0x87, 0x0B, 0x1F, 0xA5, 0x5A} //开启内码
+	DIS_CODE_CMD_TMAX        []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0xE1, 0x14, 0x00, 0x2B, 0x48, 0x75, 0x65, 0xA5, 0x5A} //关闭内码
+	ASK_ROM_VERSION_CMD_TMAX []byte = []byte{0x5A, 0xA5, 0x00, 0x0B, 0x05, 0x59, 0x00, 0xD1, 0x71, 0xFA, 0xB2, 0xA5, 0x5A} //查询eeprom的版本号
+
 )
 
 func NewComposerTMAX() *m.CmdComposer {
@@ -290,6 +295,13 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 	case m.CMD_REMOVE_SOFT_SEAL_ONCE:
 		return composeCmd(CMDID_REMOVE_SOFT_SEAL_ONCE_TMX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
 
+	case m.CMD_EN_CODE:
+		return EN_CODE_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_DIS_CODE:
+		return DIS_CODE_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+	case m.CMD_ASK_ROM_VERSION:
+		return ASK_ROM_VERSION_CMD_TMAX, CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+
 	}
 
 	return nil, CMD_TIMEOUT_IMMEDIATE, nil
@@ -375,6 +387,8 @@ const (
 	CMDID_PAY_BILL_HEAD_TMAX  = 0xE110 // 结账头
 	CMDID_PAY_BILL_MID_TMAX   = 0xE111 // 结账中
 	CMDID_PAY_BILL_TAIL_TMAX  = 0xE112 // 结账尾
+
+	CMDID_CONT_CODE_TMAX = 0xE115 // 连续发送内码
 
 	CMDID_SET_MAX_RANGE1_TMAX = 0xE300 //设置量程1
 	CMDID_GET_MAX_RANGE1_TMAX = 0xE301 //读取量程1

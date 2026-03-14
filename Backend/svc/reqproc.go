@@ -377,6 +377,21 @@ func procGetModel(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetModel(scale, req)
 }
 
+// 打开连续发送内码
+func procEnCode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqEnCode(scale, req)
+}
+
+// 关闭连续发送内码
+func procDisCode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqDisCode(scale, req)
+}
+
+// 查询ROM版本号
+func procAskRomVersion(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqAskRomVersion(scale, req)
+}
+
 func procSoftSeal(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSoftSeal(scale, req)
 }
@@ -823,6 +838,9 @@ func init() {
 		SREQ_GET_WIRED_DHCP:        procGetWiredDhcp,
 		SREQ_INIT_WIFI:             procInitWifi,
 		SREQ_GET_MODEL:             procGetModel,
+		SREQ_EN_CODE:               procEnCode,
+		SREQ_DIS_CODE:              procDisCode,
+		SREQ_ASK_ROM_VERSION:       procAskRomVersion,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{

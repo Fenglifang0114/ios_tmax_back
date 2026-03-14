@@ -134,6 +134,9 @@ const (
 	CMD_REMOVE_SOFT_SEAL
 	CMD_REMOVE_SOFT_SEAL_ONCE
 	CMD_GET_MODEL
+	CMD_EN_CODE
+	CMD_DIS_CODE
+	CMD_ASK_ROM_VERSION
 )
 
 type DataType int
@@ -295,7 +298,11 @@ const (
 	GET_GRAV_ACC_RESP      RespMsgType = "resp_get_grav_acc"
 	SET_FORCE_UNTARE_RESP  RespMsgType = "resp_force_untare"
 
-	GET_MODEL_RESP RespMsgType = "resp_get_model"
+	GET_MODEL_RESP       RespMsgType = "resp_get_model"       //获取秤的内部型号 T-MAX
+	EN_CODE_RESP         RespMsgType = "resp_en_code"         //开启内码
+	DIS_CODE_RESP        RespMsgType = "resp_dis_code"        //关闭内码
+	ASK_ROM_VERSION_RESP RespMsgType = "resp_ask_rom_version" //询问Tmax rom 版本号
+	CONT_CODE_RESP       RespMsgType = "resp_cont_code"       //连续发送内码
 
 	GET_SEAL_STATUS_RESP  RespMsgType = "resp_get_seal_status"
 	SOFT_SEAL_RESP        RespMsgType = "resp_soft_seal"
@@ -319,10 +326,8 @@ const (
 	SET_TIME_OUT_CMD_RESP          RespMsgType = "resp_set_time_out_cmd"
 	SET_PASSTH_MODE_CMD_RESP       RespMsgType = "resp_set_passth_mode_cmd"
 	SET_SCAN_AP_PARAM_CMD_RESP     RespMsgType = "resp_set_scan_ap_param_cmd"
-
-	INIT_WIFI_RESP RespMsgType = "resp_init_wifi"
-
-	SET_TCP_SERVER_RESP RespMsgType = "resp_set_tcp_server"
+	INIT_WIFI_RESP                 RespMsgType = "resp_init_wifi"
+	SET_TCP_SERVER_RESP            RespMsgType = "resp_set_tcp_server"
 
 	UNKNOWN_DATA RespMsgType = "unknown_data"
 )

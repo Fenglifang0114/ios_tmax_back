@@ -1150,6 +1150,7 @@ func handleNetState(conns *[]*ScaleConnMedia) (netsNotInUse []string) {
 			}
 
 		}
+		time.Sleep(1000 * time.Millisecond)
 
 	}
 

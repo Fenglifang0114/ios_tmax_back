@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +31,7 @@ type TNet struct {
 	maxPackLen int    // max package size that scale can receive on time
 	isAlive    bool
 	isDefault  bool //用来判断同一台秤，多种连接方式的情况下，是否走这个通道
+	timeOutCnt int  // 超时次数
 }
 
 // NewSerial creates a new serial port
@@ -43,17 +45,18 @@ func NewNet(ncnf NetInfo, pickerFn picker.PickerFunc, isDefault bool) (*TNet, er
 	var conn *net.TCPConn = nil
 	connected := false
 	tnet := &TNet{
-		port:      port,
-		ip:        ip,
-		conn:      conn,
-		sendCh:    make(chan []byte, SEND_CH_SIZE),
-		recvCh:    make(chan comm.Packet, RECV_CH_SIZE),
-		queue:     util.NewCircularBuffer(QUEUE_SIZE),
-		pickerFn:  pickerFn,
-		tmpbuf:    make([]byte, TMP_BUF_SIZE),
-		toQuit:    false,
-		isAlive:   connected,
-		isDefault: isDefault,
+		port:       port,
+		ip:         ip,
+		conn:       conn,
+		sendCh:     make(chan []byte, SEND_CH_SIZE),
+		recvCh:     make(chan comm.Packet, RECV_CH_SIZE),
+		queue:      util.NewCircularBuffer(QUEUE_SIZE),
+		pickerFn:   pickerFn,
+		tmpbuf:     make([]byte, TMP_BUF_SIZE),
+		toQuit:     false,
+		isAlive:    connected,
+		isDefault:  isDefault,
+		timeOutCnt: 0,
 	}
 
 	go tnet.write()
@@ -107,51 +110,148 @@ func (tnet *TNet) Write(data []byte) error {
 // The application runs read in a per-scale goroutine. The application
 // ensures that there is at most one reader on a scale by executing all
 // reads from this goroutine.
+// func (tnet *TNet) read() {
+// 	tnet.wg.Add(1)
+// 	packCnt := 0
+
+// 	for {
+// 		if tnet.toQuit {
+// 			break // quit immediately
+// 		}
+
+// 		if tnet.conn == nil {
+// 			time.Sleep(10 * time.Millisecond) // to avoid consume too much cpu time
+// 			continue
+// 		}
+
+// 		// read data from net at least PACK_MIN_LEN or timeout (2 * 1/baud)
+// 		if n, err := tnet.readScale(); err != nil { // data will be stored in the queue
+// 			log.Log.Errorf("@TNet read(), err: %v\n", err)
+// 			if tnet.toQuit {
+// 				continue
+// 			}
+
+// 			if err.Error() != "EOF" {
+// 				println("断开连接，重新连")
+// 				tnet.conn.Close()
+// 				tnet.conn = nil
+// 				continue
+// 			}
+
+// 			if err.Error() == "EOF" { // 20240801
+// 				log.Log.Errorf("EOF")
+// 				//20250901 断开TCP，重新连接
+// 				if tnet.conn != nil {
+// 					tnet.conn.Close()
+// 					tnet.reconnect()
+// 				}
+// 				continue
+// 			}
+// 			if !IsPacketChClosed(tnet.recvCh) {
+// 				// tnet.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
+// 			}
+// 			time.Sleep(100 * time.Millisecond) // to avoid sending error too often to UI
+// 			continue
+// 		} else if n == 0 {
+// 			time.Sleep(1 * time.Millisecond) // to avoid consume too much cpu time
+// 		}
+// 		hasPack := true
+// 		for hasPack {
+// 			if tnet.queue.GetDataLen() > MIN_PACK_SIZE {
+// 				// call the packet picker function
+// 				data := tnet.queue.PeekAll()
+// 				_, packLen, removeLen, pack := tnet.pickerFn(data, tnet.queue.GetDataLen())
+// 				if packLen > 0 {
+// 					if len(tnet.recvCh) >= RECV_CH_SIZE {
+// 						log.Log.Errorf("recvCh full, size: %v", len(tnet.recvCh))
+// 						fmt.Printf("recvCh full, size: %v", len(tnet.recvCh))
+// 					} else {
+// 						// fmt.Printf("pack data: %v\n", pack.Payload)
+// 						tnet.recvCh <- pack
+
+// 					}
+// 					packCnt++
+// 				} else {
+// 					fmt.Printf("no packet\n")
+// 					hasPack = false
+// 				}
+// 				if removeLen < packLen {
+// 					fmt.Printf("removelen error\n")
+// 				}
+// 				if removeLen > 0 {
+// 					tnet.queue.DequeueN(int(removeLen))
+// 				}
+// 			} else {
+// 				hasPack = false
+// 			}
+
+// 		}
+
+// 	}
+// 	tnet.wg.Done()
+
+// }
+
+//20260309 修复网络突然断开后，不能正常工作
+
 func (tnet *TNet) read() {
 	tnet.wg.Add(1)
+	defer tnet.wg.Done()
+
 	packCnt := 0
 
 	for {
 		if tnet.toQuit {
-			break // quit immediately
+			break
 		}
 
 		if tnet.conn == nil {
-			time.Sleep(10 * time.Millisecond) // to avoid consume too much cpu time
+			time.Sleep(1000 * time.Millisecond) // to avoid consume too much cpu time
+			// 重连成功后继续循环
 			continue
 		}
 
-		// read data from net at least PACK_MIN_LEN or timeout (2 * 1/baud)
-		if n, err := tnet.readScale(); err != nil { // data will be stored in the queue
-			log.Log.Errorf("@TNet read(), err: %v\n", err)
+		// 读取数据
+		n, err := tnet.readScale()
+		if err != nil {
+			log.Log.Errorf("@TNet read(), err: %v", err)
+
+			// 检查是否需要退出
 			if tnet.toQuit {
 				continue
 			}
 
-			if err.Error() != "EOF" {
-				println("断开连接，重新连")
-				tnet.conn.Close()
+			// 处理网络错误
+			if isNetworkError(err) {
+				log.Log.Info("Network error detected, reconnecting...")
+				tnet.forceDisconnect()
 				tnet.conn = nil
+				tnet.isAlive = false
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
 
-			if err.Error() == "EOF" { // 20240801
-				log.Log.Errorf("EOF")
-				//20250901 断开TCP，重新连接
-				if tnet.conn != nil {
-					tnet.conn.Close()
-					tnet.reconnect()
-				}
+			// 处理网络错误
+			if isNofError(err) {
+				log.Log.Info("Network error detected, reconnecting...")
+				tnet.conn.Close()
+				tnet.conn = nil
+				tnet.isAlive = false
+				time.Sleep(100 * time.Millisecond)
 				continue
 			}
-			if !IsPacketChClosed(tnet.recvCh) {
-				// tnet.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0, CmdSubId: 0, SeqNum: 0, Payload: RESP_SERIAL_ERROR}
-			}
-			time.Sleep(100 * time.Millisecond) // to avoid sending error too often to UI
+
+			// 处理其他错误
+			time.Sleep(100 * time.Millisecond)
 			continue
-		} else if n == 0 {
-			time.Sleep(1 * time.Millisecond) // to avoid consume too much cpu time
 		}
+
+		if n == 0 {
+			time.Sleep(1 * time.Millisecond)
+			continue
+		}
+
+		// 处理接收到的数据包
 		hasPack := true
 		for hasPack {
 			if tnet.queue.GetDataLen() > MIN_PACK_SIZE {
@@ -183,10 +283,30 @@ func (tnet *TNet) read() {
 			}
 
 		}
-
 	}
-	tnet.wg.Done()
+}
 
+// 辅助函数：判断是否为网络错误
+func isNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := err.Error()
+	return strings.Contains(errStr, "wsarecv") ||
+		strings.Contains(errStr, "connection refused") ||
+		strings.Contains(errStr, "timeout") ||
+		strings.Contains(errStr, "reset by peer") ||
+		strings.Contains(errStr, "use of closed network connection")
+}
+
+func isNofError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := err.Error()
+	return strings.Contains(errStr, "EOF")
 }
 
 // if n > 0 {
@@ -205,12 +325,40 @@ func (tnet *TNet) readScale() (int, error) {
 
 	}
 
-	n, err := tnet.conn.Read(tnet.tmpbuf)
+	// 设置20秒读取超时
+	err := tnet.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	if err != nil {
-		log.Log.Errorf("Error reading scale: %v", err)
-		tnet.isAlive = false
+		log.Log.Errorf("SetReadDeadline error: %v", err)
+	}
+
+	n, err := tnet.conn.Read(tnet.tmpbuf)
+
+	if err != nil {
+		// 检查是否是超时错误
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+			tnet.timeOutCnt++
+			if tnet.timeOutCnt >= 2 {
+				log.Log.Warn("Read timeout after 20 seconds")
+				return 0, fmt.Errorf("read timeout")
+			}
+
+			if tnet.probeConnection() {
+				return 0, nil
+			}
+
+			log.Log.Warn("Read timeout after 20 seconds")
+			return 0, fmt.Errorf("read timeout")
+		}
+
 		return 0, err
 	}
+	tnet.timeOutCnt = 0
+
+	// if err != nil {
+	// 	log.Log.Errorf("Error reading scale: %v", err)
+	// 	tnet.isAlive = false
+	// 	return 0, err
+	// }
 
 	if tnet.queue.IsFull() {
 		tnet.queue.DequeueN(tnet.queue.Capacity) // handle abnormal case
@@ -229,19 +377,54 @@ func (tnet *TNet) readScale() (int, error) {
 }
 
 // A goroutine running write is started for the scale. The
+// func (tnet *TNet) write() {
+// 	for message := range tnet.sendCh {
+// 		// send message to scale
+// 		if tnet.conn != nil {
+// 			n, err := tnet.conn.Write([]byte(message))
+
+// 			if err != nil || n != len(message) {
+// 				tnet.isAlive = false
+// 				log.Log.Error(fmt.Sprintf("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error()))
+
+// 			}
+// 			time.Sleep(10 * time.Millisecond)
+// 		}
+// 	}
+// }
+
 func (tnet *TNet) write() {
 	for message := range tnet.sendCh {
-		// send message to scale
-		if tnet.conn != nil {
-			n, err := tnet.conn.Write([]byte(message))
+		// 检查连接状态
+		if tnet.conn == nil || !tnet.isAlive {
+			time.Sleep(100 * time.Millisecond)
+			continue
 
-			if err != nil || n != len(message) {
-				tnet.isAlive = false
-				log.Log.Error(fmt.Sprintf("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error()))
-
-			}
-			time.Sleep(10 * time.Millisecond)
 		}
+
+		// 设置写入超时
+		if err := tnet.conn.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			log.Log.Error(fmt.Sprintf("Set write deadline error: %v", err))
+		}
+
+		n, err := tnet.conn.Write([]byte(message))
+		if err != nil {
+			tnet.isAlive = false
+			tnet.conn.Close()
+			tnet.conn = nil
+
+			log.Log.Error(fmt.Sprintf("Write error: %v, message length: %v, sent: %v",
+				err.Error(), len(message), n))
+
+			// 可以在这里将消息重新放回队列或丢弃
+			continue
+		}
+
+		if n != len(message) {
+			log.Log.Warn(fmt.Sprintf("Partial write: %v of %v bytes", n, len(message)))
+		}
+
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
@@ -307,4 +490,47 @@ func (tnet *TNet) dialTCP() (*net.TCPConn, error) {
 
 	return conn, nil
 
+}
+
+func (tnet *TNet) forceDisconnect() {
+
+	log.Log.Warn("正在强制断开连接...")
+
+	if tnet.conn != nil {
+		// 1. 先设置SO_LINGER，确保彻底关闭
+
+		// 2. 关闭连接
+		tnet.conn.Close()
+
+		// 3. 设置为nil，确保不会再使用
+		tnet.conn = nil
+	}
+
+	// 4. 重置所有状态
+	tnet.isAlive = false
+
+	// 5. 清空缓冲区
+	if tnet.queue != nil {
+		tnet.queue.Reset()
+	}
+
+	log.Log.Info("连接已彻底断开")
+}
+
+// 探测连接是否真的活着
+func (tnet *TNet) probeConnection() bool {
+	// 发送探测指令（你之前提供的指令）
+
+	probeCmd := []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf6, 0x00, 0xCE, 0xD9, 0x29, 0x24, 0xa5, 0x5a}
+
+	// 设置写超时
+	tnet.conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
+	_, err := tnet.conn.Write(probeCmd)
+	tnet.conn.SetWriteDeadline(time.Time{})
+
+	if err != nil {
+		return false
+	}
+
+	return true
 }

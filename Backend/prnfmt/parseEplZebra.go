@@ -34,7 +34,6 @@ func ParseEplZebraLines(buff string, dataBuffer *bytes.Buffer, lastvarPos int) *
 		rowArray := strings.Split(lines[i], ",")
 		buf, lastvarPos = EplZebraLines(rowArray, buf, lastvarPos, currentPath)
 	}
-
 	// 写入打印命令结尾
 	buf.WriteString(EPL_TAIL)
 	return buf
@@ -51,19 +50,16 @@ func EplZebraLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, path
 		} else if line[10] == "DATA" && len(line) == 16 {
 			dataBuffer, lastvarPos = ParseEplZebraVar(line, dataBuffer, lastvarPos)
 		}
-
 	case "B":
 		dataBuffer, lastvarPos = ParsEplZebarBarcode(line, dataBuffer, lastvarPos, path)
 	case "ROTATE":
 		dataBuffer = ParseEplRotate(line, dataBuffer)
 	case "L":
-		dataBuffer = ParseEplLine(line, dataBuffer)
+		dataBuffer = ParseEplZebraLine(line, dataBuffer)
 	case "R":
 		dataBuffer = ParseEplRectangle(line, dataBuffer)
 	case "O":
-
 	case "GP":
-
 	case "QR":
 		if len(line) > 9 {
 			dataBuffer, lastvarPos = ParsZebarEplQRcode(line, dataBuffer, lastvarPos)
@@ -83,16 +79,13 @@ func getZebraPageSize(pageDots string) string {
 	result := num / 8 * 11.8
 	resultStr := strconv.Itoa(int(result))
 	return resultStr
-
 }
 
 func ParseEplZebraPage(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
 	widthHead := "q"
 	hightHead := "Q"
 	paperGap := ",24"
-
 	dataBuffer.WriteString(EPL_ZEBRA_HEAD)
-
 	dataBuffer.WriteString(hightHead)
 	tempRowArr[2] = strings.Replace(tempRowArr[2], "\r\n", "", 1)
 	tempRowArr[1] = strings.Replace(tempRowArr[1], "\r\n", "", 1)
@@ -104,7 +97,6 @@ func ParseEplZebraPage(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buf
 	dataBuffer.WriteString(widthHead)
 	dataBuffer.WriteString(dotsWidth) // 宽度
 	dataBuffer.WriteString(EPL_LINE_END)
-
 	// fmt.Println(dataBuffer.String())
 	return dataBuffer
 }
@@ -116,27 +108,28 @@ func ParseEplZebraRotate(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.B
 	} else if tempRowArr[1] == "2" {
 		dataBuffer.WriteString(EPL_ROTATE_ZT)
 	}
-
 	dataBuffer.WriteString(EPL_LINE_END)
-
 	return dataBuffer
 }
 
 // L,63,133,153,133,2,0,0
-func ParseEplZebarLine(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
+// LS183,53,3,183,353 打印机指令 (x1,y1,lineWidth, x2,y2)
+func ParseEplZebraLine(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
 	dataBuffer.WriteString(EPL_LINE_HEAD)
-	dataBuffer.WriteString(tempRowArr[1])
+	x1 := getZebraPageSize(tempRowArr[1])
+	dataBuffer.WriteString(x1)
 	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
-
-	dataBuffer.WriteString(tempRowArr[2])
+	y1 := getZebraPageSize(tempRowArr[2])
+	dataBuffer.WriteString(y1)
 	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
 	dataBuffer.WriteString(tempRowArr[5])
 	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
-	dataBuffer.WriteString(tempRowArr[3])
+	x2 := getZebraPageSize(tempRowArr[3])
+	dataBuffer.WriteString(x2)
 	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
-	dataBuffer.WriteString(tempRowArr[4])
+	y2 := getZebraPageSize(tempRowArr[4])
+	dataBuffer.WriteString(y2)
 	dataBuffer.WriteString(EPL_LINE_END)
-
 	return dataBuffer
 }
 

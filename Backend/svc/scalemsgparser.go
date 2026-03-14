@@ -144,6 +144,7 @@ func init() {
 		cmd.CMDID_REMOVE_SOFT_SEAL_ONCE_TMX: m.REMOVE_SOFT_SEAL_ONCE_RESP,
 
 		cmd.CMDID_GET_MODEL_TMAX: m.GET_MODEL_RESP,
+		cmd.CMDID_CONT_CODE_TMAX: m.CONT_CODE_RESP,
 
 		0xff25: m.UNKNOWN_DATA,
 	}
@@ -234,6 +235,7 @@ func init() {
 		m.SOFT_SEAL_RESP:             handleSoftSealResp,
 		m.REMOVE_SOFT_SEAL_RESP:      handleRemoveSoftSealResp,
 		m.REMOVE_SOFT_SEAL_ONCE_RESP: handleRemoveSoftSealOnceResp,
+		m.CONT_CODE_RESP:             handleContCodeResp,
 
 		m.GET_MODEL_RESP: handleGetModelResp,
 	}
@@ -275,7 +277,6 @@ func handleWeightDataMsg(scaleId int64, data []byte) (ScaleRespMsg, int) {
 		fmt.Printf("%v", weightStr)
 	}
 	respMsg := ScaleRespMsg{MsgType: m.WEIGHT_DATA, MsgBody: weightStr, ScaleId: scaleId}
-
 	return respMsg, len(data)
 }
 
@@ -327,6 +328,59 @@ func retrieveWeight(data []byte) (WeightMsg, error) {
 	weightMsg.WeightUnit = strings.TrimSpace(match[2])
 
 	return weightMsg, nil
+}
+
+// 处理连续发送内码响应
+func handleContCodeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+
+	// fmt.Printf("recived%s", data)
+	weightMsg, err := retrieveCode(data)
+	if err != nil {
+		return ScaleRespMsg{}, len(data)
+	}
+	weightStr, err := json.MarshalToString(weightMsg)
+	if err != nil {
+		fmt.Printf("%v", weightStr)
+	}
+	respMsg := ScaleRespMsg{MsgType: m.CONT_CODE_RESP, MsgBody: weightStr, ScaleId: scaleId}
+
+	return respMsg, len(data)
+}
+
+func retrieveCode(data []byte) (CodeMsg, error) {
+	dataStr := strings.TrimSpace(string(data))
+
+	// 按空格分割字符串
+	fields := strings.Split(dataStr, " ")
+
+	// 检查是否正好有两部分
+	if len(fields) != 2 {
+		return CodeMsg{}, fmt.Errorf("invalid format: expected 2 fields, got %d", len(fields))
+	}
+
+	// 检查第一部分是否是0或1
+	stableFlag := strings.TrimSpace(fields[0])
+	if stableFlag != "0" && stableFlag != "1" {
+		return CodeMsg{}, fmt.Errorf("invalid stable flag: must be 0 or 1, got %s", stableFlag)
+	}
+
+	// 解析第二部分为内码值
+	codeValStr := strings.TrimSpace(fields[1])
+	codeVal, err := strconv.ParseInt(codeValStr, 10, 64)
+	if err != nil {
+		return CodeMsg{}, fmt.Errorf("invalid code value: %v", err)
+	}
+
+	// 检查内码值是否大于0
+	if codeVal <= 0 {
+		return CodeMsg{}, fmt.Errorf("code value must be greater than 0, got %d", codeVal)
+	}
+
+	// 创建并返回CodeMsg
+	return CodeMsg{
+		IsStable: stableFlag == "1", // 1表示稳定，0表示不稳定
+		CodeVal:  codeVal,
+	}, nil
 }
 
 func handleZeroCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {

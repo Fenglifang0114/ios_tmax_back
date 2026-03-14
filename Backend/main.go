@@ -45,9 +45,7 @@ func (p *program) Start(s service.Service) error {
 }
 func (p *program) run() {
 	// 具体的服务实现
-
 	killZombieApp()
-
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", INSTANCE_PORT))
 	if err != nil {
 		if strings.Contains(err.Error(), "in use") {
@@ -243,7 +241,7 @@ func main() {
 
 // 	// Wait for the process to complete and send the completion status to the doneChan channel
 // 	go func() {
-// 		time.Sleep(10 * time.Second)
+// 		time.Sleep(1000000 * time.Second)
 // 		doneChan <- app.Wait()
 // 	}()
 
@@ -276,4 +274,3 @@ func main() {
 // 	// Exit the program gracefully
 // 	os.Exit(0)
 // }
-//

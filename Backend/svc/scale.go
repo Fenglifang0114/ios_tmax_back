@@ -349,8 +349,16 @@ func (s *Scale) keepNetState() {
 		if s.MyNet.conn != nil && s.MyNet.isAlive {
 
 			// 连接正常
-			// sendRespMsgScale(s)//网口不能接收，因此心跳包停止发送，改为问答形式。
+			// sendRespMsgScale(s) //网口不能接收，因此心跳包停止发送，改为问答形式。
+
 			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		if s.MyNet == nil {
+			break
+		}
+		if s.MyNet.conn != nil {
 			continue
 		}
 
@@ -361,6 +369,7 @@ func (s *Scale) keepNetState() {
 			s.MyNet.conn, err = s.MyNet.reconnect()
 			if err == nil {
 				s.MyNet.isAlive = true
+				time.Sleep(5 * time.Second) // 明确等待 10 秒
 				go s.keepNetOnline()
 				time.Sleep(5 * time.Second) // 明确等待 10 秒
 				continue
@@ -3246,6 +3255,7 @@ func ReqOpenBillSend(c *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_OPEN_BILL_SEND, m.OPEN_BILL_SEND_RESP)
 }
 
+// 20260311备份
 // 在线升级bin
 func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	readBinData, modelName, err := getZipInfo(req.ReqData)
@@ -4446,6 +4456,11 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		return
 	}
 
+	if msg.MsgType == m.CONT_CODE_RESP && s.client != nil { // skip sending weight data to client if it doesn't not register this message
+		sendRespMsgClient(s, msg)
+		return
+	}
+
 }
 
 func sendRespMsgScale(s *Scale) {
@@ -5211,6 +5226,33 @@ func ReqGetModel(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{m.GET_MODEL_RESP, "fail", c.Id}, nil
 	}
 	return excuteSimpCmd(c, m.CMD_GET_MODEL, m.GET_MODEL_RESP)
+}
+
+// 开启打开内码
+func ReqEnCode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.EN_CODE_RESP, "fail", c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_EN_CODE, m.EN_CODE_RESP)
+}
+
+// 关闭内码
+func ReqDisCode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	// _, err, res := openFactory(c)
+	// if err != nil || !res {
+	// 	return &ScaleRespMsg{m.DIS_CODE_RESP, "fail", c.Id}, nil
+	// }
+	return excuteSimpCmd(c, m.CMD_DIS_CODE, m.DIS_CODE_RESP)
+}
+
+// 询问Tmax rom 版本号
+func ReqAskRomVersion(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	_, err, res := openFactory(c)
+	if err != nil || !res {
+		return &ScaleRespMsg{m.ASK_ROM_VERSION_RESP, "fail", c.Id}, nil
+	}
+	return excuteSimpCmd(c, m.CMD_ASK_ROM_VERSION, m.ASK_ROM_VERSION_RESP)
 }
 
 func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {

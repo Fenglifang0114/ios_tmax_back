@@ -298,6 +298,7 @@ func (h *SrvMgr) Run() {
 				if client.scaleId > SERVICE_ID {
 					delete(h.clientOfService, client.scaleId)
 				} else {
+					fmt.Printf("删除的 scale id: %v\n", client.scaleId)
 					delete(h.clientOfScales, h.scales[client.scaleId])
 				}
 
@@ -347,11 +348,13 @@ func (h *SrvMgr) Run() {
 					// 	go procToScaleReq(req, scaleId, h, scale) // TODO: handle error
 					// }
 
+					l.Log.Warnf("Test : %v\n", scaleId)
+
 				}
 			}
+
 		case scaleMessage := <-h.recvScaleMsg:
 			// handle the message from the scale
-
 			if h.scales[scaleMessage.ScaleId] != nil {
 				client := h.clientOfScales[h.scales[scaleMessage.ScaleId]]
 				if client != nil {
@@ -359,12 +362,14 @@ func (h *SrvMgr) Run() {
 					client.sendCh <- outData
 				}
 			}
-
 			// default:
 			// 	fmt.Println("    .")
 			// 	time.Sleep(1 * time.Millisecond)
+
 		case scaleMgrMessage := <-h.recvScaleMgrMsg:
 			// handle the message from the scale
+
+			l.Log.Debugf("秤客户端的数量---------- %v\n", (len(h.clientOfScales)))
 			if len(h.clientOfScales) == 0 {
 				break
 			}
@@ -1116,7 +1121,7 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 				fmt.Println("done")
 			}
 		}
-		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_KILL_BOOT_COMMANDER, MsgBody: "ok"}
+		// mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_KILL_BOOT_COMMANDER, MsgBody: "ok"}
 	case REQ_ADD_SYS_LOG:
 		jsonStr := req.ReqData
 		var data ReqAddSysLog
@@ -1347,7 +1352,14 @@ func (p exportPluToFileNotifier) Handle(mgr *SrvMgr, payload string) {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DOWN_ALL_PLU, MsgBody: "fail to get product list"}
 	}
 
-	err = SavePluToFile(payload, products)
+	var productsEnabled []ProductRec
+	for _, product := range products {
+		if product.Enabled {
+			productsEnabled = append(productsEnabled, product)
+		}
+	}
+
+	err = SavePluToFile(payload, productsEnabled)
 	if err != nil {
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_DOWN_ALL_PLU, MsgBody: "fail to save plu to file"}
 		return

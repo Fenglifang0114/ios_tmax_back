@@ -126,18 +126,57 @@ func ParseEplRotate(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer
 }
 
 // L,63,133,153,133,2,0,0
+// 	//  LS10,10,20,200,200  画对角线
+// 	//LO10,10,200,10  画直线
+//	[1] - 水平起始 X1
+//	[2] - 垂直起始 Y1
+//	[3] - 线宽
+//	[4] - 线高
+
 func ParseEplLine(tempRowArr []string, dataBuffer *bytes.Buffer) *bytes.Buffer {
-	dataBuffer.WriteString(EPL_LINE_HEAD)
+	// 参数有效性检查（至少需要索引1-5）
+	if len(tempRowArr) < 6 {
+		return dataBuffer
+	}
+
+	// 横线判断：Y1 == Y2
+	width := 0
+	height := 0
+	if tempRowArr[2] == tempRowArr[4] {
+		// 宽度 = |X2 - X1|
+		x1, _ := strconv.Atoi(tempRowArr[1])
+		x2, _ := strconv.Atoi(tempRowArr[3])
+		width = x2 - x1
+		if width < 0 {
+			width = -width
+		}
+		height, _ = strconv.Atoi(tempRowArr[5])
+		// 此处可根据需要处理 width，例如校验或日志
+	}
+
+	// 竖线判断：X1 == X2
+
+	if tempRowArr[1] == tempRowArr[3] {
+		// 高度 = |Y2 - Y1|
+		y1, _ := strconv.Atoi(tempRowArr[2])
+		y2, _ := strconv.Atoi(tempRowArr[4])
+		height = y2 - y1
+		if height < 0 {
+			height = -height
+		}
+		width, _ = strconv.Atoi(tempRowArr[5])
+		// 此处可根据需要处理 height
+	}
+
+	// 写入LO指令，参数顺序：X1, Y1, 线宽, 线高
+	dataBuffer.WriteString("LO")
 	dataBuffer.WriteString(tempRowArr[1])
 	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
-
 	dataBuffer.WriteString(tempRowArr[2])
 	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
-	dataBuffer.WriteString(tempRowArr[5])
+	dataBuffer.WriteString(strconv.Itoa(width))
 	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
-	dataBuffer.WriteString(tempRowArr[3])
-	dataBuffer.WriteString(EPL_INNER_LINE_SEP)
-	dataBuffer.WriteString(tempRowArr[4])
+	dataBuffer.WriteString(strconv.Itoa(height))
 	dataBuffer.WriteString(EPL_LINE_END)
 
 	return dataBuffer
