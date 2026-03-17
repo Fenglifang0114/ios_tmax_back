@@ -2306,6 +2306,7 @@ func extractIPMode(response string) (bool, error) {
 
 func handleGetApInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AP_INFO_OK_RESP) { // success
+		println("AP:" + string(data))
 		apInfo, err := extractWifiAPInfo(string(data))
 		if err != nil {
 			return ScaleRespMsg{}, len(data)

@@ -904,15 +904,17 @@ func ReqGetWifiApInfo(s *Scale) (*ScaleRespMsg, error) {
 		msg.MsgType = m.GET_WIFI_AP_INFO_RESP
 		return msg, err
 	}
-	msg, _ = getAtVersion(s)
-	switch msg.MsgBody {
-	case m.AT_VERSION:
-		return GetWifiApInfo32(s)
-	case m.AT_VERSION8266:
-		return GetWifiApInfo(s)
-	default:
-		return GetWifiApInfo32(s)
-	}
+	// msg, _ = getAtVersion(s)
+	// switch msg.MsgBody {
+	// case m.AT_VERSION:
+	// 	return GetWifiApInfo32(s)
+	// case m.AT_VERSION8266:
+	// 	return GetWifiApInfo(s)
+	// default:
+	// 	return GetWifiApInfo32(s)
+	// }
+
+	return GetWifiApInfo32(s)
 
 }
 
@@ -951,19 +953,22 @@ func ReqConnectAp(s *Scale, ssid string, bssid string, password string) (*ScaleR
 		msg.MsgType = m.CONNECT_AP_RESP
 		return msg, err
 	}
-	msg, _ = getAtVersion(s)
+	// msg, _ = getAtVersion(s)
 
-	switch msg.MsgBody {
-	case m.AT_VERSION:
-		res, err := ConnectWifiAp32(s, ssid, password, bssid)
-		return res, err
-	case m.AT_VERSION8266:
-		res, err := ConnectWifiAp(s, ssid, password, bssid)
-		return res, err
-	default:
-		res, err := ConnectWifiAp32(s, ssid, password, bssid)
-		return res, err
-	}
+	// switch msg.MsgBody {
+	// case m.AT_VERSION:
+	// 	res, err := ConnectWifiAp32(s, ssid, password, bssid)
+	// 	return res, err
+	// case m.AT_VERSION8266:
+	// 	res, err := ConnectWifiAp(s, ssid, password, bssid)
+	// 	return res, err
+	// default:
+	// 	res, err := ConnectWifiAp32(s, ssid, password, bssid)
+	// 	return res, err
+	// }
+
+	res, err := ConnectWifiAp32(s, ssid, password, bssid)
+	return res, err
 
 }
 
@@ -1000,15 +1005,17 @@ func ReqSetWifiDynamicIp(s *Scale) (*ScaleRespMsg, error) {
 		msg.MsgType = m.SET_WIFI_DYNAMIC_IP_RESP
 		return msg, err
 	}
-	msg, _ = getAtVersion(s)
-	switch msg.MsgBody {
-	case m.AT_VERSION:
-		return SetWifiDynamicIp32(s)
-	case m.AT_VERSION8266:
-		return SetWifiDynamicIp(s)
-	default:
-		return SetWifiDynamicIp32(s)
-	}
+	// msg, _ = getAtVersion(s)
+	// switch msg.MsgBody {
+	// case m.AT_VERSION:
+	// 	return SetWifiDynamicIp32(s)
+	// case m.AT_VERSION8266:
+	// 	return SetWifiDynamicIp(s)
+	// default:
+	// 	return SetWifiDynamicIp32(s)
+	// }
+
+	return SetWifiDynamicIp32(s)
 }
 
 func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*ScaleRespMsg, error) {
@@ -1024,15 +1031,16 @@ func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*S
 		msg.MsgType = m.SET_WIFI_STATIC_IP_RESP
 		return msg, err
 	}
-	msg, _ = getAtVersion(s)
-	switch msg.MsgBody {
-	case m.AT_VERSION:
-		return SetWifiStaticIp32(s, ip, gateway, netmask)
-	case m.AT_VERSION8266:
-		return SetWifiStaticIp(s, ip, gateway, netmask)
-	default:
-		return SetWifiStaticIp32(s, ip, gateway, netmask)
-	}
+	// msg, _ = getAtVersion(s)
+	// switch msg.MsgBody {
+	// case m.AT_VERSION:
+	// 	return SetWifiStaticIp32(s, ip, gateway, netmask)
+	// case m.AT_VERSION8266:
+	// 	return SetWifiStaticIp(s, ip, gateway, netmask)
+	// default:
+	// 	return SetWifiStaticIp32(s, ip, gateway, netmask)
+	// }
+	return SetWifiStaticIp32(s, ip, gateway, netmask)
 }
 
 func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
@@ -1049,15 +1057,16 @@ func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
 		return msg, err
 	}
 
-	msg, _ = getAtVersion(s)
-	switch msg.MsgBody {
-	case m.AT_VERSION:
-		return GetIpInfo32(s)
-	case m.AT_VERSION8266:
-		return GetIpInfo(s)
-	default:
-		return GetIpInfo32(s)
-	}
+	// msg, _ = getAtVersion(s)
+	// switch msg.MsgBody {
+	// case m.AT_VERSION:
+	// 	return GetIpInfo32(s)
+	// case m.AT_VERSION8266:
+	// 	return GetIpInfo(s)
+	// default:
+	// 	return GetIpInfo32(s)
+	// }
+	return GetIpInfo32(s)
 
 }
 
@@ -1131,15 +1140,16 @@ func ReqGetIpMode(s *Scale) (*ScaleRespMsg, error) {
 		msg.MsgType = m.GET_IP_MODE_RESP
 		return msg, err
 	}
-	msg, _ = getAtVersion(s)
-	switch msg.MsgBody {
-	case m.AT_VERSION:
-		return GetIpMode32(s)
-	case m.AT_VERSION8266:
-		return GetIpMode(s)
-	default:
-		return GetIpMode32(s)
-	}
+	// msg, _ = getAtVersion(s)
+	// switch msg.MsgBody {
+	// case m.AT_VERSION:
+	// 	return GetIpMode32(s)
+	// case m.AT_VERSION8266:
+	// 	return GetIpMode(s)
+	// default:
+	// 	return GetIpMode32(s)
+	// }
+	return GetIpMode32(s)
 
 }
 func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
