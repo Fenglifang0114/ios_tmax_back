@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
@@ -341,6 +342,8 @@ func ParserDefFmtToFile(fmtDataList []string, printerModel string, fmtLen int) b
 	var buffer *bytes.Buffer
 	if printerModel == "EPM205" {
 		buffer = ParserDefFmtToBuf(fmtDataList, printerModel, fmtLen)
+	} else if printerModel == "LP50" {
+		buffer = ParserLp50DefFmtToBuf(fmtDataList, printerModel, fmtLen)
 	} else {
 		return false
 	}
@@ -454,4 +457,117 @@ func binaryDataDef(tempInfo printInfoDef) *bytes.Buffer {
 	binary.Write(buf, binary.LittleEndian, tempInfo.everyFormatInfo)
 	binary.Write(buf, binary.LittleEndian, tempInfo.varInfo)
 	return buf
+}
+
+func ParserLp50DefFmtToBuf(fmtDataList []string, printerModel string, fmtLen int) *bytes.Buffer {
+	var FinalFormatInfo printInfoDef
+
+	dataCamp1 := bytes.NewBufferString("")
+	for i := 0; i < len(FMT_FILL_TAIL); i++ {
+		dataCamp1.WriteByte(FMT_FILL_TAIL[i])
+	}
+
+	// var fillchar byte
+	fillchar := 0xff
+	var lastVarPos int //变量位置
+
+	FinalFormatInfo.formatNum = uint8(len(fmtDataList)) ///打印格式总数，根据打印格式文件数量决定
+
+	totalbuffer := bytes.NewBufferString("") //打印命令集合
+	// var everyAddr []int                                                 //每个打印格式偏移量
+	var everyBufLen []int  //每个打印格式的命令集合
+	TotalVarDataIndex := 0 //每个打印格式信息的索引
+	// formatinfo.VarTable = formatinfo.ReadTableFromFile(currentPath + "\\varTable.json") //获取变量ID表
+	dataCamp := bytes.NewBufferString("") //临时buf 存放命令数据
+	lastVarNum := 0
+	lastAddr := 0
+	var clearList []VarStruct
+	VarList = clearList // 用于清空数据
+
+	//for循环解析文件
+	for i := 0; i < len(fmtDataList); i++ {
+		utf8Buff := fmtDataList[i]
+		lastVarPos = 0
+
+		buff, _ := Utf8ToGb2312(utf8Buff)
+		buff = ModifyDataSimple(buff)
+		formatbuf := ParseEplLp50Lines(buff, dataCamp, lastVarPos)
+		everyBufLen = append(everyBufLen, formatbuf.Len())
+
+		fmt.Println(string(dataCamp.Bytes()))
+
+		totalbuffer.WriteString(formatbuf.String())
+		div := ((everyBufLen[TotalVarDataIndex] / 4) + 1) * 4
+
+		for i := formatbuf.Len(); i < div; i++ {
+			totalbuffer.WriteByte(byte(fillchar))
+		}
+
+		if TotalVarDataIndex > 0 {
+			lastVarNum = len(VarList) - lastVarNum
+		} else {
+			lastAddr = headBufLenDef
+			lastVarNum = len(VarList)
+		}
+		// fmt.Printf("%x", templen)
+		FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].addr = uint32(lastAddr)
+		FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].formatLen = uint32(everyBufLen[TotalVarDataIndex])
+		FinalFormatInfo.everyFormatInfo[TotalVarDataIndex].varNum = uint32(lastVarNum)
+		dataCamp.Reset()
+		// fmt.Println(dataCamp.Len())
+		TotalVarDataIndex = TotalVarDataIndex + 1
+		lastVarNum = len(VarList)
+		lastAddr = div + lastAddr
+
+	}
+	if len(VarList) > 150 {
+		return bytes.NewBufferString("")
+
+	}
+
+	//复制变量
+	copy(FinalFormatInfo.varInfo[:], VarList)
+
+	buffer := binaryDataDef(FinalFormatInfo)
+	binary.Write(buffer, binary.LittleEndian, totalbuffer.Bytes())
+	// fmt.Println(buffer.Len())
+	if buffer.Len() < (fmtLen - 8) {
+		for i := buffer.Len(); i < (fmtLen - 8); i++ {
+			binary.Write(buffer, binary.LittleEndian, byte(fillchar))
+		}
+	} else {
+		return bytes.NewBufferString("")
+	}
+	binary.Write(buffer, binary.LittleEndian, dataCamp1.Bytes())
+
+	return buffer
+
+}
+
+// EPM205 打印机 解析P命令 存为整数
+func ModifyDataSimple(s string) string {
+	if !strings.Contains(s, "EPM205") {
+		return s
+	}
+	lines := strings.Split(s, "\r\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, "P,") {
+			// 解析line
+			parts := strings.Split(line, ",")
+			if len(parts) == 3 {
+				// parts[0]是"P"，parts[1]和parts[2]是数字字符串（可能含小数）
+				num1, err1 := strconv.ParseFloat(parts[1], 64)
+				num2, err2 := strconv.ParseFloat(parts[2], 64)
+				if err1 == nil && err2 == nil {
+					int1 := int(num1) // 截断小数
+					int2 := int(num2)
+					lines[i] = fmt.Sprintf("P,%d,%d", int1, int2)
+				}
+				// 如果解析失败，保留原行
+			}
+			break
+
+		}
+	}
+	return strings.Join(lines, "\r\n")
 }

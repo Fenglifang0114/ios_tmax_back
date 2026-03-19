@@ -3317,6 +3317,11 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		addrInLoop += 4096
 	}
+
+	respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(10), ScaleId: c.Id}
+	result, _ := json.Marshal(respMsg100)
+	c.client.sendCh <- result
+	time.Sleep(50 * time.Millisecond)
 	//开始写
 	//开辟4K的空间来存储校验和尾巴，尾巴为8个字节，前四个字节为bin长度，后四个字节为固定的 5a a5 a5 5a
 	loopDataLen := 4096
@@ -3346,6 +3351,16 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	packetCount := len(binDataAdd) / DATA_LENGTH_256_TMAX
 	println(packetCount)
 
+	process := 1.0
+
+	if packetCount > 0 {
+		// 浮点数除法，得到小数结果
+		process = 85.0 / float64(packetCount)
+		if process < 0.01 {
+			process = 0.01
+		}
+	}
+
 	l.Log.Debug("send data package to scale")
 	loopAddr := addr
 	for i := 0; i < packetCount; i++ {
@@ -3367,6 +3382,17 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 		}
 		loopAddr += DATA_LENGTH_256_TMAX
+
+		totalProcessFloat := 11.0 + float64(i)*process
+		totalProcessInt := int(math.Round(totalProcessFloat))
+		if totalProcessInt > 95 {
+			totalProcessInt = 95
+		}
+
+		respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(totalProcessInt), ScaleId: c.Id}
+		result, _ := json.Marshal(respMsg100)
+		c.client.sendCh <- result
+		time.Sleep(50 * time.Millisecond)
 	}
 	//写最后4K
 	lastLoop := len(last4kByte) / DATA_LENGTH_256_TMAX
@@ -3499,10 +3525,27 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 			addrInLoop += 4096
 		}
+		//擦除完成后送进度
+		respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(10), ScaleId: c.Id}
+		result, _ := json.Marshal(respMsg100)
+		c.client.sendCh <- result
+		time.Sleep(50 * time.Millisecond)
+
 		packetCount := len(data) / DATA_LENGTH_256_TMAX
 		if len(data)%DATA_LENGTH_256_TMAX != 0 {
 			packetCount += 1
 		}
+
+		process := 1.0
+
+		if packetCount > 0 {
+			// 浮点数除法，得到小数结果
+			process = 85.0 / float64(packetCount)
+			if process < 0.01 {
+				process = 0.01
+			}
+		}
+
 		l.Log.Debug("send data package to scale")
 		for i := 0; i < packetCount; i++ {
 			// 计算本包数据
@@ -3523,6 +3566,17 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 			}
 			addr += DATA_LENGTH_256_TMAX
+
+			totalProcessFloat := 11.0 + float64(i)*process
+			totalProcessInt := int(math.Round(totalProcessFloat))
+			if totalProcessInt > 95 {
+				totalProcessInt = 95
+			}
+
+			respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(totalProcessInt), ScaleId: c.Id}
+			result, _ := json.Marshal(respMsg100)
+			c.client.sendCh <- result
+			time.Sleep(50 * time.Millisecond)
 		}
 		l.Log.Info("send bin ok")
 	} else {

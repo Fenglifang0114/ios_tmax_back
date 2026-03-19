@@ -1132,9 +1132,9 @@ func handleNetState(conns *[]*ScaleConnMedia) (netsNotInUse []string) {
 			if conn.scale.MyNet.conn == nil {
 				if (*conns)[i].IsOnline {
 					(*conns)[i].IsOnline = false
-					fmt.Println("false" + (*conns)[i].scale.MyNet.ip)
+					// fmt.Println("false" + (*conns)[i].scale.MyNet.ip)
 				}
-				fmt.Println("false" + (*conns)[i].scale.MyNet.ip)
+				// fmt.Println("false" + (*conns)[i].scale.MyNet.ip)
 				continue
 
 			}
@@ -1142,9 +1142,9 @@ func handleNetState(conns *[]*ScaleConnMedia) (netsNotInUse []string) {
 			if conn.scale.MyNet.conn != nil && conn.scale.MyNet.isAlive {
 				if !(*conns)[i].IsOnline {
 					(*conns)[i].IsOnline = true
-					fmt.Println("true" + (*conns)[i].scale.MyNet.ip)
+					// fmt.Println("true" + (*conns)[i].scale.MyNet.ip)
 				}
-				fmt.Println("true" + (*conns)[i].scale.MyNet.ip)
+				// fmt.Println("true" + (*conns)[i].scale.MyNet.ip)
 				continue
 
 			}
