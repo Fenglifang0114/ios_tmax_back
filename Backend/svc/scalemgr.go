@@ -295,6 +295,12 @@ func init() {
 	createGetOutputPortNotifier := getOutputPortNotifier{}
 	getOutputPort.Register(createGetOutputPortNotifier)
 
+	createGetInputPortNotifier := getInputPortNotifier{}
+	getInputPort.Register(createGetInputPortNotifier)
+
+	createUpdateInputPortNotifier := updateInputPortNotifier{}
+	updateInputPort.Register(createUpdateInputPortNotifier)
+
 	createDraftFmaWgtRecNotifier := addDraftFmaWgtRecNotifier{}
 	addDraftFmaWgtRec.Register(createDraftFmaWgtRecNotifier)
 
@@ -636,6 +642,10 @@ type unsealByMasterKeyNotifier struct{}
 type readOutputPortNotifier struct{}
 
 type openOutputPortNotifier struct{}
+
+type getInputPortNotifier struct{}
+
+type updateInputPortNotifier struct{}
 
 func (p portListedNotifier) Handle() {
 	// Do something for this event

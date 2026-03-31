@@ -2508,3 +2508,45 @@ func (u UpdateOutputPort) Trigger(mgr *SrvMgr, payload []ReqUpdateOutputPort) {
 		go handler.Handle(mgr, payload)
 	}
 }
+
+// 获取输入端口状态
+var getInputPort GetInputPort
+
+type GetInputPort struct {
+	handlers []interface{ Handle(srvMgr *SrvMgr) }
+}
+
+// Register adds an event handler for this event
+func (u *GetInputPort) Register(handler interface{ Handle(payload *SrvMgr) }) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u GetInputPort) Trigger(payload *SrvMgr) {
+	for _, handler := range u.handlers {
+		go handler.Handle(payload)
+	}
+}
+
+// 更新输入端口状态
+var updateInputPort UpdateInputPort
+
+type UpdateInputPort struct {
+	handlers []interface {
+		Handle(mgr *SrvMgr, payload []ReqUpdateInputPort)
+	}
+}
+
+// Register adds an event handler for this event
+func (u *UpdateInputPort) Register(handler interface {
+	Handle(*SrvMgr, []ReqUpdateInputPort)
+}) {
+	u.handlers = append(u.handlers, handler)
+}
+
+// Trigger sends out an event with the payload
+func (u UpdateInputPort) Trigger(mgr *SrvMgr, payload []ReqUpdateInputPort) {
+	for _, handler := range u.handlers {
+		go handler.Handle(mgr, payload)
+	}
+}

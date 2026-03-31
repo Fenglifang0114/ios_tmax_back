@@ -319,6 +319,7 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 		&FormulaWgtRecDetail{},
 		&SetAutoNext{},
 		&SetOutputPort{},
+		&SetInputPort{},
 		&DrafFmaWgtRecHeader{},
 		&DrafFmaWgtRecDetail{},
 		&SetReportPrint{},
@@ -398,6 +399,11 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 
 	//新增设置 配方秤输出口设置
 	if err := info.CreateSetOutputPort(); err != nil {
+		return nil, err
+	}
+
+	//新增设置 配方秤输入口设置
+	if err := info.CreateSetInputPort(); err != nil {
 		return nil, err
 	}
 
@@ -1990,6 +1996,14 @@ type SetOutputPort struct {
 	UpdateAt  time.Time
 }
 
+// 配方秤中的输入口设置
+type SetInputPort struct {
+	RecID    int    `gorm:"primaryKey;autoincrement;not null"`
+	Port     int    `gorm:"not null"`                //0-3   输入口
+	Btn      string `gorm:"default:'None';not null"` // 按钮类型
+	UpdateAt time.Time
+}
+
 func (d *DbFormulaInfo) CreateSetAutoNext() error {
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -2664,6 +2678,113 @@ func (d *DbFormulaInfo) UpdateSetOutputPort(ports []SetOutputPort) error {
 		}
 	}
 
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// //////// 配方秤输入口设置的增删改查
+func (d *DbFormulaInfo) CreateSetInputPort() error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// 检查 SetInputPort 表中是否有数据
+	var count int64
+	if err := tx.Model(&SetInputPort{}).Count(&count).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 若没有数据，则插入一条
+	if count == 0 {
+		for i := 1; i <= 4; i++ {
+			if err := tx.Create(&SetInputPort{
+				Port:     i,
+				Btn:      "None",
+				UpdateAt: time.Now(),
+			}).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+	// 提交事务
+	return tx.Commit().Error
+}
+
+// GetSetInputPort
+func (d *DbFormulaInfo) GetSetInputPort() ([]SetInputPort, error) {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+
+	// 查询 SetInputPort 表中的所有数据
+	var ports []SetInputPort
+	if err := db.Find(&ports).Error; err != nil {
+		return nil, err
+	}
+	return ports, nil
+}
+
+// SetInputPort
+func (d *DbFormulaInfo) UpdateSetInputPort(ports []SetInputPort) error {
+	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
+	if err != nil {
+		return err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	if sqlDB != nil {
+		defer sqlDB.Close()
+	}
+	// 开启事务
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	for i := 0; i < len(ports); i++ {
+		// 检查记录是否存在
+		var count int64
+		if err := tx.Model(&SetInputPort{}).Where("port = ?", ports[i].Port).Count(&count).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+
+		if count > 0 {
+			// 存在则更新
+			if err := tx.Model(&SetInputPort{}).Where("port = ?", ports[i].Port).Updates(map[string]interface{}{
+				"btn":       ports[i].Btn,
+				"update_at": time.Now(),
+			}).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
 	// 提交事务
 	return tx.Commit().Error
 }

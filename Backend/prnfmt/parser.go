@@ -118,10 +118,16 @@ func ParserFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.Buf
 		dataCamp.Write(ESC_CHANGE_EPL_205)
 	}
 
+	// 解析TSC指令
+
 	if printerModel == "ZEBRA" {
 		formatbuf = ParseEplZebraLines(buff, dataCamp, lastVarPos)
 	} else if printerModel == "LP50" {
 		formatbuf = ParseEplLp50Lines(buff, dataCamp, lastVarPos)
+	} else if printerModel == "EPM205" {
+		formatbuf = ParseEplLines(buff, dataCamp, lastVarPos)
+	} else if printerModel == "TSC" {
+		formatbuf = ParseTscLines(buff, dataCamp, lastVarPos)
 	} else {
 		formatbuf = ParseEplLines(buff, dataCamp, lastVarPos)
 	}

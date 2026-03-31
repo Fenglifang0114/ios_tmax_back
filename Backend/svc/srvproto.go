@@ -117,6 +117,9 @@ const (
 	REQ_GET_OUTPUT_PORT      ReqType = "get_output_port"      //获取输出端口状态
 	REQ_UPDATE_OUTPUT_PORT   ReqType = "update_output_port"   //更新输出端口状态
 
+	REQ_GET_INPUT_PORT    ReqType = "get_input_port"    //获取输入端口状态
+	REQ_UPDATE_INPUT_PORT ReqType = "update_input_port" //更新输入端口状态
+
 	REQ_GET_FORMULA_BY_BARCODE   ReqType = "get_formula_by_barcode"   //根据条码获取配方信息
 	REQ_CHECK_FMA_ID_AND_BARCODE ReqType = "check_fma_id_and_barcode" //检查配方ID和条码是否匹配
 
@@ -323,6 +326,11 @@ type ReqUpdateOutputPort struct {
 	StartTime int
 	EndValue  float64
 	Remark    string
+}
+
+type ReqUpdateInputPort struct {
+	Port int
+	Btn  string
 }
 
 type ReqDeleteDraftFmaWgtRec struct {
@@ -822,6 +830,7 @@ const (
 	SCALE_MGR_RESP_WIFI_PWD_LIST     ScaleMgrRespMsgType = "resp_wifi_pwd_list"     // with response of ScalesListMsg
 	SCALE_MGR_RESP_WIFI_PWD_ADD      ScaleMgrRespMsgType = "resp_wifi_pwd_add"      // with response
 	SCALE_MGR_RESP_SCALE_ONLINE      ScaleMgrRespMsgType = "resp_scale_online"      //回复秤的状态
+	SCALE_MGR_RESP_SCALE_INPUT       ScaleMgrRespMsgType = "resp_scale_input"       //回复秤输入口按下的状态
 	//下面是添加给小服务的
 	SCALE_MGR_RESP_SNED_TO_SRV1       ScaleMgrRespMsgType = "resp_send_to_srv1"       // with response
 	SCALE_MGR_RESP_GET_SCALE_SRV_LIST ScaleMgrRespMsgType = "resp_get_scale_srv_list" // with response
@@ -875,10 +884,14 @@ const (
 	SCALE_MGR_RESP_KILL_BOOT_COMMANDER           ScaleMgrRespMsgType = "resp_kill_boot_commander" // without parameter
 	SCALE_MGR_RESP_GET_AUTO_NEXT                 ScaleMgrRespMsgType = "resp_get_auto_next"
 	SCALE_MGR_RESP_UPDATE_AUTO_NEXT              ScaleMgrRespMsgType = "resp_update_auto_next"
-	SCALE_MGR_RESP_GET_OUTPUT_PORT               ScaleMgrRespMsgType = "resp_get_output_port"         //获取输出端口状态
-	SCALE_MGR_RESP_UPDATE_OUTPUT_PORT            ScaleMgrRespMsgType = "resp_update_output_port"      //更新输出端口状态
-	SCALE_MGR_RESP_UPDATE_SET_REPORT_PRINT       ScaleMgrRespMsgType = "resp_update_set_report_print" //更新报表打印设置
-	SCALE_MGR_RESP_GET_SET_REPORT_PRINT          ScaleMgrRespMsgType = "resp_get_set_report_print"
+	SCALE_MGR_RESP_GET_OUTPUT_PORT               ScaleMgrRespMsgType = "resp_get_output_port"    //获取输出端口状态
+	SCALE_MGR_RESP_UPDATE_OUTPUT_PORT            ScaleMgrRespMsgType = "resp_update_output_port" //更新输出端口状态
+
+	SCALE_MGR_RESP_UPDATE_INPUT_PORT ScaleMgrRespMsgType = "resp_update_input_port" //更新输入端口状态
+	SCALE_MGR_RESP_GET_INPUT_PORT    ScaleMgrRespMsgType = "resp_get_input_port"    //获取输入端口状态
+
+	SCALE_MGR_RESP_UPDATE_SET_REPORT_PRINT ScaleMgrRespMsgType = "resp_update_set_report_print" //更新报表打印设置
+	SCALE_MGR_RESP_GET_SET_REPORT_PRINT    ScaleMgrRespMsgType = "resp_get_set_report_print"
 
 	SCALE_MGR_RESP_UPLOAD_SERVER_EDIT ScaleMgrRespMsgType = "resp_upload_server_edit" //编辑上传配方称重记录服务器
 	SCALE_MGR_RESP_UPLOAD_SERVER_GET  ScaleMgrRespMsgType = "resp_upload_server_get"  //获取上传配方称重记录服务器

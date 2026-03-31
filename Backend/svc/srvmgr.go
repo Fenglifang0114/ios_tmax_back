@@ -86,6 +86,13 @@ type SrvMgr struct {
 	// 串口数据通道
 	serialDataChan chan *SerialDataMessage
 
+	//串口分析接收的输入状态
+	inputBuffer chan []byte // 全局或函数内维持的缓冲区
+
+	parseBuffer []byte     // 用于累积数据的缓冲区
+	parseMu     sync.Mutex // 保护 parseBuffer（如果可能被多个 goroutine 访问）
+	lastStates  [4]bool    // 上次开关状态，用于检测下降沿
+
 	// 串口状态
 	serialStatus struct {
 		IsOpen        bool
@@ -208,6 +215,10 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 		serialHandlers: make(map[string]func(*SerialDataMessage)),
 		configPath:     configPath,
 		autoOpenSerial: true,
+		lastStates:     [4]bool{false, false, false, false},
+		parseBuffer:    make([]byte, 2048),
+		parseMu:        sync.Mutex{},
+		inputBuffer:    make(chan []byte, 1024),
 	}
 
 	// 加载配置
@@ -217,6 +228,11 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	// 设置串口事件监听
 	sm.setupSerialEventListeners()
+
+	sm.StartParsing()
+
+	// 启动查询协程
+	go sm.queryLoop()
 
 	// 启动串口管理协程
 	go sm.serialManager()
@@ -776,6 +792,18 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			l.Log.Error(err)
 		} else {
 			updateOutputPort.Trigger(scaleMgr.srvMgr, data)
+		}
+
+	case REQ_GET_INPUT_PORT:
+		getInputPort.Trigger(scaleMgr.srvMgr)
+
+	case REQ_UPDATE_INPUT_PORT:
+		jsonStr := req.ReqData
+		var data []ReqUpdateInputPort
+		if err := json.UnmarshalFromString(jsonStr, &data); err != nil {
+			l.Log.Error(err)
+		} else {
+			updateInputPort.Trigger(scaleMgr.srvMgr, data)
 		}
 
 	case REQ_GET_AUTO_NEXT:
@@ -4773,5 +4801,43 @@ func (p updateOutputPortNotifier) Handle(mgr *SrvMgr, payload []ReqUpdateOutputP
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_OUTPUT_PORT, MsgBody: err.Error()}
 	}
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_OUTPUT_PORT, MsgBody: "ok"}
+	//TODO: 增加日志记录
+}
+
+// 获取输入端口设置
+func (p getInputPortNotifier) Handle(mgr *SrvMgr) {
+	// Do something for this event
+	l.Log.Debug("Handle getInputPortNotifier called")
+	formulaRecProvider := mgr.formulaPd
+	rec, _ := formulaRecProvider.GetSetInput()
+
+	var typesStr string
+	var err error
+	if typesStr, err = json.MarshalToString(rec); err != nil {
+		l.Log.Error(err)
+
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_INPUT_PORT, MsgBody: typesStr}
+}
+
+// 更新输入端口设置
+func (p updateInputPortNotifier) Handle(mgr *SrvMgr, payload []ReqUpdateInputPort) {
+	// Do something for this event
+	l.Log.Debug("Handle updateInputPortNotifier called")
+	portList := payload
+	setPortList := []SetInputPort{}
+
+	for i := 0; i < len(portList); i++ {
+		setPortList = append(setPortList, SetInputPort{
+			Port: portList[i].Port,
+			Btn:  portList[i].Btn,
+		})
+	}
+
+	if err := mgr.formulaPd.UpdateSetInput(setPortList); err != nil {
+		l.Log.Error(err)
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_INPUT_PORT, MsgBody: err.Error()}
+	}
+	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_INPUT_PORT, MsgBody: "ok"}
 	//TODO: 增加日志记录
 }

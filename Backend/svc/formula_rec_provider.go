@@ -336,3 +336,13 @@ func (p *FormulaRecProvider) UpdateSetOutput(recs []SetOutputPort) error {
 func (p *FormulaRecProvider) GetSetOutput() ([]SetOutputPort, error) {
 	return p.infoPb.GetSetOutputPort()
 }
+
+// 获取配方秤中的输入设置
+func (p *FormulaRecProvider) GetSetInput() ([]SetInputPort, error) {
+	return p.infoPb.GetSetInputPort()
+}
+
+// 更新配方秤中的输入设置
+func (p *FormulaRecProvider) UpdateSetInput(recs []SetInputPort) error {
+	return p.infoPb.UpdateSetInputPort(recs)
+}

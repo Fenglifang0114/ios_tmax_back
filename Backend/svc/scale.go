@@ -3321,7 +3321,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(10), ScaleId: c.Id}
 	result, _ := json.Marshal(respMsg100)
 	c.client.sendCh <- result
-	time.Sleep(50 * time.Millisecond)
+
 	//开始写
 	//开辟4K的空间来存储校验和尾巴，尾巴为8个字节，前四个字节为bin长度，后四个字节为固定的 5a a5 a5 5a
 	loopDataLen := 4096
@@ -3392,7 +3392,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(totalProcessInt), ScaleId: c.Id}
 		result, _ := json.Marshal(respMsg100)
 		c.client.sendCh <- result
-		time.Sleep(50 * time.Millisecond)
+
 	}
 	//写最后4K
 	lastLoop := len(last4kByte) / DATA_LENGTH_256_TMAX
@@ -3529,7 +3529,6 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(10), ScaleId: c.Id}
 		result, _ := json.Marshal(respMsg100)
 		c.client.sendCh <- result
-		time.Sleep(50 * time.Millisecond)
 
 		packetCount := len(data) / DATA_LENGTH_256_TMAX
 		if len(data)%DATA_LENGTH_256_TMAX != 0 {
@@ -3576,7 +3575,7 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(totalProcessInt), ScaleId: c.Id}
 			result, _ := json.Marshal(respMsg100)
 			c.client.sendCh <- result
-			time.Sleep(50 * time.Millisecond)
+
 		}
 		l.Log.Info("send bin ok")
 	} else {

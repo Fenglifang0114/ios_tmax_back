@@ -427,46 +427,6 @@ func NewSerialPort(configPath string) *SerialPort {
 	return sp
 }
 
-// NewSerialPortWithConfig 使用指定配置创建串口控制器
-// func NewSerialPortWithConfig(config *SerialConfig, packetConfig *PacketConfig) *SerialPort {
-// 	if config == nil {
-// 		config = &SerialConfig{
-// 			Name:        "Com3",
-// 			BaudRate:    57600,
-// 			DataBits:    8,
-// 			StopBits:    1,
-// 			Parity:      "N",
-// 			ReadTimeout: DefaultReadTimeout,
-// 		}
-// 	}
-
-// 	if packetConfig == nil {
-// 		packetConfig = &PacketConfig{
-// 			Mode:         "none",
-// 			MaxPacketLen: DefaultMaxPacketLen,
-// 		}
-// 	}
-
-// 	sp := &SerialPort{
-// 		config:         config,
-// 		packetConfig:   packetConfig,
-// 		state:          StateClosed,
-// 		quit:           make(chan struct{}),
-// 		readDone:       make(chan struct{}),
-// 		writeDone:      make(chan struct{}),
-// 		readChan:       make(chan []byte, 100),
-// 		packetChan:     make(chan []byte, 100),
-// 		eventCallbacks: make([]EventCallback, 0),
-// 		configPath:     "config.yaml",
-// 		debug:          false,
-// 	}
-
-// 	// 初始化包处理器
-// 	sp.packetHandler = sp.newPacketHandler(packetConfig)
-
-// 	return sp
-// }
-
 // Open 打开串口
 func (sp *SerialPort) Open() error {
 	sp.stateMu.Lock()
@@ -743,6 +703,14 @@ func (sp *SerialPort) packetLoop() {
 }
 
 // SetConfigPath 设置配置文件路径
+func (sp *SerialPort) sendGetInput() error {
+	if _, err := sp.WriteHex("01020000000479c9"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetConfigPath 设置配置文件路径
 func (sp *SerialPort) SetConfigPath(path string) {
 	sp.configPath = path
 }
@@ -850,35 +818,6 @@ CLEAN_DONE:
 
 	return nil
 }
-
-// LoadConfig 从文件加载配置
-// func (sp *SerialPort) LoadConfig(path string) error {
-// 	if path != "" {
-// 		sp.configPath = path
-// 	}
-
-// 	viper.SetConfigFile(sp.configPath)
-// 	viper.SetConfigType("yaml")
-
-// 	if err := viper.ReadInConfig(); err != nil {
-// 		return fmt.Errorf("failed to read config file: %v", err)
-// 	}
-
-// 	var appConfig struct {
-// 		Serial SerialConfig `mapstructure:"serial"`
-// 		Packet PacketConfig `mapstructure:"packet"`
-// 	}
-
-// 	if err := viper.Unmarshal(&appConfig); err != nil {
-// 		return fmt.Errorf("failed to unmarshal config: %v", err)
-// 	}
-
-// 	sp.config = &appConfig.Serial
-// 	sp.packetConfig = &appConfig.Packet
-// 	sp.packetHandler = sp.newPacketHandler(sp.packetConfig)
-
-// 	return nil
-// }
 
 func (sp *SerialPort) LoadConfig(path string) error {
 	if path != "" {
@@ -1071,6 +1010,9 @@ func (sm *SrvMgr) setupSerialEventListeners() {
 					PortName:  sm.serialPort.GetConfig().Name,
 					HexDump:   hex.EncodeToString(rawData),
 				}
+				sm.inputBuffer <- rawData
+				// 解析输入状态
+
 			}
 
 		case EventPacketReceived:
@@ -1089,6 +1031,46 @@ func (sm *SrvMgr) setupSerialEventListeners() {
 			}
 		}
 	})
+}
+
+// 启动消费者 goroutine
+func (sm *SrvMgr) StartParsing() {
+	go sm.consumeInputBuffer()
+}
+
+func (sm *SrvMgr) consumeInputBuffer() {
+
+	for {
+		select {
+		case data, ok := <-sm.inputBuffer:
+			if !ok {
+				// 通道已关闭，退出
+				return
+			}
+			// 将收到的数据追加到缓冲区
+			sm.parseMu.Lock()
+			sm.parseBuffer = append(sm.parseBuffer, data...)
+			sm.parseMu.Unlock()
+
+			// 尝试从缓冲区中解析所有完整帧
+			sm.parseFrames()
+
+			// 可选：如果希望定时清理缓冲区或处理超时，可以加一个 time.After
+		}
+	}
+}
+
+// 查询协程
+func (sm *SrvMgr) queryLoop() {
+	for {
+		cmdWithCRC := []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x04, 0x79, 0xc9}
+		_, err := sm.WriteSerial(cmdWithCRC)
+		if err != nil {
+			fmt.Printf("写入串口失败: %v\n", err)
+			continue
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 // 注册默认处理器
@@ -1332,6 +1314,7 @@ func (sm *SrvMgr) dispatchSerialData(msg *SerialDataMessage) {
 	for _, handler := range handlers {
 		go handler(msg)
 	}
+
 }
 
 // ========== 对外提供的串口操作方法 ==========
@@ -1647,6 +1630,10 @@ func (ph *PacketHandler) getModbusPacketLength(functionCode byte, buffer []byte)
 	case 0x05:
 		// 写单个线圈/寄存器的请求或响应：固定8字节
 		return 8
+
+	case 0x02:
+
+		return 6
 
 	// case 0x0F, 0x10:
 	// 	// 写多个线圈/寄存器的请求：需要第6字节是数据长度
