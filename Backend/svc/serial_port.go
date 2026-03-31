@@ -1062,11 +1062,18 @@ func (sm *SrvMgr) consumeInputBuffer() {
 
 // 查询协程
 func (sm *SrvMgr) queryLoop() {
+
+	if !sm.autoOpenSerial {
+		return
+	}
+
 	for {
 		cmdWithCRC := []byte{0x01, 0x02, 0x00, 0x00, 0x00, 0x04, 0x79, 0xc9}
+
 		_, err := sm.WriteSerial(cmdWithCRC)
 		if err != nil {
 			fmt.Printf("写入串口失败: %v\n", err)
+			time.Sleep(1000 * time.Millisecond)
 			continue
 		}
 		time.Sleep(100 * time.Millisecond)
