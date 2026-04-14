@@ -252,12 +252,10 @@ func procDelRec(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	parts := strings.Split(req.ReqData, ",")
 	if id, err = strconv.ParseUint(parts[0], 10, 64); err != nil {
-		l.Log.Errorf(err.Error())
 		resp := &ScaleRespMsg{MsgType: m.DEL_REC_RESP, MsgBody: err.Error(), ScaleId: scale.Id}
 		result, _ := json.Marshal(resp)
 		scale.client.sendCh <- result
 	} else if scaleMode, err = strconv.ParseUint(parts[1], 10, 64); err != nil {
-		l.Log.Errorf(err.Error())
 		resp := &ScaleRespMsg{MsgType: m.DEL_REC_RESP, MsgBody: err.Error(), ScaleId: scale.Id}
 		result, _ := json.Marshal(resp)
 		scale.client.sendCh <- result

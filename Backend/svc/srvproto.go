@@ -549,6 +549,7 @@ type ReqExportLog struct {
 	Direction   string
 	Search      LogQuery
 	Translation map[string]string
+	Headers     []string
 }
 
 type ReqGetLog struct {

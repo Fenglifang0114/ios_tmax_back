@@ -139,14 +139,14 @@ func pickerFnTmax(inData []byte, dataLen int) (packOffset uint, packLen uint, sh
 	}
 }
 
-func findLfCrPos(buf []byte, offset int, len int) int {
+func findLfCrPos(buf []byte, offset int, dataLen int) int {
 	foundPos := -1
 
-	if len <= 2 { // \r\n
+	if dataLen <= 2 { // \r\n
 		return -1
 	}
 
-	for pos := offset; pos < len-1; pos++ {
+	for pos := offset; pos < dataLen-1; pos++ {
 		if buf[pos] == 0x0d && buf[pos+1] == 0x0a { // find a correct response
 			foundPos = pos
 			break
@@ -182,8 +182,8 @@ func pickerFnAutoWeight(inData []byte, dataLen int) (packOffset uint, packLen ui
 	return 0, 0, 0
 }
 
-func findHeadPos(buf []byte, offset int, len int) int {
-	foundPos := bytes.Index(buf[offset:], []byte{CMD_HEAD1, CMD_HEAD2})
+func findHeadPos(buf []byte, offset int, dataLen int) int {
+	foundPos := bytes.Index(buf[offset:dataLen], []byte{CMD_HEAD1, CMD_HEAD2})
 	if foundPos == -1 {
 		return -1
 	}
@@ -191,13 +191,13 @@ func findHeadPos(buf []byte, offset int, len int) int {
 	return foundPos + offset
 }
 
-func verifyTail(buf []byte, headPos int, len int) (int, State) {
-	if len < headPos+4 { // to prevent index out of bounds
+func verifyTail(buf []byte, headPos int, dataLen int) (int, State) {
+	if dataLen < headPos+4 { // to prevent index out of bounds
 		return -1, NOT_ENOUGH_DATA
 	}
 
 	end := headPos + int(binary.BigEndian.Uint16(buf[headPos+2:headPos+2+2])) + HEAD_SIZE
-	if end > len { // not enough data entering
+	if end > dataLen { // not enough data entering
 		return -1, NOT_ENOUGH_DATA
 	}
 	if !bytes.Equal(buf[end-TAIL_SIZE:end], []byte{CMD_TAIL1, CMD_TAIL2}) {

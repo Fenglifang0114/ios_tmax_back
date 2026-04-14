@@ -1337,7 +1337,7 @@ func (sm *SrvMgr) OpenSerial() error {
 
 	result := <-resp
 	if result.Error != "" {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 	return nil
 }
@@ -1353,7 +1353,7 @@ func (sm *SrvMgr) CloseSerial() error {
 
 	result := <-resp
 	if result.Error != "" {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 	return nil
 }
@@ -1369,7 +1369,7 @@ func (sm *SrvMgr) RestartSerial() error {
 
 	result := <-resp
 	if result.Error != "" {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 	return nil
 }
@@ -1386,7 +1386,7 @@ func (sm *SrvMgr) WriteSerial(data []byte) (int, error) {
 
 	result := <-resp
 	if result.Error != "" {
-		return 0, fmt.Errorf(result.Error)
+		return 0, fmt.Errorf("%s", result.Error)
 	}
 
 	if writeResult, ok := result.Data.(map[string]interface{}); ok {
@@ -1409,7 +1409,7 @@ func (sm *SrvMgr) WriteSerialString(str string) (int, error) {
 
 	result := <-resp
 	if result.Error != "" {
-		return 0, fmt.Errorf(result.Error)
+		return 0, fmt.Errorf("%s", result.Error)
 	}
 
 	if writeResult, ok := result.Data.(map[string]interface{}); ok {
@@ -1432,7 +1432,7 @@ func (sm *SrvMgr) WriteSerialHex(hexStr string) (int, error) {
 
 	result := <-resp
 	if result.Error != "" {
-		return 0, fmt.Errorf(result.Error)
+		return 0, fmt.Errorf("%s", result.Error)
 	}
 
 	if writeResult, ok := result.Data.(map[string]interface{}); ok {
@@ -1489,7 +1489,7 @@ func (sm *SrvMgr) GetSerialStatus() (map[string]interface{}, error) {
 
 	result := <-resp
 	if result.Error != "" {
-		return nil, fmt.Errorf(result.Error)
+		return nil, fmt.Errorf("%s", result.Error)
 	}
 
 	if status, ok := result.Data.(map[string]interface{}); ok {
@@ -1510,7 +1510,7 @@ func (sm *SrvMgr) UpdateSerialConfig(config *SerialConfig) error {
 
 	result := <-resp
 	if result.Error != "" {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 	return nil
 }
@@ -1526,7 +1526,7 @@ func (sm *SrvMgr) ReloadSerialConfig() error {
 
 	result := <-resp
 	if result.Error != "" {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 	return nil
 }
@@ -1542,7 +1542,7 @@ func (sm *SrvMgr) ClearSerialBuffers() error {
 
 	result := <-resp
 	if result.Error != "" {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 	return nil
 }

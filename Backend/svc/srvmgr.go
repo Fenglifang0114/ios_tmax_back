@@ -245,7 +245,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	// 如果配置了自动打开，则打开串口
 
-	l.Log.Debugf("sm.autoOpenSerial:%s\n", sm.autoOpenSerial)
+	l.Log.Debugf("sm.autoOpenSerial:%v\n", sm.autoOpenSerial)
 	if sm.autoOpenSerial {
 		go func() {
 			time.Sleep(1 * time.Second) // 等待系统初始化完成
@@ -2009,19 +2009,22 @@ func IsServiceInstalled(serviceName string) bool {
 func IsServiceRunning(serviceName string) bool {
 	m, err := mgr.Connect()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("mgr.Connect error: %v", err)
+		return false
 	}
 	defer m.Disconnect()
 
 	s, err := m.OpenService(serviceName)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("OpenService error: %v", err)
+		return false
 	}
 	defer s.Close()
 
 	status, err := s.Query()
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Query error: %v", err)
+		return false
 	}
 
 	return status.State == svc.Running
@@ -4420,7 +4423,7 @@ func (p exportSysLogNotifier) Handle(mgr *SrvMgr, payload ReqExportLog) {
 	fmt.Print(len(logs))
 
 	// 导出日志到文件
-	err = ExportSysLogsToFile(logs, payload.FilePath, trans)
+	err = ExportSysLogsToFile(logs, payload.FilePath, trans, payload.Headers)
 	if err != nil {
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SYS_LOG, MsgBody: "fail,export sys log failed"}
@@ -4449,7 +4452,7 @@ func (p exportCalLogNotifier) Handle(mgr *SrvMgr, payload ReqExportLog) {
 	fmt.Print(len(logs))
 
 	// 导出日志到文件
-	err = ExportCalLogsToFile(logs, payload.FilePath, payload.Translation)
+	err = ExportCalLogsToFile(logs, payload.FilePath, payload.Translation, payload.Headers)
 	if err != nil {
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_CAL_LOG, MsgBody: "fail,export calibration log failed"}
@@ -4475,7 +4478,7 @@ func (p exportScaleLogNotifier) Handle(mgr *SrvMgr, payload ReqExportLog) {
 	fmt.Print(len(logs))
 
 	// 导出日志到文件
-	err = ExportWgtLogsToFile(logs, payload.FilePath, trans)
+	err = ExportWgtLogsToFile(logs, payload.FilePath, trans, payload.Headers)
 	if err != nil {
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_EXPORT_SCALE_LOG, MsgBody: "fail,export sys log failed"}

@@ -420,19 +420,19 @@ func (c *Scale) GetRecs(scaleMode string) ([]ScaleRec, error) {
 		}
 
 		if scaleModeInt == NORMAL_WEIGHT_MODE {
-			return c.scaleMgr.recPb.GetRecsList(*c, scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
+			return c.scaleMgr.recPb.GetRecsList(c, scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
 		}
 		if scaleModeInt == CHECK_WEIGHT_MODE {
-			return c.scaleMgr.recCheckWeigherPb.GetRecsList(*c, scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
+			return c.scaleMgr.recCheckWeigherPb.GetRecsList(c, scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
 		}
 		if scaleModeInt == TACKE_IN_MODE {
-			return c.scaleMgr.recTakeInPb.GetRecsList(*c, scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
+			return c.scaleMgr.recTakeInPb.GetRecsList(c, scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
 		}
 		if scaleModeInt == TACKE_OUT_MODE {
-			return c.scaleMgr.recTakeOutPb.GetRecsList(*c, scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
+			return c.scaleMgr.recTakeOutPb.GetRecsList(c, scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
 		}
 	}
-	return []ScaleRec{}, nil // c.scaleMgr.recPb.GetRecsList(*c, scaleModel, scaleSn, scaleName)
+	return []ScaleRec{}, nil // c.scaleMgr.recPb.GetRecsList(c, scaleModel, scaleSn, scaleName)
 }
 
 func (c *Scale) GetWgtRecs(scaleMode string, offset int, limit int) ([]ScaleRec, error) {
@@ -448,19 +448,19 @@ func (c *Scale) GetWgtRecs(scaleMode string, offset int, limit int) ([]ScaleRec,
 		scaleName = result[3]
 
 		if scaleModeInt == NORMAL_WEIGHT_MODE {
-			return c.scaleMgr.recPb.GetWgtRecsList(*c, scaleModel, scaleSn, scaleName, offset, limit)
+			return c.scaleMgr.recPb.GetWgtRecsList(c, scaleModel, scaleSn, scaleName, offset, limit)
 		}
 		if scaleModeInt == CHECK_WEIGHT_MODE {
-			return c.scaleMgr.recCheckWeigherPb.GetWgtRecsList(*c, scaleModel, scaleSn, scaleName, offset, limit)
+			return c.scaleMgr.recCheckWeigherPb.GetWgtRecsList(c, scaleModel, scaleSn, scaleName, offset, limit)
 		}
 		if scaleModeInt == TACKE_IN_MODE {
-			return c.scaleMgr.recTakeInPb.GetWgtRecsList(*c, scaleModel, scaleSn, scaleName, offset, limit)
+			return c.scaleMgr.recTakeInPb.GetWgtRecsList(c, scaleModel, scaleSn, scaleName, offset, limit)
 		}
 		if scaleModeInt == TACKE_OUT_MODE {
-			return c.scaleMgr.recTakeOutPb.GetWgtRecsList(*c, scaleModel, scaleSn, scaleName, offset, limit)
+			return c.scaleMgr.recTakeOutPb.GetWgtRecsList(c, scaleModel, scaleSn, scaleName, offset, limit)
 		}
 	}
-	return []ScaleRec{}, nil // c.scaleMgr.recPb.GetRecsList(*c, scaleModel, scaleSn, scaleName)
+	return []ScaleRec{}, nil // c.scaleMgr.recPb.GetRecsList(c, scaleModel, scaleSn, scaleName)
 }
 
 func (c *Scale) AddRec(rec ScaleRec) error {

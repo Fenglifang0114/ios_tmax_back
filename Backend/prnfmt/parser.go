@@ -339,7 +339,8 @@ func Utf8ToGb2312(buff string) (string, error) {
 	utf8Bytes := []byte(utf8str)
 	gb2312Bytes, err := enc.Bytes(utf8Bytes)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Utf8ToGb2312 error: %v", err)
+		return "", err
 	}
 	gb2312str := string(gb2312Bytes)
 

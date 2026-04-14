@@ -43,13 +43,13 @@ func NewScaleRecProvider() *ScaleRecProvider {
 	return &ScaleRecProvider{myId: "ScaleRecProvider", recPb: recPb}
 }
 
-func (p *ScaleRecProvider) GetRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
+func (p *ScaleRecProvider) GetRecsList(scale *Scale, scaleModel string, scaleSn string, scaleName string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	recs, err := p.recPb.GetScaleRecsList(scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
 	return recs, err
 }
-func (p *ScaleRecProvider) GetWgtRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string, offset int, limit int) ([]ScaleRec, error) {
+func (p *ScaleRecProvider) GetWgtRecsList(scale *Scale, scaleModel string, scaleSn string, scaleName string, offset int, limit int) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	recs, err := p.recPb.GetScaleWgtRecsList(scaleModel, scaleSn, scaleName, offset, limit)
@@ -112,14 +112,14 @@ func NewScaleRecCheckWeigherProvider() *ScaleRecCheckWeigherProvider {
 	return &ScaleRecCheckWeigherProvider{myId: "ScaleRecCheckWeigherProvider", recPb: recPb}
 }
 
-func (p *ScaleRecCheckWeigherProvider) GetRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
+func (p *ScaleRecCheckWeigherProvider) GetRecsList(scale *Scale, scaleModel string, scaleSn string, scaleName string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	recs, err := p.recPb.GetScaleRecsList(scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
 	return recs, err
 }
 
-func (p *ScaleRecCheckWeigherProvider) GetWgtRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string, offset int, limit int) ([]ScaleRec, error) {
+func (p *ScaleRecCheckWeigherProvider) GetWgtRecsList(scale *Scale, scaleModel string, scaleSn string, scaleName string, offset int, limit int) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	recs, err := p.recPb.GetScaleWgtRecsList(scaleModel, scaleSn, scaleName, offset, limit)
@@ -182,14 +182,14 @@ func NewScaleRecTakeInProvider() *ScaleRecTakeInProvider {
 	return &ScaleRecTakeInProvider{myId: "ScaleRecTakeInProvider", recPb: recPb}
 }
 
-func (p *ScaleRecTakeInProvider) GetRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
+func (p *ScaleRecTakeInProvider) GetRecsList(scale *Scale, scaleModel string, scaleSn string, scaleName string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	recs, err := p.recPb.GetScaleRecsList(scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
 	return recs, err
 }
 
-func (p *ScaleRecTakeInProvider) GetWgtRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string, offset int, limit int) ([]ScaleRec, error) {
+func (p *ScaleRecTakeInProvider) GetWgtRecsList(scale *Scale, scaleModel string, scaleSn string, scaleName string, offset int, limit int) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	recs, err := p.recPb.GetScaleWgtRecsList(scaleModel, scaleSn, scaleName, offset, limit)
@@ -252,14 +252,14 @@ func NewScaleRecTakeOutProvider() *ScaleRecTakeOutProvider {
 	return &ScaleRecTakeOutProvider{myId: "ScaleRecTakeOutProvider", recPb: recPb}
 }
 
-func (p *ScaleRecTakeOutProvider) GetRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
+func (p *ScaleRecTakeOutProvider) GetRecsList(scale *Scale, scaleModel string, scaleSn string, scaleName string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	recs, err := p.recPb.GetScaleRecsList(scaleModel, scaleSn, scaleName, page, pageSize, columnName, direction)
 	return recs, err
 }
 
-func (p *ScaleRecTakeOutProvider) GetWgtRecsList(scale Scale, scaleModel string, scaleSn string, scaleName string, offset int, limit int) ([]ScaleRec, error) {
+func (p *ScaleRecTakeOutProvider) GetWgtRecsList(scale *Scale, scaleModel string, scaleSn string, scaleName string, offset int, limit int) ([]ScaleRec, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	recs, err := p.recPb.GetScaleWgtRecsList(scaleModel, scaleSn, scaleName, offset, limit)

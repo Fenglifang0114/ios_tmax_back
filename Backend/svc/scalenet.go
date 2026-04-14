@@ -221,27 +221,11 @@ func (tnet *TNet) read() {
 				continue
 			}
 
-			// 处理网络错误
-			if isNetworkError(err) {
-				log.Log.Info("Network error detected, reconnecting...")
-				tnet.forceDisconnect()
-				tnet.conn = nil
-				tnet.isAlive = false
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
-
-			// 处理网络错误
-			if isNofError(err) {
-				log.Log.Info("Network error detected, reconnecting...")
-				tnet.conn.Close()
-				tnet.conn = nil
-				tnet.isAlive = false
-				time.Sleep(100 * time.Millisecond)
-				continue
-			}
-
-			// 处理其他错误
+			// [优化] 统一处理所有异常：只要报错就认为断开了（readScale 内部已过滤掉正常的 200ms 超时）
+			log.Log.Warn("Detected network fatal error, performing force disconnect...")
+			tnet.forceDisconnect()
+			tnet.conn = nil
+			tnet.isAlive = false
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
@@ -325,8 +309,10 @@ func (tnet *TNet) readScale() (int, error) {
 
 	}
 
-	// 设置20秒读取超时
-	err := tnet.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	// 设置2秒读取超时，从而更快地检测到断开
+	// [最大稳定优化] 放弃短周期感应检测，回归最传统的阻塞读取和致命错误监测。
+	// 这能确保在不发送业务心跳时，不会因为忙碌或微小延迟导致跳变。
+	err := tnet.conn.SetReadDeadline(time.Now().Add(300 * time.Second))
 	if err != nil {
 		log.Log.Errorf("SetReadDeadline error: %v", err)
 	}
@@ -334,24 +320,15 @@ func (tnet *TNet) readScale() (int, error) {
 	n, err := tnet.conn.Read(tnet.tmpbuf)
 
 	if err != nil {
-		// 检查是否是超时错误
+		// 检查是否是超时错误 (由 300s 触发)
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			tnet.timeOutCnt++
-			if tnet.timeOutCnt >= 2 {
-				log.Log.Warn("Read timeout after 20 seconds")
-				return 0, fmt.Errorf("read timeout")
-			}
-
-			if tnet.probeConnection() {
-				return 0, nil
-			}
-
-			log.Log.Warn("Read timeout after 20 seconds")
-			return 0, fmt.Errorf("read timeout")
+			// 超时时间极长，通常不需要处理
+			return 0, nil 
 		}
-
+		// 只有遇到真正的致命底层故障（如：Connection reset, EOF）时才上报错误
 		return 0, err
 	}
+	// 只要收到了数据，重置计数器（虽然逻辑上已不再主动使用计数器做断开判定）
 	tnet.timeOutCnt = 0
 
 	// if err != nil {
@@ -409,14 +386,28 @@ func (tnet *TNet) write() {
 
 		n, err := tnet.conn.Write([]byte(message))
 		if err != nil {
+			// [最终稳定优化] 写入报错时的分级处理
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				// 判定为“写超时”。这通常不是链路断了，而是秤端忙着解析指令或网络拥塞
+				// 此时绝对不能销毁连接，否则会触发无限重连死循环
+				log.Log.Trace(fmt.Sprintf("Write timeout (5s), scale busy? IP: %v", tnet.ip))
+				// 避让 100ms 再试下一个指令包
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+
+			// 只有真正的致命链路错误才断线
+			log.Log.Errorf("Fatal write error: %v, IP: %v, message length: %v, sent: %v",
+				err.Error(), tnet.ip, len(message), n)
+
 			tnet.isAlive = false
-			tnet.conn.Close()
-			tnet.conn = nil
+			if tnet.conn != nil {
+				tnet.conn.Close()
+				tnet.conn = nil
+			}
 
-			log.Log.Error(fmt.Sprintf("Write error: %v, message length: %v, sent: %v",
-				err.Error(), len(message), n))
-
-			// 可以在这里将消息重新放回队列或丢弃
+			// 延迟一秒给底层网络栈留出重平衡时间
+			time.Sleep(1000 * time.Millisecond)
 			continue
 		}
 
@@ -485,8 +476,8 @@ func (tnet *TNet) dialTCP() (*net.TCPConn, error) {
 	if err != nil {
 		return nil, err
 	}
+	// 采用系统默认的 KeepAlive 设置，不进行高频探测。
 	conn.SetKeepAlive(true)
-	conn.SetKeepAlivePeriod(1 * time.Second)
 
 	return conn, nil
 
@@ -517,20 +508,3 @@ func (tnet *TNet) forceDisconnect() {
 	log.Log.Info("连接已彻底断开")
 }
 
-// 探测连接是否真的活着
-func (tnet *TNet) probeConnection() bool {
-	// 发送探测指令（你之前提供的指令）
-
-	probeCmd := []byte{0x5a, 0xa5, 0x00, 0x0b, 0x05, 0xf6, 0x00, 0xCE, 0xD9, 0x29, 0x24, 0xa5, 0x5a}
-
-	// 设置写超时
-	tnet.conn.SetWriteDeadline(time.Now().Add(3 * time.Second))
-	_, err := tnet.conn.Write(probeCmd)
-	tnet.conn.SetWriteDeadline(time.Time{})
-
-	if err != nil {
-		return false
-	}
-
-	return true
-}

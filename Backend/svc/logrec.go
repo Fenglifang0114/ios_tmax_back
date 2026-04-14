@@ -184,7 +184,7 @@ func ComparePages(userName string, newPages []int) (bool, []int) {
 
 //导出日志到文件
 
-func ExportSysLogsToFile(logs []Syslog, filePath string, trans map[string]string) error {
+func ExportSysLogsToFile(logs []Syslog, filePath string, trans map[string]string, headers []string) error {
 	file, err := os.Create(filePath)
 	if err != nil {
 		l.Log.Error(err)
@@ -195,7 +195,9 @@ func ExportSysLogsToFile(logs []Syslog, filePath string, trans map[string]string
 	defer writer.Flush()
 
 	// 写入CSV头
-	headers := []string{"ID", "Operator", "Role", "Module", "Function Module", "Operation Type", "Details", "Result", "Created Time"}
+	if len(headers) == 0 {
+		headers = []string{"ID", "Operator", "Role", "Module", "Function Module", "Operation Type", "Details", "Result", "Created Time"}
+	}
 	writer.Write(headers)
 
 	// 写入日志数据
@@ -402,7 +404,7 @@ func SaveDelUserFunc(users []SysUser) string {
 }
 
 // 导出称重日志到文件
-func ExportWgtLogsToFile(logs []ScaleWgtLog, filePath string, trans map[string]string) error {
+func ExportWgtLogsToFile(logs []ScaleWgtLog, filePath string, trans map[string]string, headers []string) error {
 	file, err := os.Create(filePath)
 	if err != nil {
 		l.Log.Error(err)
@@ -413,7 +415,9 @@ func ExportWgtLogsToFile(logs []ScaleWgtLog, filePath string, trans map[string]s
 	defer writer.Flush()
 
 	// 写入CSV头
-	headers := []string{"ID", "Operator", "Role", "Module", "Total Weight", "Weight Unit", "Scale Name", "Scale Module", "SN", "Created Time"}
+	if len(headers) == 0 {
+		headers = []string{"ID", "Operator", "Role", "Module", "Total Weight", "Weight Unit", "Scale Name", "Scale Module", "SN", "Created Time"}
+	}
 	writer.Write(headers)
 
 	// 写入日志数据
@@ -453,7 +457,7 @@ func ExportWgtLogsToFile(logs []ScaleWgtLog, filePath string, trans map[string]s
 	return nil
 }
 
-func ExportCalLogsToFile(logs []CalibrationLog, filePath string, trans map[string]string) error {
+func ExportCalLogsToFile(logs []CalibrationLog, filePath string, trans map[string]string, headers []string) error {
 	file, err := os.Create(filePath)
 	if err != nil {
 		l.Log.Error(err)
@@ -464,7 +468,9 @@ func ExportCalLogsToFile(logs []CalibrationLog, filePath string, trans map[strin
 	defer writer.Flush()
 
 	// 写入CSV头
-	headers := []string{"ID", "Operator", "Role", "Calibration Type", "Calibration Mode", "Calibration Unit", "Calibration Value", "Before", "After", "Error", "Result", "Scale Name", "Scale Module", "SN", "Created Time"}
+	if len(headers) == 0 {
+		headers = []string{"ID", "Operator", "Role", "Calibration Type", "Calibration Mode", "Calibration Unit", "Calibration Value", "Before", "After", "Error", "Result", "Scale Name", "Scale Module", "SN", "Created Time"}
+	}
 	writer.Write(headers)
 
 	// 写入日志数据

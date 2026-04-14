@@ -151,10 +151,6 @@ func (d *DbProductRec) GetPluByPage(page, pageSize int, fieldName, direction str
 		return nil, 0, err
 	}
 
-	//查询总数
-	var total int64
-	db.Model(&ProductRec{}).Count(&total)
-
 	// 构建查询
 	query := db.Model(&ProductRec{})
 
@@ -178,6 +174,10 @@ func (d *DbProductRec) GetPluByPage(page, pageSize int, fieldName, direction str
 		}
 
 	}
+
+	//查询总数
+	var total int64
+	query.Count(&total)
 
 	// 添加排序
 	if fieldName != "" {

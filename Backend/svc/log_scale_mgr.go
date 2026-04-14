@@ -103,6 +103,11 @@ func SaveDelScaleInfoLog(delScaleInfo MediaConf, delScaleName string) {
 		json.Unmarshal([]byte(delScaleInfo.MediaInfoJson), &netInfo)
 		jsonData, _ = json.MarshalToString(netInfo)
 	}
+	if delScaleInfo.Type == MEDIA_BT {
+		btInfo := BtInfo{}
+		json.Unmarshal([]byte(delScaleInfo.MediaInfoJson), &btInfo)
+		jsonData, _ = json.MarshalToString(btInfo)
+	}
 	jsonStr, _ := json.MarshalToString(map[string]interface{}{
 		"ScaleName": delScaleName,
 		"ScaleInfo": jsonData,

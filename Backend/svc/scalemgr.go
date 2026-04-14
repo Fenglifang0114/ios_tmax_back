@@ -827,8 +827,13 @@ func (p delScaleNotifier) Handle(mgr *SrvMgr, payload ReqDelScale) { //修改秤
 		return
 	}
 
-	delScaleInfo := mSrvMgr.scaleMgr.scales[payload.ScaleId].Conn.MediaConf
-	delScaleName := mSrvMgr.scaleMgr.scales[payload.ScaleId].Conn.ScaleName
+	scale, ok := mSrvMgr.scaleMgr.scales[payload.ScaleId]
+	if !ok {
+		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_SCALE_DEL, MsgBody: "fail,scale not found"}
+		return
+	}
+	delScaleInfo := scale.Conn.MediaConf
+	delScaleName := scale.Conn.ScaleName
 
 	if err := mSrvMgr.scaleMgr.DelScale(payload.ScaleId); err != nil {
 		log.Log.Errorf("%v\n", err)
@@ -1430,13 +1435,6 @@ func (s *ScaleMgr) DelScale(id int64) error {
 	}
 
 	if scale.Conn.TMedia == MEDIA_BT {
-		// client := s.srvMgr.clientOfScales[scale]
-		// if client != nil && client.scaleId == id {
-		// 	s.srvMgr.unregister <- client
-		// 	if client.conn != nil {
-		// 		client.conn.Close()
-		// 	}
-		// }
 		if scale.MyBluetooth != nil {
 			scale.MyBluetooth.toQuit = true
 		}
@@ -1450,17 +1448,16 @@ func (s *ScaleMgr) DelScale(id int64) error {
 				client.conn.Close()
 			}
 		}
+
 		s.srvMgr.removeScale <- scale
 		s.connPb.connPb.DeleteScaleConn(*conn)
-		if s.scales[scale.Id] != nil { // scale not existing
+		if s.scales[scale.Id] != nil {
 			s.scales[scale.Id] = nil
 		}
 		s.DelMediaList(scale.Id, *conn)
 		s.connPb.DeleteSrvScaleRelByScaleId(scale.Id)
 		s.DelSrvScaleList(scale.Id)
-
 		return nil
-
 	}
 	return nil
 }

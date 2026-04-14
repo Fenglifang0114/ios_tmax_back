@@ -171,6 +171,8 @@ type Scale struct {
 	IsScalePassthHex bool
 	detailInfo       DetailList
 	packDetailMid    []PackDetailMidData
+	mu               sync.Mutex
+	closed           bool
 }
 
 // NewScale creates a new scale
@@ -272,8 +274,8 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 		go scale.keepSerialPortState()
 	case MEDIA_NET:
 		scale.MyNet = net
-		go scale.keepNetState()
-		// scale.keepNetState()
+		go scale.keepNetState(scale.MyNet)
+		// scale.keepNetState(scale.MyNet)
 	}
 
 	go scale.procScaleRespMsg()
@@ -334,98 +336,54 @@ func (s *Scale) keepSerialPortState() {
 	}
 }
 
-func (s *Scale) keepNetState() {
+func (s *Scale) keepNetState(myNet *TNet) {
 	for {
-		if s.MyNet == nil {
+		if myNet == nil {
 			break
 		}
-		if s.MyNet.toQuit {
-			if s.MyNet.conn != nil {
-				s.MyNet.conn.Close()
+		// 用户要求退出
+		if myNet.toQuit {
+			if myNet.conn != nil {
+				myNet.conn.Close()
 			}
 			break
 		}
 
-		if s.MyNet.conn != nil && s.MyNet.isAlive {
-
-			// 连接正常
-			// sendRespMsgScale(s) //网口不能接收，因此心跳包停止发送，改为问答形式。
-
+		// [核心逻辑] 如果当前是存活状态，休眠并继续检测
+		if myNet.isAlive && myNet.conn != nil {
 			time.Sleep(5 * time.Second)
 			continue
 		}
 
-		if s.MyNet == nil {
-			break
-		}
-		if s.MyNet.conn != nil {
-			continue
-		}
+		// [核心逻辑] 如果代码运行到这里，说明断开了。
+		// 1. 发送离线通知给界面
+		sendScaleOnlineToUi(s, false, "", "")
 
+		// 2. 检查连接状态是否需要清理
+		if myNet.conn != nil {
+			myNet.conn.Close()
+			myNet.conn = nil
+		}
+		myNet.isAlive = false
+
+		// 3. 尝试重连
+		fmt.Printf("Attempting to reconnect: %v\n", myNet.ip)
 		var err error
-		if s.MyNet != nil && s.MyNet.conn == nil {
-			sendScaleOnlineToUi(s, false, "", "")
-			fmt.Printf("reconnect is nil:%v\n", s.MyNet.ip)
-			s.MyNet.conn, err = s.MyNet.reconnect()
-			if err == nil {
-				s.MyNet.isAlive = true
-				time.Sleep(5 * time.Second) // 明确等待 10 秒
-				go s.keepNetOnline()
-				time.Sleep(5 * time.Second) // 明确等待 10 秒
-				continue
-			}
-			s.MyNet.isAlive = false
-		}
-
-		time.Sleep(2 * time.Second) // 连不上等待 10 秒
-	}
-}
-
-func (s *Scale) keepNetOnline() {
-	hasUpdated := false
-	for {
-		if s.MyNet == nil {
-			return
-		}
-		if s.MyNet.conn == nil {
-			println("退出online")
-			return
-		}
-		if s.MyNet.toQuit {
-			return
-		}
-
-		if !s.MyNet.isAlive {
-			return
-		}
-
-		if s.MyNet.conn != nil && s.MyNet.isAlive {
-			if !hasUpdated {
-				scaleModel, sn, err := getModelNameSn(s)
-				if err == nil {
-					req := ReqModifyScaleSn{
-						ScaleId:    s.Id,
-						ScaleModel: scaleModel,
-						Sn:         sn,
-					}
-					sendScaleOnlineToUi(s, true, scaleModel, sn)
-					err := s.scaleMgr.UpdateScaleSn(req)
-					if err == nil {
-						hasUpdated = true
-						return
-					} else {
-						time.Sleep(5 * time.Second)
-						// continue
-					}
-				}
-			}
+		myNet.conn, err = myNet.reconnect()
+		if err == nil {
+			myNet.isAlive = true
+			fmt.Printf("Reconnect successful: %v\n", myNet.ip)
+			// 重连成功，同步一次在线状态
+			sendScaleOnlineToUi(s, true, s.Conn.ScaleModel, s.Sn)
 		} else {
-			hasUpdated = false
+			// 连不上则等待 2 秒后再试
+			time.Sleep(2 * time.Second)
 		}
-
-		time.Sleep(1 * time.Second) // 根据需要可调整检测状态的间隔时间
 	}
 }
+
+// 移除 keepNetOnline 函数，因为不再需要通过指令获取 SN 和型号
+
 
 func sendScaleOnlineToUi(s *Scale, isOnline bool, modelName string, sn string) {
 	sta := &ScaleIsOnlineInfo{ScaleId: s.Conn.ScaleId, IsOnline: isOnline, ModelName: modelName, Sn: sn}
@@ -434,6 +392,14 @@ func sendScaleOnlineToUi(s *Scale, isOnline bool, modelName string, sn string) {
 }
 
 func (s *Scale) Close() error {
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return nil
+	}
+	s.closed = true
+	s.mu.Unlock()
+
 	close(s.quitProcScaleRespMessageCh)
 	close(s.quitProcToScaleMsgCh)
 	if s.MySerial != nil {
@@ -695,8 +661,11 @@ func (s *Scale) procToScaleMsg() {
 }
 
 func (s *Scale) ModifyMedia(conf MediaConf) bool {
-	mu.Lock()
-	defer mu.Unlock()
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return false
+	}
 	switch conf.Type {
 	case MEDIA_COM:
 		var pcnf ComInfo
@@ -707,16 +676,29 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 		}
 		var pickFun picker.PickerFunc = nil
 		if s.MySerial != nil {
-			s.quitProcScaleRespMessageCh <- true
-			s.quitProcToScaleMsgCh <- true
+			select {
+			case s.quitProcScaleRespMessageCh <- true:
+			default:
+			}
+			select {
+			case s.quitProcToScaleMsgCh <- true:
+			default:
+			}
 			pickFun = s.MySerial.pickerFn
 			s.MySerial.Close()
 			s.MySerial = nil
 		} else {
-			l.Log.Error("no serial port is assigned before")
+			pickFun = picker.GetPickerFn(s.ScaleCat)
+		}
+		// 释放锁再进行休眠
+		s.mu.Unlock()
+		time.Sleep(1 * time.Second)
+		s.mu.Lock()
+		if s.closed {
+			s.mu.Unlock()
 			return false
 		}
-		time.Sleep(1 * time.Second)
+
 		if s.MySerial, err = NewSerial(pcnf, pickFun, true); err != nil {
 			l.Log.Error(err.Error())
 		}
@@ -730,38 +712,59 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 		}
 		var pickFun picker.PickerFunc = nil
 		if s.MyNet != nil {
-			s.quitProcScaleRespMessageCh <- true
-			s.quitProcToScaleMsgCh <- true
+			select {
+			case s.quitProcScaleRespMessageCh <- true:
+			default:
+			}
+			select {
+			case s.quitProcToScaleMsgCh <- true:
+			default:
+			}
 			pickFun = s.MyNet.pickerFn
 			s.MyNet.Close()
 			s.MyNet = nil
+			s.mu.Unlock()
 			time.Sleep(500 * time.Millisecond)
+			s.mu.Lock()
+			if s.closed {
+				s.mu.Unlock()
+				return false
+			}
 
 		} else {
-			l.Log.Error("no net is assigned before")
+			pickFun = picker.GetPickerFn(s.ScaleCat)
+		}
+		s.mu.Unlock()
+		time.Sleep(500 * time.Millisecond)
+		s.mu.Lock()
+		if s.closed {
+			s.mu.Unlock()
 			return false
 		}
-		time.Sleep(500 * time.Millisecond)
 		if s.MyNet, err = NewNet(ncnf, pickFun, true); err != nil {
 			l.Log.Error(err.Error())
 		}
 		time.Sleep(500 * time.Millisecond)
 		s.Ncnf = ncnf
-		go s.keepNetState()
+		go s.keepNetState(s.MyNet)
 
 	case MEDIA_BT:
 		//TODO: 要做修改蓝牙    202406
+		s.mu.Unlock()
 		return false
 	default:
+		s.mu.Unlock()
 		return false
 
 	}
+	defer s.mu.Unlock()
 	go s.procScaleRespMsg()
 	go s.procToScaleMsg()
 	return true
 }
 
-var mu sync.Mutex
+// 移除不再使用的全局锁
+// var mu sync.Mutex
 
 func (c *Scale) RegisterNotif(msgType m.RespMsgType, inCh chan *ScaleRespMsg) {
 	addNotif(c, msgType, inCh)
@@ -772,14 +775,14 @@ func (c *Scale) UnRegisterNotif(msgType m.RespMsgType, inCh chan *ScaleRespMsg) 
 }
 
 func addNotif(s *Scale, msgType m.RespMsgType, inCh chan *ScaleRespMsg) {
-	mu.Lock()
-	defer mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.respChansMap[msgType] = append(s.respChansMap[msgType], inCh)
 }
 
 func removeNotif(s *Scale, msgType m.RespMsgType, inCh chan *ScaleRespMsg) {
-	mu.Lock()
-	defer mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.respChansMap[msgType] = remove(s.respChansMap[msgType], inCh)
 }
 
@@ -1271,7 +1274,8 @@ func ReqSetEepromFromBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	dataInfo, err := os.ReadFile(filePath)
 	if err != nil {
-		l.Log.Fatal(err)
+		l.Log.Errorf("SetEepromFromBin read file error: %v", err)
+		return &ScaleRespMsg{}, err
 	}
 
 	if len(dataInfo) != 512 {
@@ -1327,7 +1331,8 @@ func ReqSetEepromFromBinFc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	dataInfo, err := os.ReadFile(filePath)
 	if err != nil {
-		l.Log.Fatal(err)
+		l.Log.Errorf("SetEepromFromBinFc read file error: %v", err)
+		return &ScaleRespMsg{}, err
 	}
 
 	if len(dataInfo) != 512 {
@@ -2280,7 +2285,8 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			filePath := filepath.Join(exeDir, "formatBin.bin")
 			data, err := os.ReadFile(filePath)
 			if err != nil {
-				l.Log.Fatal(err)
+				l.Log.Errorf("ReqDownPrnFmt read file error: %v", err)
+				return &ScaleRespMsg{}, err
 			}
 			// 擦除原本秤上的打印格式
 			l.Log.Debug("erase flash on scale")
@@ -2344,9 +2350,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			l.Log.Info("send bin ok")
 		}
 	}
-
 	SaveDownLabelFmtToScaleLog(c.Conn.ScaleName, req.ReqData)
-
 	return &ScaleRespMsg{m.DOWN_PRN_FMT_RESP, "ok", c.Id}, nil
 }
 
@@ -2423,7 +2427,8 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		filePath := filepath.Join(exeDir, "formatBin.bin")
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			l.Log.Fatal(err)
+			l.Log.Errorf("ReqDownDefaultPrnFmt read file error: %v", err)
+			return &ScaleRespMsg{}, err
 		}
 		// 擦除原本秤上的打印格式
 		l.Log.Debug("erase flash on scale")
@@ -2813,7 +2818,8 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		// 读取bin文件
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			l.Log.Fatal(err)
+			l.Log.Errorf("ReqDownDefaultPlu read file error: %v", err)
+			return &ScaleRespMsg{}, err
 		}
 		l.Log.Debug("send enable factory mode cmd to scale")
 
@@ -3460,7 +3466,8 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		// 读取bin文件
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			l.Log.Fatal(err)
+			l.Log.Errorf("ReqDownPlu read file error: %v", err)
+			return &ScaleRespMsg{}, err
 		}
 		l.Log.Debug("send enable factory mode cmd to scale")
 		reg, err, res := openFactory(c)
@@ -4387,7 +4394,8 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		// 读取bin文件
 		data, err := os.ReadFile(binPath)
 		if err != nil {
-			l.Log.Fatal(err)
+			l.Log.Errorf("WriteDataToBinAndErase read file error: %v", err)
+			return &ScaleRespMsg{}, err
 		}
 
 		// 擦除原本秤上的打印格式
@@ -4476,8 +4484,8 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		l.Log.Errorf("extractMsgTmaxScale error")
 		return
 	}
-	mu.Lock()
-	defer mu.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	chs := s.respChansMap[msg.MsgType]
 
@@ -4547,7 +4555,7 @@ func sendRespMsgClient(s *Scale, msg *ScaleRespMsg) {
 				return
 			}
 
-			l.Log.Tracef("%%%%%%%%%%%%%%: " + msgStr)
+			l.Log.Tracef("%%%%%%%%%%%%%%: %s", msgStr)
 			s.client.sendCh <- []byte(msgStr)
 		} else {
 			l.Log.Errorf("marshal msg err: %v", err.Error())

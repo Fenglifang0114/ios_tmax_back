@@ -123,7 +123,7 @@ func ParseRptZebraLines(buff string, dataBuffer *bytes.Buffer, lastvarPos int) *
 
 	for i := 0; i < len(lines); i++ {
 		rowArray := strings.Split(lines[i], ",")
-		buf, lastvarPos = zebraLines(rowArray, buf, lastvarPos, currentPath)
+		buf, lastvarPos = zebraLines(rowArray, buf, lastvarPos)
 	}
 
 	fmt.Println("ZebraLines lastvarPos:", buf)
@@ -133,7 +133,7 @@ func ParseRptZebraLines(buff string, dataBuffer *bytes.Buffer, lastvarPos int) *
 	return buf
 }
 
-func zebraLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int, path string) (*bytes.Buffer, int) {
+func zebraLines(line []string, dataBuffer *bytes.Buffer, lastvarPos int) (*bytes.Buffer, int) {
 	switch line[0] {
 	case "P":
 		ZEBRA_LINE_NUM = 0
