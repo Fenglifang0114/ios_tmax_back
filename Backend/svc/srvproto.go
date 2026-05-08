@@ -1126,6 +1126,8 @@ const (
 	SREQ_GET_WIRED_DHCP SReqType = "get_wired_dhcp"
 
 	SREQ_INIT_WIFI SReqType = "init_wifi"
+
+	SREQ_VIRTUAL_SERIAL_READ SReqType = "virtual_serial_read"
 )
 
 type ReqScaleRec struct {

@@ -1,3 +1,4 @@
+//go:build windows
 // BluetoothManager.go
 package svc
 
@@ -352,6 +353,14 @@ type TBluetooth struct {
 
 	readChar  *bluetooth.DeviceCharacteristic
 	writeChar *bluetooth.DeviceCharacteristic
+
+	VirtualWriteHandler func([]byte)
+}
+
+// VirtualSerialRead 将来自 Flutter 的数据推入蓝牙接收队列 (Windows 原生模式下通常不使用，但为了接口一致性保留)
+func (bt *TBluetooth) VirtualSerialRead(base64Data string) error {
+	log.Log.Warn("VirtualSerialRead called in native Windows mode, ignoring")
+	return nil
 }
 
 // 新的构造函数

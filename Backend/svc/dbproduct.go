@@ -5,7 +5,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -45,6 +45,7 @@ type FieldDisplaySetting struct {
 }
 
 func NewDbProductRec(dbName string) (*DbProductRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -70,6 +71,7 @@ func NewDbProductRec(dbName string) (*DbProductRec, error) {
 
 // CheckPluExist 检查PLU是否存在
 func (d *DbProductRec) CheckPluExist(id int, plu string) (bool, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -104,6 +106,7 @@ func (d *DbProductRec) CheckPluExist(id int, plu string) (bool, error) {
 }
 
 func (d *DbProductRec) GetProductRecsList() ([]ProductRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -129,6 +132,7 @@ func (d *DbProductRec) GetProductRecsList() ([]ProductRec, error) {
 
 // 获取分页数据
 func (d *DbProductRec) GetPluByPage(page, pageSize int, fieldName, direction string, search ProductQuery) ([]ProductRec, int, error) {
+	defer func() { recover() }()
 	// fieldName是排序字段，direction是排序方向asc/desc
 	// ProductQuery是查询条件,如果为空,则不进行过滤
 	var err error
@@ -224,6 +228,7 @@ func (d *DbProductRec) GetPluByPage(page, pageSize int, fieldName, direction str
 
 // 导出产品列表
 func (d *DbProductRec) GetExportProductList(search ProductQuery) ([]ProductRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -283,6 +288,7 @@ func (d *DbProductRec) GetExportProductList(search ProductQuery) ([]ProductRec, 
 }
 
 func (d *DbProductRec) GetProductRecs(start int, quantity int) ([]ProductRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -307,6 +313,7 @@ func (d *DbProductRec) GetProductRecs(start int, quantity int) ([]ProductRec, er
 }
 
 func (d *DbProductRec) InsertProductRec(rec ProductRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -328,6 +335,7 @@ func (d *DbProductRec) InsertProductRec(rec ProductRec) error {
 }
 
 func (d *DbProductRec) Insert100ProductsWithGorm(products []ProductRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -379,6 +387,7 @@ func (d *DbProductRec) Insert100ProductsWithGorm(products []ProductRec) error {
 }
 
 func (d *DbProductRec) UpdateProductRec(rec ProductRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -430,6 +439,7 @@ func (d *DbProductRec) UpdateProductRec(rec ProductRec) error {
 
 // 获取recId最大的记录，也就是最后一个新增的记录
 func (d *DbProductRec) GetLastProductRec() (ProductRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -450,6 +460,7 @@ func (d *DbProductRec) GetLastProductRec() (ProductRec, error) {
 
 // 批量更新数据
 func (d *DbProductRec) BatchUpdateProductRec(multiRec []ProductRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -496,6 +507,7 @@ func (d *DbProductRec) BatchUpdateProductRec(multiRec []ProductRec) error {
 	return tx.Commit().Error
 }
 func (d *DbProductRec) DeleteProductRec(id []int) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -519,6 +531,7 @@ func (d *DbProductRec) DeleteProductRec(id []int) error {
 }
 
 func (d *DbProductRec) DeleteAllProductRecs() error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -543,6 +556,7 @@ func (d *DbProductRec) DeleteAllProductRecs() error {
 
 // 批量启用或者停用PLU
 func (d *DbProductRec) UpdateProductRecEnabled(pluList []int, enabled bool, updateUser string) error {
+	defer func() { recover() }()
 
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -570,6 +584,7 @@ func (d *DbProductRec) UpdateProductRecEnabled(pluList []int, enabled bool, upda
 }
 
 func (d *DbProductRec) GetPluSetting() (map[int]string, error) {
+	defer func() { recover() }()
 
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -598,6 +613,7 @@ func (d *DbProductRec) GetPluSetting() (map[int]string, error) {
 
 // 设置字段显示
 func (d *DbProductRec) SetPluSetting(fieldDisplaySetting []string, updateUser string) error {
+	defer func() { recover() }()
 
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

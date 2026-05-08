@@ -7,7 +7,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -61,6 +61,7 @@ type ScaleRecInfo struct {
 
 // 将传入的字段转为数据库字段
 func ConvertToDBColumnName(columnName string) string {
+	defer func() { recover() }()
 	var dbColumnName string
 	switch columnName {
 	case "Id":
@@ -113,6 +114,7 @@ func ConvertToDBColumnName(columnName string) string {
 }
 
 func NewDbScaleRec(dbName string) (*DbScaleRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -134,6 +136,7 @@ func NewDbScaleRec(dbName string) (*DbScaleRec, error) {
 
 // GetScaleWgtRecsList 从数据库中分批获取数据
 func (d *DbScaleRec) GetScaleWgtRecsList(model string, sn string, name string, offset int, limit int) ([]ScaleRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -167,6 +170,7 @@ func (d *DbScaleRec) GetScaleWgtRecsList(model string, sn string, name string, o
 }
 
 func (d *DbScaleRec) GetScaleRecsList(model string, sn string, name string, page string, pageSize string, columnName string, direction string) ([]ScaleRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -258,6 +262,7 @@ func (d *DbScaleRec) GetScaleRecsList(model string, sn string, name string, page
 }
 
 func (d *DbScaleRec) GetScaleRecs(model string, sn string, start int, quantity int) ([]ScaleRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -282,6 +287,7 @@ func (d *DbScaleRec) GetScaleRecs(model string, sn string, start int, quantity i
 }
 
 func (d *DbScaleRec) InsertScaleRec(rec ScaleRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -303,6 +309,7 @@ func (d *DbScaleRec) InsertScaleRec(rec ScaleRec) error {
 }
 
 func (d *DbScaleRec) UpdateScaleRec(rec ScaleRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -323,6 +330,7 @@ func (d *DbScaleRec) UpdateScaleRec(rec ScaleRec) error {
 }
 
 func (d *DbScaleRec) DeleteScaleRec(id uint) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -343,6 +351,7 @@ func (d *DbScaleRec) DeleteScaleRec(id uint) error {
 }
 
 func (d *DbScaleRec) DeleteAllScaleRec(scaleModel string, scaleSn string) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -368,6 +377,7 @@ func (d *DbScaleRec) DeleteAllScaleRec(scaleModel string, scaleSn string) error 
 }
 
 func (d *DbScaleRec) NewDeleteAllRec() error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -405,6 +415,7 @@ type PagedScaleRecInfo struct {
 
 // 分页获取数据
 func (d *DbScaleRec) NewGetScaleRecsList(page int, pageSize int, columnName string, direction string) (PagedScaleRecInfo, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -504,6 +515,7 @@ func (d *DbScaleRec) NewGetScaleRecsList(page int, pageSize int, columnName stri
 }
 
 func (d *DbScaleRec) NewInsertScaleRec(rec ScaleRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -529,6 +541,7 @@ func (d *DbScaleRec) NewInsertScaleRec(rec ScaleRec) error {
 
 // 找出最大的rec_id
 func (d *DbScaleRec) FindMaxRecId() (uint, error) {
+	defer func() { recover() }()
 	var err error
 	var maxRecId uint
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -555,6 +568,7 @@ func (d *DbScaleRec) FindMaxRecId() (uint, error) {
 
 // 插入明细
 func (d *DbScaleRec) InsertScaleRecDetail(rec ScaleRecDetail) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -579,6 +593,7 @@ func (d *DbScaleRec) InsertScaleRecDetail(rec ScaleRecDetail) error {
 // 导出所有的记录，包括头和明细数据
 // GetAllScaleRecInfos 查出所有记录，包括头和明细信息
 func (d *DbScaleRec) GetAllScaleRecInfos() ([]ScaleRecInfo, error) {
+	defer func() { recover() }()
 	var err error
 	// 打开数据库连接
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})

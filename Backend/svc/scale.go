@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -234,6 +235,20 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 			detailInfo:    detailInfo,
 			packDetailMid: packDetailMid,
 		}
+		// 设置虚拟蓝牙写入回调，将数据发回给 client (Flutter 端)
+		if bt != nil {
+			bt.VirtualWriteHandler = func(data []byte) {
+				if scale.client != nil {
+					scaleResp := &ScaleRespMsg{
+						MsgType: m.VIRTUAL_SERIAL_WRITE,
+						MsgBody: base64.StdEncoding.EncodeToString(data),
+						ScaleId: scale.Id,
+					}
+					outData, _ := json.Marshal(scaleResp)
+					scale.client.sendCh <- outData
+				}
+			}
+		}
 
 	}
 
@@ -276,6 +291,9 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 		scale.MyNet = net
 		go scale.keepNetState(scale.MyNet)
 		// scale.keepNetState(scale.MyNet)
+	case MEDIA_BT:
+		// 蓝牙秤的物理连接由 Flutter 维护，一旦创建，Go 侧应视为逻辑在线
+		scale.Conn.IsOnline = true
 	}
 
 	go scale.procScaleRespMsg()
@@ -384,7 +402,6 @@ func (s *Scale) keepNetState(myNet *TNet) {
 
 // 移除 keepNetOnline 函数，因为不再需要通过指令获取 SN 和型号
 
-
 func sendScaleOnlineToUi(s *Scale, isOnline bool, modelName string, sn string) {
 	sta := &ScaleIsOnlineInfo{ScaleId: s.Conn.ScaleId, IsOnline: isOnline, ModelName: modelName, Sn: sn}
 	recsStr, _ := json.MarshalToString(sta)
@@ -418,6 +435,26 @@ func (s *Scale) Close() error {
 
 func (s *Scale) SetClient(client *Client) error {
 	s.client = client
+
+	// 如果是蓝牙秤，建立指令回流管道：Go -> Flutter
+	if s.MyBluetooth != nil {
+		s.MyBluetooth.VirtualWriteHandler = func(data []byte) {
+			if s.client != nil {
+				// 将指令封装为 resp_virtual_serial_write 发回 Flutter
+				resp := &ScaleRespMsg{
+					MsgType: m.VIRTUAL_SERIAL_WRITE,
+					MsgBody: base64.StdEncoding.EncodeToString(data),
+					ScaleId: s.Id,
+				}
+				msgBytes, _ := json.Marshal(resp)
+				s.client.sendCh <- msgBytes
+			}
+		}
+		l.Log.Infof("Scale %d: Bluetooth VirtualWriteHandler established", s.Id)
+	}
+
+	// 当客户端（WebSocket）连接时，通知 UI 该秤已上线
+	sendScaleOnlineToUi(s, true, s.Conn.ScaleModel, s.Sn)
 	return nil
 }
 
@@ -425,8 +462,16 @@ func (s *Scale) HandleClientDisconnect() error {
 	l.Log.Warn("Client disconnected, HandleClientDisconnect called")
 
 	s.client = nil
+	// 当客户端断开时，通知 UI 该秤已下线
+	sendScaleOnlineToUi(s, false, s.Conn.ScaleModel, s.Sn)
 
 	return nil
+}
+
+func (s *Scale) ReqVirtualSerialRead(base64Data string) {
+	if s.MyBluetooth != nil {
+		s.MyBluetooth.VirtualSerialRead(base64Data)
+	}
 }
 
 // to process msg from serial port
@@ -571,7 +616,7 @@ func (s *Scale) procScaleRespMsg() {
 				if inPack.PayloadLen == 0 {
 					continue
 				}
-				// l.Log.Debugf("From net: %v", inPack)
+				l.Log.Debugf("BT: 收到解析后的指令包 - ID: %v, SubID: %v, 长度: %d", inPack.CmdID, inPack.CmdSubId, inPack.PayloadLen)
 
 				if s.ScaleCat == m.SCALE_C51 {
 				} else if s.ScaleCat == m.SCALE_T2200 {
@@ -875,6 +920,20 @@ func ReqSendDataToBT(s *Scale, data string) (*ScaleRespMsg, error) {
 	SaveUpdateBtPowerLog(s.Conn.ScaleName, data)
 
 	return SendDataToBT(s, data+"\r\n\x00")
+}
+
+func ReqVirtualSerialRead(scale *Scale, base64Data string) (*ScaleRespMsg, error) {
+	if scale.closed {
+		return nil, fmt.Errorf("Scale is closed")
+	}
+	if scale.MyBluetooth == nil {
+		return nil, fmt.Errorf("Scale Bluetooth is nil")
+	}
+	// 在 Android 上，我们通过 VirtualSerialRead 将数据推入蓝牙接收队列
+	if err := scale.MyBluetooth.VirtualSerialRead(base64Data); err != nil {
+		return nil, err
+	}
+	return &ScaleRespMsg{m.VIRTUAL_SERIAL_READ, "ok", scale.Id}, nil
 }
 
 func ReqSendDataToWifi(s *Scale, data string) (*ScaleRespMsg, error) {
@@ -1684,9 +1743,9 @@ func ReqDownFactoryInfoFc(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	// 发送数据包
 	if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return res, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{}, fmt.Errorf("write flase fail")
+		return &ScaleRespMsg{m.WRITE_DATA_FLASH_RESP, "write flase fail", s.Id}, nil
 	}
 
 	return &ScaleRespMsg{m.DOWN_FACTORY_INFO_FC_RESP, "ok", s.Id}, nil
@@ -2183,12 +2242,12 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 	var nums []uint8
 	cmd, timeoutMs, err := fn(composer, m.CMD_GET_RANDOM_DATA, m.CmdData{})
 	if err != nil {
-		return &ScaleRespMsg{}, err, false
+		return &ScaleRespMsg{m.EN_FACTORY_MODE_RESP, "fail", c.Id}, err, false
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.GET_RANDOM_DATA_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err, false
+		return &ScaleRespMsg{m.EN_FACTORY_MODE_RESP, "fail", c.Id}, err, false
 	} else if res.MsgBody == "" {
-		return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail"), false
+		return &ScaleRespMsg{m.EN_FACTORY_MODE_RESP, "fail", c.Id}, fmt.Errorf("enable factory mode fail"), false
 	} else {
 		numsInt, ok := res.MsgBody.([]uint8)
 		nums = numsInt
@@ -3718,9 +3777,9 @@ func ReqDelPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 
 	if res, err := perfCmdNwaitResult(c, cmd, m.DEL_PLU_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return res, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{}, fmt.Errorf("delete plu id fail")
+		return &ScaleRespMsg{m.DEL_PLU_RESP, "delete plu id fail", c.Id}, nil
 	}
 
 	return &ScaleRespMsg{m.DEL_PLU_RESP, "ok", c.Id}, nil
@@ -4480,6 +4539,9 @@ func retreiveRespMsgT2200(scaleId int64, data []byte) (*ScaleRespMsg, error) {
 }
 
 func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
+	if s.closed {
+		return
+	}
 	if (*msg == ScaleRespMsg{}) {
 		l.Log.Errorf("extractMsgTmaxScale error")
 		return
@@ -4543,6 +4605,9 @@ func sendRespMsgScale(s *Scale) {
 }
 
 func sendRespMsgClient(s *Scale, msg *ScaleRespMsg) {
+	if s.closed {
+		return
+	}
 	if (*msg == ScaleRespMsg{}) {
 		l.Log.Warnf("msg is ScaleRespMsg{}")
 		return
@@ -4581,7 +4646,7 @@ func ReqSetMaxRange1(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_SET_MAX_RANGE1, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_MAX_RANGE1_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_MAX_RANGE1_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_MAX_RANGE1_RESP, timeoutMs)
 }
@@ -4600,7 +4665,7 @@ func ReqSetMaxRange2(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_SET_MAX_RANGE2, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_MAX_RANGE2_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_MAX_RANGE2_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_MAX_RANGE2_RESP, timeoutMs)
 }
@@ -4639,7 +4704,7 @@ func ReqCalWeight(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_CAl_WGT, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_CAL_WGT_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_CAL_WGT_RESP, "fail", c.Id}, nil
 
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_CAL_WGT_RESP, timeoutMs)
@@ -4665,7 +4730,7 @@ func ReqSetDecimalValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_DECIMAL_VALUE_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_DECIMAL_VALUE_RESP, timeoutMs)
 }
@@ -4681,7 +4746,7 @@ func ReqSetGaduation1Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GADUATION1_VALUE, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_GADUATION1_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_GADUATION1_VALUE_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_GADUATION1_VALUE_RESP, timeoutMs)
 }
@@ -4708,7 +4773,7 @@ func ReqSetWeightUnit(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WEIGHT_UNIT, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_WEIGHT_UNIT_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_WEIGHT_UNIT_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_WEIGHT_UNIT_RESP, timeoutMs)
 
@@ -4727,7 +4792,7 @@ func ReqSetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_GADUATION2_VALUE_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_GADUATION2_VALUE_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_GADUATION2_VALUE_RESP, timeoutMs)
 
@@ -4773,7 +4838,7 @@ func ReqSetInitialZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_INITIAL_ZERO, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_INITIAL_ZERO_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_INITIAL_ZERO_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_INITIAL_ZERO_RESP, timeoutMs)
 
@@ -4800,7 +4865,7 @@ func ReqSetManualZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_MANUAL_ZERO, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_MANUAL_ZERO_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_MANUAL_ZERO_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_MANUAL_ZERO_RESP, timeoutMs)
 }
@@ -4826,7 +4891,7 @@ func ReqSetZeroTracking(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_ZERO_TRACKING, m.CmdData{Type: m.DATA_TYPE_STR, Data: reqData})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_ZERO_TRACKING_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_ZERO_TRACKING_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_ZERO_TRACKING_RESP, timeoutMs)
 }
@@ -4854,7 +4919,7 @@ func ReqSetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_GRAV_ACC, m.CmdData{Type: m.DATA_TYPE_INT, Data: num})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_GRAV_ACC_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_GRAV_ACC_RESP, "fail", c.Id}, nil
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_GRAV_ACC_RESP, timeoutMs)
 }
@@ -4930,17 +4995,20 @@ func ReqSetWiredIp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	err = json.Unmarshal([]byte(req.ReqData), &inInfo)
 	if err != nil {
-		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, fmt.Errorf("fail, data error"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, "fail, data error", c.Id}, nil
 	}
 
-	dataByteStr, _ := convertIPConfigToHex(inInfo)
+	dataByteStr, err := convertIPConfigToHex(inInfo)
+	if err != nil {
+		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, err.Error(), c.Id}, nil
+	}
 
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WIRED_IP, m.CmdData{Type: m.DATA_TYPE_STR, Data: dataByteStr})
 
 	println(fmt.Sprintf("%x", cmd))
 
 	if err != nil {
-		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, "fail", c.Id}, err
 	}
 	return perfCmdNwaitResult(c, cmd, m.SET_WIRED_IP_RESP, timeoutMs)
 }
@@ -4956,19 +5024,19 @@ func ReqSetWiredDhcp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WIRED_DHCP, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x01})
 		println(fmt.Sprintf("%x", cmd))
 		if err != nil {
-			return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, fmt.Errorf("fail"), c.Id}, nil
+			return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, "fail", c.Id}, nil
 		}
 		return perfCmdNwaitResult(c, cmd, m.SET_WIRED_DHCP_RESP, timeoutMs)
 	case "false":
 		cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_WIRED_DHCP, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 		println(fmt.Sprintf("%x", cmd))
 		if err != nil {
-			return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, fmt.Errorf("fail"), c.Id}, nil
+			return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, "fail", c.Id}, nil
 		}
 		return perfCmdNwaitResult(c, cmd, m.SET_WIRED_DHCP_RESP, timeoutMs)
 	}
 
-	return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, fmt.Errorf("fail"), c.Id}, nil
+	return &ScaleRespMsg{m.SET_WIRED_DHCP_RESP, "fail", c.Id}, nil
 }
 func ReqGetWiredDhcp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
@@ -4986,12 +5054,12 @@ func ReqInitWifiAPListRef(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.SET_SCAN_AP_PARAM_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return res, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "fail", c.Id}, nil
 	}
 
 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "ok", c.Id}, nil
@@ -5006,12 +5074,12 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_CLOSE_SERVER_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.CLOSE_SERVER_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, "fail", c.Id}, nil
 	}
 
 	//注销蓝牙
@@ -5020,12 +5088,12 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_BT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.DIS_BT_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.DIS_BT_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.DIS_BT_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.DIS_BT_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.DIS_BT_CMD_RESP, "fail", c.Id}, nil
 	}
 	//打开自动连接
 	GExpectWifiResp = m.EN_AUTO_CONN_CMD_RESP
@@ -5033,24 +5101,24 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_EN_AUTO_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.EN_AUTO_CONN_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, "fail", c.Id}, nil
 	}
 	//设置Wi-Fi模式为station
 	GExpectWifiResp = m.SET_WIFI_STATION_MODE_CMD_RESP
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_WIFI_STATION_MODE_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.SET_WIFI_STATION_MODE_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "fail", c.Id}, nil
 	}
 	// //设置多连接
 	// GExpectWifiResp = m.SET_MULTI_CONN_CMD_RESP
@@ -5146,12 +5214,12 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.SET_SCAN_AP_PARAM_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return res, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "fail", c.Id}, nil
 	}
 
 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "ok", c.Id}, nil
@@ -5165,12 +5233,12 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_MULTI_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.SET_MULTI_CONN_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return res, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, "fail", c.Id}, nil
 	}
 	//设置单连接
 	GExpectWifiResp = m.SET_SINGLE_CONN_CMD_RESP
@@ -5178,36 +5246,36 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SINGLE_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.SET_SINGLE_CONN_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return res, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, "fail", c.Id}, nil
 	}
 	//断开重连
 	GExpectWifiResp = m.DIS_RECONN_CMD_RESP
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_RECONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.DIS_RECONN_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.DIS_RECONN_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "fail", c.Id}, nil
 	}
 	//不提示对端IP及端口号
 	GExpectWifiResp = m.DIS_IP_PORT_INFO_CMD_RESP
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_IP_PORT_INFO_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.DIS_IP_PORT_INFO_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "fail", c.Id}, nil
 	}
 	//设置端口号
 	GExpectWifiResp = m.SET_TCP_SERVER_CMD_RESP
@@ -5215,12 +5283,12 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_CONN_PORT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.SET_TCP_SERVER_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "fail", c.Id}, nil
 	}
 	//设置本地TCP服务器超时
 	GExpectWifiResp = m.SET_TIME_OUT_CMD_RESP
@@ -5228,12 +5296,12 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_TIME_OUT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.SET_TIME_OUT_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "fail", c.Id}, nil
 	}
 	//设置传输模式 0-普通 1-透传
 	GExpectWifiResp = m.SET_PASSTH_MODE_CMD_RESP
@@ -5241,12 +5309,12 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_PASSTH_MODE_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
 	if err != nil {
-		return &ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, fmt.Errorf("fail"), c.Id}, nil
+		return &ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "fail", c.Id}, nil
 	}
 	if res, err := perfCmdNwaitResult(c, cmd, m.SET_PASSTH_MODE_CMD_RESP, timeoutMs); err != nil {
-		return &ScaleRespMsg{}, err
+		return &ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "fail, timeout", c.Id}, err
 	} else if res.MsgBody != "ok" {
-		return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "fail", c.Id}, nil
 	}
 	// //设置扫描AP参数
 	// GExpectWifiResp = m.SET_SCAN_AP_PARAM_CMD_RESP
@@ -5261,7 +5329,7 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// } else if res.MsgBody != "ok" {
 	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
 	// }
-	return &ScaleRespMsg{m.INIT_WIFI_RESP, "ok", c.Id}, nil
+	return &ScaleRespMsg{m.SET_SERVER_MODE_RESP, "ok", c.Id}, nil
 }
 
 func ReqGetWiredIp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -5327,15 +5395,23 @@ func ReqAskRomVersion(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	// 1. 停止连续发送，确保指令能被秤接收
+	excuteSimpCmd(c, m.CMD_DIS_CONTINUE_MODE, m.UNREG_WEIGHT_RESP)
+	time.Sleep(100 * time.Millisecond)
+
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.SOFT_SEAL_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.SOFT_SEAL_RESP, "fail, factory mode error", c.Id}, nil
 	}
 
 	dataStr := req.ReqData
 	var hexStr string
 	for _, ch := range dataStr {
-		hexStr += fmt.Sprintf("%02X", ch-'0') // ch-'0' 将字符转换为数字值
+		if ch >= '0' && ch <= '9' {
+			hexStr += fmt.Sprintf("%02X", byte(ch-'0'))
+		} else {
+			hexStr += fmt.Sprintf("%02X", byte(ch))
+		}
 	}
 
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_SET_SOFT_SEAL, m.CmdData{Type: m.DATA_TYPE_STR, Data: hexStr})
@@ -5361,14 +5437,22 @@ func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func ReqRemoveSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	// 1. 停止连续发送
+	excuteSimpCmd(c, m.CMD_DIS_CONTINUE_MODE, m.UNREG_WEIGHT_RESP)
+	time.Sleep(100 * time.Millisecond)
+
 	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_RESP, "fail", c.Id}, nil
+		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_RESP, "fail, factory mode error", c.Id}, nil
 	}
 	dataStr := req.ReqData
 	var hexStr string
 	for _, ch := range dataStr {
-		hexStr += fmt.Sprintf("%02X", ch-'0') // ch-'0' 将字符转换为数字值
+		if ch >= '0' && ch <= '9' {
+			hexStr += fmt.Sprintf("%02X", byte(ch-'0'))
+		} else {
+			hexStr += fmt.Sprintf("%02X", byte(ch))
+		}
 	}
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_REMOVE_SOFT_SEAL, m.CmdData{Type: m.DATA_TYPE_STR, Data: hexStr})
 	println(fmt.Sprintf("%x", cmd))

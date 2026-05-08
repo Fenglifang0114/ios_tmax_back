@@ -579,6 +579,10 @@ func procSendDataToBT(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSendDataToBT(scale, req.ReqData)
 }
 
+func procVirtualSerialRead(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqVirtualSerialRead(scale, req.ReqData)
+}
+
 func procGetIpMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqGetIpMode(scale)
 }
@@ -839,6 +843,7 @@ func init() {
 		SREQ_EN_CODE:               procEnCode,
 		SREQ_DIS_CODE:              procDisCode,
 		SREQ_ASK_ROM_VERSION:       procAskRomVersion,
+		SREQ_VIRTUAL_SERIAL_READ:   procVirtualSerialRead,
 	}
 
 	conversionMap = map[SReqType]m.RespMsgType{
@@ -909,5 +914,6 @@ func init() {
 		SREQ_REMOVE_SOFT_SEAL_ONCE: m.REMOVE_SOFT_SEAL_ONCE_RESP,
 
 		SREQ_GET_MODEL: m.GET_MODEL_RESP,
+		SREQ_VIRTUAL_SERIAL_READ: m.VIRTUAL_SERIAL_READ,
 	}
 }

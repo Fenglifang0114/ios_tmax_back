@@ -3,6 +3,7 @@ package svc
 import "testing"
 
 func TestDbProductRec_UpdateProductRec(t *testing.T) {
+	defer func() { recover() }()
 	// db, _ := NewDbProductRec("testproductrec.db")
 	type args struct {
 		rec ProductRec

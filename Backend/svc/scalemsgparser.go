@@ -1850,12 +1850,7 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleCloseServerCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CIPSERVER=0") {
-			return ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.CLOSE_SERVER_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.CLOSE_SERVER_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1865,12 +1860,7 @@ func handleCloseServerCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleDisBtCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+BLEINIT=0") {
-			return ScaleRespMsg{m.DIS_BT_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.DIS_BT_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.DIS_BT_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_BT_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1880,12 +1870,7 @@ func handleDisBtCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleEnAutoConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CWAUTOCONN=1") {
-			return ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.EN_AUTO_CONN_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.EN_AUTO_CONN_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1895,12 +1880,7 @@ func handleEnAutoConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleSetWifiStationModeCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CWMODE=1,1") {
-			return ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_WIFI_STATION_MODE_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1910,12 +1890,7 @@ func handleSetWifiStationModeCmdResp(scaleId int64, data []byte) (ScaleRespMsg, 
 
 func handleSetMultiConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CIPMUX=1") {
-			return ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_MULTI_CONN_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1925,12 +1900,7 @@ func handleSetMultiConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleDisReconnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CWRECONNCFG=20,0") {
-			return ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "ok", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_RECONN_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1940,12 +1910,7 @@ func handleDisReconnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleDisIpPortInfoCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CIPDINFO=0") {
-			return ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.DIS_IP_PORT_INFO_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1955,12 +1920,7 @@ func handleDisIpPortInfoCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) 
 
 func handleSetSingleConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CIPSERVERMAXCONN=1") {
-			return ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_SINGLE_CONN_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1970,12 +1930,7 @@ func handleSetSingleConnCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) 
 
 func handleSetTcpServerCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CIPSERVER=") {
-			return ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_TCP_SERVER_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1984,12 +1939,7 @@ func handleSetTcpServerCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 }
 func handleSetTimeOutCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CIPSTO=0") {
-			return ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_TIME_OUT_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -1999,12 +1949,7 @@ func handleSetTimeOutCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 
 func handleSetPassthModeCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CIPMODE=0") {
-			return ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_PASSTH_MODE_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown
@@ -2014,12 +1959,7 @@ func handleSetPassthModeCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) 
 
 func handleSetScanApParamCmdResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	if strings.Contains(string(data), GET_AT_MODE_OK_RESP) { // success
-		if strings.Contains(string(data), "AT+CWLAPOPT") {
-			return ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "ok", scaleId}, len(data)
-		} else {
-			return ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "fail", scaleId}, len(data)
-
-		}
+		return ScaleRespMsg{m.SET_SCAN_AP_PARAM_CMD_RESP, "ok", scaleId}, len(data)
 	} else if strings.Contains(string(data), "Error") { // fail
 		return ScaleRespMsg{ScaleId: scaleId, MsgType: m.SET_SCAN_AP_PARAM_CMD_RESP, MsgBody: "fail"}, len(data)
 	} else { // unkown

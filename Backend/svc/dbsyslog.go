@@ -4,7 +4,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -13,6 +13,7 @@ type DbSyslogRec struct {
 }
 
 func NewDbSyslogRec(dbName string) (*DbSyslogRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -93,6 +94,7 @@ type ScaleWgtLog struct {
 
 // 创建系统操作日志
 func (d *DbSyslogRec) CreateSyslog(log Syslog) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -112,6 +114,7 @@ func (d *DbSyslogRec) CreateSyslog(log Syslog) error {
 
 // 创建标定日志
 func (d *DbSyslogRec) CreateCalibrationLog(log CalibrationLog) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -131,6 +134,7 @@ func (d *DbSyslogRec) CreateCalibrationLog(log CalibrationLog) error {
 
 // 创建称重日志
 func (d *DbSyslogRec) CreateScaleLog(log ScaleWgtLog) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -150,6 +154,7 @@ func (d *DbSyslogRec) CreateScaleLog(log ScaleWgtLog) error {
 
 // 删除系统操作日志
 func (d *DbSyslogRec) DeleteSyslog(recIds []int) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -169,6 +174,7 @@ func (d *DbSyslogRec) DeleteSyslog(recIds []int) error {
 
 // 删除所有系统操作日志
 func (d *DbSyslogRec) DeleteAllSyslog() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -188,6 +194,7 @@ func (d *DbSyslogRec) DeleteAllSyslog() error {
 
 // 删除标定日志
 func (d *DbSyslogRec) DeleteCalibrationLog(recIds []int) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -207,6 +214,7 @@ func (d *DbSyslogRec) DeleteCalibrationLog(recIds []int) error {
 
 // 删除所有标定日志
 func (d *DbSyslogRec) DeleteAllCalibrationLog() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -226,6 +234,7 @@ func (d *DbSyslogRec) DeleteAllCalibrationLog() error {
 
 // 删除称重日志
 func (d *DbSyslogRec) DeleteScaleLog(recIds []int) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -245,6 +254,7 @@ func (d *DbSyslogRec) DeleteScaleLog(recIds []int) error {
 
 // 删除所有称重日志
 func (d *DbSyslogRec) DeleteAllScaleLog() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -263,6 +273,7 @@ func (d *DbSyslogRec) DeleteAllScaleLog() error {
 
 // 删除多条系统操作日志
 func (d *DbSyslogRec) DeleteMultiSyslog(recIds []int) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -282,6 +293,7 @@ func (d *DbSyslogRec) DeleteMultiSyslog(recIds []int) error {
 
 // 删除多条标定日志
 func (d *DbSyslogRec) DeleteMultiCalibrationLog(recIds []int) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -301,6 +313,7 @@ func (d *DbSyslogRec) DeleteMultiCalibrationLog(recIds []int) error {
 
 // 删除多条称重日志
 func (d *DbSyslogRec) DeleteMultiScaleLog(recIds []int) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		l.Log.Debug("failed to connect database")
@@ -320,6 +333,7 @@ func (d *DbSyslogRec) DeleteMultiScaleLog(recIds []int) error {
 
 // 获取所有系统操作日志
 func (d *DbSyslogRec) GetAllSyslog() ([]Syslog, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -340,6 +354,7 @@ func (d *DbSyslogRec) GetAllSyslog() ([]Syslog, error) {
 
 // 获取所有标定日志
 func (d *DbSyslogRec) GetAllCalibrationLog() ([]CalibrationLog, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -360,6 +375,7 @@ func (d *DbSyslogRec) GetAllCalibrationLog() ([]CalibrationLog, error) {
 
 // 获取所有称重日志
 func (d *DbSyslogRec) GetAllScaleLog() ([]ScaleWgtLog, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -397,6 +413,7 @@ func (d *DbSyslogRec) GetSyslogWithSort(
 	sortOrder string,
 	query SyslogQuery,
 ) ([]Syslog, int64, error) {
+	defer func() { recover() }()
 	if pageNum <= 0 {
 		return []Syslog{}, 0, nil
 	}
@@ -472,6 +489,7 @@ func (d *DbSyslogRec) GetCalibrationLogWithSort(
 	sortOrder string,
 	query SyslogQuery,
 ) ([]CalibrationLog, int64, error) {
+	defer func() { recover() }()
 	if pageNum <= 0 {
 		return []CalibrationLog{}, 0, nil
 	}
@@ -541,6 +559,7 @@ func (d *DbSyslogRec) GetScaleLogWithSort(
 	sortOrder string,
 	query SyslogQuery,
 ) ([]ScaleWgtLog, int64, error) {
+	defer func() { recover() }()
 
 	if pageNum <= 0 {
 		return []ScaleWgtLog{}, 0, nil
@@ -609,6 +628,7 @@ func (d *DbSyslogRec) ExportSyslogWithSort(
 	sortOrder string,
 	query SyslogQuery,
 ) ([]Syslog, error) {
+	defer func() { recover() }()
 
 	// 1. 连接数据库（建议抽离为全局连接，避免重复打开关闭）
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -670,6 +690,7 @@ func (d *DbSyslogRec) ExportCalibrationLogWithSort(
 	sortOrder string,
 	query SyslogQuery,
 ) ([]CalibrationLog, error) {
+	defer func() { recover() }()
 
 	// 1. 连接数据库（建议抽离为全局连接，避免重复打开关闭）
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -728,6 +749,7 @@ func (d *DbSyslogRec) ExportScaleLogWithSort(
 	sortOrder string,
 	query SyslogQuery,
 ) ([]ScaleWgtLog, error) {
+	defer func() { recover() }()
 
 	// 1. 连接数据库（建议抽离为全局连接，避免重复打开关闭）
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -784,6 +806,7 @@ func (d *DbSyslogRec) ExportScaleLogWithSort(
 
 // 根据日志ID列表获取系统日志记录
 func (d *DbSyslogRec) GetSyslogByID(RecIds []int) ([]Syslog, error) {
+	defer func() { recover() }()
 	// 1. 连接数据库（建议抽离为全局连接，避免重复打开关闭）
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -811,6 +834,7 @@ func (d *DbSyslogRec) GetSyslogByID(RecIds []int) ([]Syslog, error) {
 
 // 根据日志ID列表获取校准日志记录
 func (d *DbSyslogRec) GetCalibrationLogByID(RecIds []int) ([]CalibrationLog, error) {
+	defer func() { recover() }()
 	// 1. 连接数据库（建议抽离为全局连接，避免重复打开关闭）
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -838,6 +862,7 @@ func (d *DbSyslogRec) GetCalibrationLogByID(RecIds []int) ([]CalibrationLog, err
 
 // 根据日志ID列表获取称重日志记录
 func (d *DbSyslogRec) GetScaleLogByID(RecIds []int) ([]ScaleWgtLog, error) {
+	defer func() { recover() }()
 	// 1. 连接数据库（建议抽离为全局连接，避免重复打开关闭）
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -877,6 +902,7 @@ type SealLog struct {
 }
 
 func (d *DbSyslogRec) CreateSealLog(log *SealLog) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -898,6 +924,7 @@ func (d *DbSyslogRec) CreateSealLog(log *SealLog) error {
 
 // 查询印章日志列表
 func (d *DbSyslogRec) ListSealLogs(model string, sn string) ([]SealLog, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -22,6 +22,7 @@ type ScaleInfos struct {
 }
 
 func NewDbScaleInfos(dbName string) (*DbScaleInfos, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -42,6 +43,7 @@ func NewDbScaleInfos(dbName string) (*DbScaleInfos, error) {
 }
 
 func (d *DbScaleInfos) GetScaleInfo(model string, sn string) ([]ScaleInfos, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -66,6 +68,7 @@ func (d *DbScaleInfos) GetScaleInfo(model string, sn string) ([]ScaleInfos, erro
 }
 
 func (d *DbScaleInfos) InsertScaleInfos(rec ScaleInfos) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -87,6 +90,7 @@ func (d *DbScaleInfos) InsertScaleInfos(rec ScaleInfos) error {
 }
 
 func (d *DbScaleInfos) UpdateScaleInfos(rec ScaleInfos) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -107,6 +111,7 @@ func (d *DbScaleInfos) UpdateScaleInfos(rec ScaleInfos) error {
 }
 
 func (d *DbScaleInfos) DeleteScaleInfos(id uint) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -127,6 +132,7 @@ func (d *DbScaleInfos) DeleteScaleInfos(id uint) error {
 }
 
 func (d *DbScaleInfos) DeleteAllScaleInfos() error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

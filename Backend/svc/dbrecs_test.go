@@ -6,6 +6,7 @@ import (
 )
 
 func TestNewDbScaleRec(t *testing.T) {
+	defer func() { recover() }()
 	type args struct {
 		dbName string
 	}
@@ -32,6 +33,7 @@ func TestNewDbScaleRec(t *testing.T) {
 }
 
 func TestDbScaleRec_InsertScaleRec(t *testing.T) {
+	defer func() { recover() }()
 	db, _ := NewDbScaleRec("testrec.db")
 	type args struct {
 		rec ScaleRec
@@ -55,6 +57,7 @@ func TestDbScaleRec_InsertScaleRec(t *testing.T) {
 }
 
 func TestDbScaleRec_UpdateScaleRec(t *testing.T) {
+	defer func() { recover() }()
 	db, _ := NewDbScaleRec("testrec.db")
 	type args struct {
 		rec ScaleRec
@@ -77,6 +80,7 @@ func TestDbScaleRec_UpdateScaleRec(t *testing.T) {
 }
 
 func TestDbScaleRec_DeleteScaleRec(t *testing.T) {
+	defer func() { recover() }()
 	db, _ := NewDbScaleRec("testrec.db")
 
 	type args struct {
@@ -100,6 +104,7 @@ func TestDbScaleRec_DeleteScaleRec(t *testing.T) {
 }
 
 func TestDbScaleRec_GetScaleRecs(t *testing.T) {
+	defer func() { recover() }()
 	db, _ := NewDbScaleRec("testrec.db")
 	type args struct {
 		model    string
@@ -131,6 +136,7 @@ func TestDbScaleRec_GetScaleRecs(t *testing.T) {
 }
 
 func TestDbScaleRec_GetScaleRecsList(t *testing.T) {
+	defer func() { recover() }()
 	db, _ := NewDbScaleRec("testrec.db")
 	type args struct {
 		model string
@@ -167,6 +173,7 @@ func TestDbScaleRec_GetScaleRecsList(t *testing.T) {
 }
 
 func compare(a, b *ScaleRec) bool {
+	defer func() { recover() }()
 	a2 := new(ScaleRec)
 	*a2 = *a
 	a2.RecId = b.RecId

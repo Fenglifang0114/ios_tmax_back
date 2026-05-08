@@ -3,7 +3,7 @@ package svc
 import (
 	"time"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -51,6 +51,7 @@ type FlowRateList struct {
 
 // 初始化数据库连接和表结构
 func NewFlowRateInfo(dbName string) (*DbFlowRate, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -68,6 +69,7 @@ func NewFlowRateInfo(dbName string) (*DbFlowRate, error) {
 
 // 新增头
 func (d *DbFlowRate) AddFlowRateHeader(header *FlowRateHeader) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -80,6 +82,7 @@ func (d *DbFlowRate) AddFlowRateHeader(header *FlowRateHeader) error {
 
 // 新增明细表
 func (d *DbFlowRate) AddFlowRateDetail(detail *FlowRateDetail) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -92,6 +95,7 @@ func (d *DbFlowRate) AddFlowRateDetail(detail *FlowRateDetail) error {
 
 // 找出头表中最大的recid
 func (d *DbFlowRate) FindMaxRecId() (int, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return 0, err
@@ -108,6 +112,7 @@ func (d *DbFlowRate) FindMaxRecId() (int, error) {
 // 获取所有的流速信息
 // 获取所有的流速信息
 func (d *DbFlowRate) GetAllFlowRateLists() ([]FlowRateList, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err

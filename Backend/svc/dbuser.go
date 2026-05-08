@@ -5,7 +5,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -24,6 +24,7 @@ type UserRec struct {
 }
 
 func NewDbUserRec(dbName string) (*DbUserRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -44,6 +45,7 @@ func NewDbUserRec(dbName string) (*DbUserRec, error) {
 }
 
 func (d *DbUserRec) GetUserRecsList() ([]UserRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -68,6 +70,7 @@ func (d *DbUserRec) GetUserRecsList() ([]UserRec, error) {
 }
 
 func (d *DbUserRec) GetUserRecs(start int, quantity int) ([]UserRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -92,6 +95,7 @@ func (d *DbUserRec) GetUserRecs(start int, quantity int) ([]UserRec, error) {
 }
 
 func (d *DbUserRec) InsertUserRec(rec UserRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -113,6 +117,7 @@ func (d *DbUserRec) InsertUserRec(rec UserRec) error {
 }
 
 func (d *DbUserRec) UpdateUserRec(rec UserRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -138,6 +143,7 @@ func (d *DbUserRec) UpdateUserRec(rec UserRec) error {
 }
 
 func (d *DbUserRec) DeleteUserRec(id uint) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

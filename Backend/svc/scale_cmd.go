@@ -268,6 +268,21 @@ func (c *Scale) GetScaleInfo() (*ScaleRespMsg, error) {
 func (c *Scale) GetFactoryInfo() (*ScaleRespMsg, error) {
 	l.Log.Debug("get factory info")
 	reqMsg, err := excuteSimpCmd(c, m.CMD_GET_FACTORY_INFO, m.GET_FACTORY_INFO_RESP)
+	if err == nil && reqMsg != nil && reqMsg.MsgBody != nil {
+		var dataStruct FIFromScale
+		msgBodyStr, ok := reqMsg.MsgBody.(string)
+		if ok {
+			errJson := json.UnmarshalFromString(msgBodyStr, &dataStruct)
+			if errJson == nil {
+				req := ReqModifyScaleSn{
+					ScaleId:    c.Id,
+					ScaleModel: dataStruct.ModelName,
+					Sn:         dataStruct.ScaleSn,
+				}
+				c.scaleMgr.UpdateScaleSn(req)
+			}
+		}
+	}
 	return reqMsg, err
 }
 
@@ -837,6 +852,9 @@ func (c *Scale) GetPluDownRec(md5Str string) ([]PluRec, error) {
 }
 
 func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeoutMs ...int) (*ScaleRespMsg, error) {
+	if c.closed {
+		return nil, fmt.Errorf("Scale is closed")
+	}
 	curTimeoutMs := 10000 //3000 // 3000 ms
 	var ret *ScaleRespMsg
 	var err error = nil
@@ -910,7 +928,9 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 }
 
 func writeScale(c *Scale, data []byte) error {
-
+	if c.closed {
+		return fmt.Errorf("scale is closed")
+	}
 	if c.MySerial != nil && c.MySerial.isDefault {
 		if c.MySerial.toQuit {
 			return fmt.Errorf("serial is closed")

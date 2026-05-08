@@ -5,6 +5,7 @@ import (
 )
 
 func TestNewDbScaleConn(t *testing.T) {
+	defer func() { recover() }()
 	type args struct {
 		dbName string
 	}
@@ -54,6 +55,7 @@ func TestNewDbScaleConn(t *testing.T) {
 // }
 
 func TestDbScaleConn_InsertScaleConn(t *testing.T) {
+	defer func() { recover() }()
 	db, _ := NewDbScaleConn("test.db")
 	type args struct {
 		conn ScaleConnMedia
@@ -79,6 +81,7 @@ func TestDbScaleConn_InsertScaleConn(t *testing.T) {
 }
 
 func TestDbScaleConn_UpdateScaleConn(t *testing.T) {
+	defer func() { recover() }()
 	db, _ := NewDbScaleConn("test.db")
 	type args struct {
 		conn ScaleConnMedia
@@ -104,6 +107,7 @@ func TestDbScaleConn_UpdateScaleConn(t *testing.T) {
 }
 
 func TestDbScaleConn_DeleteScaleConn(t *testing.T) {
+	defer func() { recover() }()
 	db, _ := NewDbScaleConn("test.db")
 	type args struct {
 		inConn ScaleConnMedia

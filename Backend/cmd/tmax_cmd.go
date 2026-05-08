@@ -287,10 +287,10 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 
 	case m.CMD_SET_SOFT_SEAL:
 		data, _ := hex.DecodeString(cmdData.Data.(string))
-		return composeCmd(CMDID_SET_SOFT_SEAL_TMAX, 0, data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+		return composeCmd(CMDID_SET_SOFT_SEAL_TMAX, 0, data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_REMOVE_SOFT_SEAL:
 		data, _ := hex.DecodeString(cmdData.Data.(string))
-		return composeCmd(CMDID_REMOVE_SOFT_SEAL_TMAX, 0, data), CMD_TIMEOUT_VERY_SHORT_200_MS, nil
+		return composeCmd(CMDID_REMOVE_SOFT_SEAL_TMAX, 0, data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 
 	case m.CMD_REMOVE_SOFT_SEAL_ONCE:
 		return composeCmd(CMDID_REMOVE_SOFT_SEAL_ONCE_TMX, 0, []byte{}), CMD_TIMEOUT_VERY_SHORT_200_MS, nil

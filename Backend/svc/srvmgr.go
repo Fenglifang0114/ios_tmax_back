@@ -3,7 +3,6 @@ package svc
 import (
 	"encoding/csv"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 	"os"
@@ -15,8 +14,6 @@ import (
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
 
 	"tmaxsrv/comm" // for the message types.  It is not a direct part of the code.  It is a "hel
 	"tmaxsrv/lic"
@@ -332,6 +329,12 @@ func (h *SrvMgr) Run() {
 			}
 		case scale := <-h.removeScale: // from scale manager
 			if h.scales[scale.Id] != nil { // scale not existing
+				l.Log.Infof("Removing scale %d...", scale.Id)
+				// 尝试停止连续发送 (如果还连接着)
+				excuteSimpCmd(scale, comm.CMD_DIS_CONTINUE_MODE, comm.UNREG_WEIGHT_RESP)
+				time.Sleep(200 * time.Millisecond)
+				
+				scale.Close()
 				h.scales[scale.Id] = nil
 			} else {
 				l.Log.Warn("scale id not registered and can't be removed, just ignore it")
@@ -1986,49 +1989,9 @@ func (sm *ServiceManager) Stop() error {
 // 	return status.State == svc.Running, nil
 // }
 
-func IsServiceInstalled(serviceName string) bool {
-	m, err := mgr.Connect()
-	if err != nil {
-		log.Printf("%v", err)
-	}
-	defer m.Disconnect()
+func IsServiceInstalled(s string) bool { return false }
 
-	services, err := m.ListServices()
-	if err != nil {
-		log.Printf("%v", err)
-	}
-
-	for _, s := range services {
-		if s == serviceName {
-			return true
-		}
-	}
-	return false
-}
-
-func IsServiceRunning(serviceName string) bool {
-	m, err := mgr.Connect()
-	if err != nil {
-		log.Printf("mgr.Connect error: %v", err)
-		return false
-	}
-	defer m.Disconnect()
-
-	s, err := m.OpenService(serviceName)
-	if err != nil {
-		log.Printf("OpenService error: %v", err)
-		return false
-	}
-	defer s.Close()
-
-	status, err := s.Query()
-	if err != nil {
-		log.Printf("Query error: %v", err)
-		return false
-	}
-
-	return status.State == svc.Running
-}
+func IsServiceRunning(s string) bool { return false }
 
 // 配方秤原料类型新增
 func (p addRawTypeNotifier) Handle(mgr *SrvMgr, payload ReqAddRawType) {
@@ -4168,6 +4131,7 @@ func (p getAllUsersNotifier) Handle(mgr *SrvMgr) {
 		return
 	}
 	// 转换为字符串
+	if users == nil { users = make([]SysUser, 0) }
 	usersStr, err := json.Marshal(users)
 	if err != nil {
 		l.Log.Error(err)
@@ -4844,3 +4808,4 @@ func (p updateInputPortNotifier) Handle(mgr *SrvMgr, payload []ReqUpdateInputPor
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_INPUT_PORT, MsgBody: "ok"}
 	//TODO: 增加日志记录
 }
+

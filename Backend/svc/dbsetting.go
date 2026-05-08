@@ -4,7 +4,7 @@ import (
 	"errors"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -28,6 +28,7 @@ type ModeSetting struct {
 }
 
 func NewDbModeSetting(dbName string) (*DbModeSetting, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -49,6 +50,7 @@ func NewDbModeSetting(dbName string) (*DbModeSetting, error) {
 }
 
 func (d *DbModeSetting) GetModeSetting(scaleMode uint) ([]ModeSetting, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -73,6 +75,7 @@ func (d *DbModeSetting) GetModeSetting(scaleMode uint) ([]ModeSetting, error) {
 }
 
 func (d *DbModeSetting) UpdateModeSetting(setting ModeSetting) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

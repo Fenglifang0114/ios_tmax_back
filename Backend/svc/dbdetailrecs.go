@@ -5,7 +5,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -57,6 +57,7 @@ type DetailList struct {
 }
 
 func NewDbDetailRec(dbName string) (*DbDetailRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -78,6 +79,7 @@ func NewDbDetailRec(dbName string) (*DbDetailRec, error) {
 }
 
 func (d *DbDetailRec) GetDetailRecsList() ([]DetailList, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -109,6 +111,7 @@ func (d *DbDetailRec) GetDetailRecsList() ([]DetailList, error) {
 }
 
 func (d *DbDetailRec) InsertDetailRec(rec DetailRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -130,6 +133,7 @@ func (d *DbDetailRec) InsertDetailRec(rec DetailRec) error {
 }
 
 func (d *DbDetailRec) InsertDetailTotal(total DetailTotal) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -149,6 +153,7 @@ func (d *DbDetailRec) InsertDetailTotal(total DetailTotal) error {
 }
 
 func (d *DbDetailRec) UpdateDetailRec(rec ScaleRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -169,6 +174,7 @@ func (d *DbDetailRec) UpdateDetailRec(rec ScaleRec) error {
 }
 
 func (d *DbDetailRec) DeleteDetailRec(id uint) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -189,6 +195,7 @@ func (d *DbDetailRec) DeleteDetailRec(id uint) error {
 }
 
 func (d *DbDetailRec) DeleteAllDetailRec(scaleModel string, scaleSn string) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

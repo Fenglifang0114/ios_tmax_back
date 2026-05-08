@@ -4,7 +4,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -20,6 +20,7 @@ type PluRec struct {
 }
 
 func NewDbPluRec(dbName string) (*DbPluRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -40,6 +41,7 @@ func NewDbPluRec(dbName string) (*DbPluRec, error) {
 }
 
 func (d *DbPluRec) GetPluRecsList() ([]PluRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -64,6 +66,7 @@ func (d *DbPluRec) GetPluRecsList() ([]PluRec, error) {
 }
 
 func (d *DbPluRec) GetPluRecs(md5Str string) ([]PluRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -88,6 +91,7 @@ func (d *DbPluRec) GetPluRecs(md5Str string) ([]PluRec, error) {
 }
 
 func (d *DbPluRec) InsertPluRec(rec PluRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

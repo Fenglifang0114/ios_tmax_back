@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -125,6 +125,7 @@ type FormulaHeader struct {
 
 // 配方头表的 BeforeSave 钩子
 func (f *FormulaHeader) BeforeSave(tx *gorm.DB) error {
+	defer func() { recover() }()
 	if f.FormulaKey == 0 {
 		// 解引用并赋值
 		f.FormulaKey = f.RecId
@@ -304,6 +305,7 @@ type FormulaWgtRecList struct {
 
 // 初始化数据库连接和表结构
 func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -412,6 +414,7 @@ func NewFormulaInfo(dbName string) (*DbFormulaInfo, error) {
 
 // 更新 FormulaWgtRecHeader 中 formula_key 为 0 的记录
 func (d *DbFormulaInfo) UpdateFormulaKeyInWgtRecHeader() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -449,6 +452,7 @@ func (d *DbFormulaInfo) UpdateFormulaKeyInWgtRecHeader() error {
 
 // 删除未使用的原料类别
 func (d *DbFormulaInfo) DeleteUnusedRawMaterialCategories() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -466,6 +470,7 @@ func (d *DbFormulaInfo) DeleteUnusedRawMaterialCategories() error {
 
 // 删除未使用的配方类别
 func (d *DbFormulaInfo) DeleteUnusedFormulaCategories() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -483,6 +488,7 @@ func (d *DbFormulaInfo) DeleteUnusedFormulaCategories() error {
 
 // 新增配方类别
 func (d *DbFormulaInfo) CreateFormulaCategory(category FormulaCategory) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -500,6 +506,7 @@ func (d *DbFormulaInfo) CreateFormulaCategory(category FormulaCategory) error {
 
 // 新增配方类别列表
 func (d *DbFormulaInfo) CreateFormulaCategoryList(categories []string) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -550,6 +557,7 @@ func (d *DbFormulaInfo) CreateFormulaCategoryList(categories []string) error {
 
 // 获取所有配方类别
 func (d *DbFormulaInfo) GetAllFormulaCategories() ([]FormulaCategory, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -569,6 +577,7 @@ func (d *DbFormulaInfo) GetAllFormulaCategories() ([]FormulaCategory, error) {
 
 // 根据 ID 获取配方类别
 func (d *DbFormulaInfo) GetFormulaCategoryByID(id int) (FormulaCategory, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return FormulaCategory{}, err
@@ -588,6 +597,7 @@ func (d *DbFormulaInfo) GetFormulaCategoryByID(id int) (FormulaCategory, error) 
 
 // 更新配方类别
 func (d *DbFormulaInfo) UpdateFormulaCategory(category FormulaCategory) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -605,6 +615,7 @@ func (d *DbFormulaInfo) UpdateFormulaCategory(category FormulaCategory) error {
 
 // 删除配方类别
 func (d *DbFormulaInfo) DeleteFormulaCategory(name string) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -622,6 +633,7 @@ func (d *DbFormulaInfo) DeleteFormulaCategory(name string) error {
 
 // 新增原料类别
 func (d *DbFormulaInfo) CreateRawMaterialCategory(category RawMaterialCategory) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -644,6 +656,7 @@ func (d *DbFormulaInfo) CreateRawMaterialCategory(category RawMaterialCategory) 
 
 // 新增原料类别
 func (d *DbFormulaInfo) CreateRawCategoryList(categories []string) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -681,6 +694,7 @@ func (d *DbFormulaInfo) CreateRawCategoryList(categories []string) error {
 
 // 获取所有原料类别
 func (d *DbFormulaInfo) GetAllRawMaterialCategories() ([]RawMaterialCategory, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -705,6 +719,7 @@ func (d *DbFormulaInfo) GetAllRawMaterialCategories() ([]RawMaterialCategory, er
 
 // 根据 ID 获取原料类别
 func (d *DbFormulaInfo) GetRawMaterialCategoryByID(id int) (RawMaterialCategory, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -728,6 +743,7 @@ func (d *DbFormulaInfo) GetRawMaterialCategoryByID(id int) (RawMaterialCategory,
 
 // 更新原料类别
 func (d *DbFormulaInfo) UpdateRawMaterialCategory(category RawMaterialCategory) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -745,6 +761,7 @@ func (d *DbFormulaInfo) UpdateRawMaterialCategory(category RawMaterialCategory) 
 
 // 删除原料类别
 func (d *DbFormulaInfo) DeleteRawMaterialCategory(name string) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -762,6 +779,7 @@ func (d *DbFormulaInfo) DeleteRawMaterialCategory(name string) error {
 
 // 新增原料
 func (d *DbFormulaInfo) CreateRawMaterial(material RawMaterial) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -779,6 +797,7 @@ func (d *DbFormulaInfo) CreateRawMaterial(material RawMaterial) error {
 
 // 获取最大的原料ID
 func (d *DbFormulaInfo) GetMaxRawRecId() (int, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -802,6 +821,7 @@ func (d *DbFormulaInfo) GetMaxRawRecId() (int, error) {
 // 根据FMAID获取原料数据的输出口
 // 根据配方的ID 找到原料ID，再找到原料的输出口
 func (d *DbFormulaInfo) GetRawOutputByFmaId(fmaId string) ([]RawMaterialOutput, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -845,6 +865,7 @@ func (d *DbFormulaInfo) GetRawOutputByFmaId(fmaId string) ([]RawMaterialOutput, 
 
 // 批量新增原料
 func (d *DbFormulaInfo) CreateRawMaterialList(materials []RawMaterial) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -875,6 +896,7 @@ func (d *DbFormulaInfo) CreateRawMaterialList(materials []RawMaterial) error {
 
 // 获取所有原料
 func (d *DbFormulaInfo) GetAllRawMaterials() ([]RawMaterial, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -894,6 +916,7 @@ func (d *DbFormulaInfo) GetAllRawMaterials() ([]RawMaterial, error) {
 
 // 获取原料
 func (d *DbFormulaInfo) GetRawMaterial(recId int) ([]RawMaterial, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -913,6 +936,7 @@ func (d *DbFormulaInfo) GetRawMaterial(recId int) ([]RawMaterial, error) {
 
 // 根据 ID 获取原料
 func (d *DbFormulaInfo) GetRawMaterialByID(id int) ([]RawMaterial, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -932,6 +956,7 @@ func (d *DbFormulaInfo) GetRawMaterialByID(id int) ([]RawMaterial, error) {
 
 // 更新原料
 func (d *DbFormulaInfo) UpdateRawMaterial(material RawMaterial) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -961,6 +986,7 @@ func (d *DbFormulaInfo) UpdateRawMaterial(material RawMaterial) error {
 
 // 删除原料
 func (d *DbFormulaInfo) DeleteRawMaterial(recId int) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -979,6 +1005,7 @@ func (d *DbFormulaInfo) DeleteRawMaterial(recId int) error {
 
 // 删除所有原料 - 只删除未被使用的原料
 func (d *DbFormulaInfo) DeleteAllRawMaterials(recIds []int) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1022,6 +1049,7 @@ func (d *DbFormulaInfo) DeleteAllRawMaterials(recIds []int) error {
 
 // 新增配方列表
 func (d *DbFormulaInfo) InsertFormulaList(list []FmaDataImportInfo) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1063,6 +1091,7 @@ func (d *DbFormulaInfo) InsertFormulaList(list []FmaDataImportInfo) error {
 
 // 根据配方编号查询 FormulaList
 func (d *DbFormulaInfo) GetFormulaListByFormulaID(formulaID string) (FormulaList, error) {
+	defer func() { recover() }()
 	var list FormulaList
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1100,6 +1129,7 @@ func (d *DbFormulaInfo) GetFormulaListByFormulaID(formulaID string) (FormulaList
 
 // 根据rec_id 查询配方信息
 func (d *DbFormulaInfo) GetFormulaByRecId(recId int) (FormulaList, error) {
+	defer func() { recover() }()
 	var list FormulaList
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1135,6 +1165,7 @@ func (d *DbFormulaInfo) GetFormulaByRecId(recId int) (FormulaList, error) {
 
 // 根据记录编号查询 FormulaWgtRecList
 func (d *DbFormulaInfo) GetFormulaWgtRecListByRecordID(recordID string) (FormulaWgtRecList, error) {
+	defer func() { recover() }()
 	var list FormulaWgtRecList
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1165,6 +1196,7 @@ func (d *DbFormulaInfo) GetFormulaWgtRecListByRecordID(recordID string) (Formula
 
 // 查询单个配方信息
 func (d *DbFormulaInfo) GetFormulaData(id int) ([]FormulaList, error) {
+	defer func() { recover() }()
 
 	var formulaLists []FormulaList
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -1204,6 +1236,7 @@ func (d *DbFormulaInfo) GetFormulaData(id int) ([]FormulaList, error) {
 
 // 检查配方ID和条码是否匹配
 func (d *DbFormulaInfo) CheckFmaIdAndBarcode(recId int, formulaID string, formulaBarcode string) (bool, bool, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return false, false, err
@@ -1257,6 +1290,7 @@ func (d *DbFormulaInfo) CheckFmaIdAndBarcode(recId int, formulaID string, formul
 //GetFormulaDataByBarcode
 
 func (d *DbFormulaInfo) GetFormulaDataByBarcode(barcode string) ([]FormulaList, error) {
+	defer func() { recover() }()
 	var formulaLists []FormulaList
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 
@@ -1294,6 +1328,7 @@ func (d *DbFormulaInfo) GetFormulaDataByBarcode(barcode string) ([]FormulaList, 
 
 // 查询所有的 FormulaList
 func (d *DbFormulaInfo) GetAllFormulaLists() ([]FormulaList, error) {
+	defer func() { recover() }()
 	var formulaLists []FormulaList
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1331,6 +1366,7 @@ func (d *DbFormulaInfo) GetAllFormulaLists() ([]FormulaList, error) {
 
 // 查询单个配方称重记录
 func (d *DbFormulaInfo) GetFmaWgtRecByOrderId(orderId string) (FormulaWgtRecList, error) {
+	defer func() { recover() }()
 	var formulaWgtRecList FormulaWgtRecList
 
 	// 设置重试参数
@@ -1412,6 +1448,7 @@ func (d *DbFormulaInfo) GetFmaWgtRecByOrderId(orderId string) (FormulaWgtRecList
 
 // 查询一个配方称重记录通过配方ID
 func (d *DbFormulaInfo) GetOneFormulaWgtRecLists(fmaId string) ([]FormulaWgtRecList, error) {
+	defer func() { recover() }()
 	var formulaWgtRecLists []FormulaWgtRecList
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1448,6 +1485,7 @@ func (d *DbFormulaInfo) GetOneFormulaWgtRecLists(fmaId string) ([]FormulaWgtRecL
 
 // 查询所有的 FormulaWgtRecList
 func (d *DbFormulaInfo) GetAllFormulaWgtRecLists() ([]FormulaWgtRecList, error) {
+	defer func() { recover() }()
 	var formulaWgtRecLists []FormulaWgtRecList
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1484,6 +1522,7 @@ func (d *DbFormulaInfo) GetAllFormulaWgtRecLists() ([]FormulaWgtRecList, error) 
 
 // 新增配方称重记录头
 func (d *DbFormulaInfo) CreateFormulaWgtRecHeader(header FormulaWgtRecHeader) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1501,6 +1540,7 @@ func (d *DbFormulaInfo) CreateFormulaWgtRecHeader(header FormulaWgtRecHeader) er
 
 // 新增配方称重记录详情
 func (d *DbFormulaInfo) CreateFormulaWgtRecDetail(detail FormulaWgtRecDetail) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1518,6 +1558,7 @@ func (d *DbFormulaInfo) CreateFormulaWgtRecDetail(detail FormulaWgtRecDetail) er
 
 // 查询配方头中的最大的formula_key
 func (d *DbFormulaInfo) GetMaxFormulaRecKey() (int, error) {
+	defer func() { recover() }()
 	var maxRecId int
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1542,6 +1583,7 @@ func (d *DbFormulaInfo) GetMaxFormulaRecKey() (int, error) {
 
 // 查询配方头中的最大的recId
 func (d *DbFormulaInfo) GetMaxFormulaRecId() (int, error) {
+	defer func() { recover() }()
 	var maxRecId int
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -1566,6 +1608,7 @@ func (d *DbFormulaInfo) GetMaxFormulaRecId() (int, error) {
 
 // 新增配方头
 func (d *DbFormulaInfo) CreateFormulaHeader(header FormulaHeader) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1583,6 +1626,7 @@ func (d *DbFormulaInfo) CreateFormulaHeader(header FormulaHeader) error {
 
 // 新增配方明细
 func (d *DbFormulaInfo) CreateFormulaDetail(detail FormulaDetail) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1600,6 +1644,7 @@ func (d *DbFormulaInfo) CreateFormulaDetail(detail FormulaDetail) error {
 
 // 修改配方，包含配方头和明细
 func (d *DbFormulaInfo) UpdateFormula(header FormulaHeader, details []FormulaDetail) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1672,6 +1717,7 @@ func (d *DbFormulaInfo) UpdateFormula(header FormulaHeader, details []FormulaDet
 
 // 新增配方称重记录，包含记录头和详情
 func (d *DbFormulaInfo) CreateFormulaWgtRec(header FormulaWgtRecHeader, details []FormulaWgtRecDetail) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1710,6 +1756,7 @@ func (d *DbFormulaInfo) CreateFormulaWgtRec(header FormulaWgtRecHeader, details 
 
 // 根据记录编号删除配方称重记录头和详情
 func (d *DbFormulaInfo) DeleteFormulaWgtRecByRecordID(recordID string) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1746,6 +1793,7 @@ func (d *DbFormulaInfo) DeleteFormulaWgtRecByRecordID(recordID string) error {
 
 // 根据recId将配方标记为未使用
 func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -1796,6 +1844,7 @@ func (d *DbFormulaInfo) DeleteFormulaByRecId(recId int) error {
 // 根据recId删除所有配方
 // 根据recIds删除配方及其相关的暂存记录
 func (d *DbFormulaInfo) DeleteAllFormulaByRecId(recIds []int) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2005,6 +2054,7 @@ type SetInputPort struct {
 }
 
 func (d *DbFormulaInfo) CreateSetAutoNext() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2048,6 +2098,7 @@ func (d *DbFormulaInfo) CreateSetAutoNext() error {
 
 // 创建打印字段是否显示表
 func (d *DbFormulaInfo) CreateSetReportPrint() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2098,6 +2149,7 @@ func (d *DbFormulaInfo) CreateSetReportPrint() error {
 
 // 修改打印字段是否显示表
 func (d *DbFormulaInfo) UpdateSetReportPrint(setReportPrint SetReportPrint) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2140,6 +2192,7 @@ func (d *DbFormulaInfo) UpdateSetReportPrint(setReportPrint SetReportPrint) erro
 
 // 查询SetReportPrint
 func (d *DbFormulaInfo) GetSetReportPrint() (*SetReportPrint, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -2160,6 +2213,7 @@ func (d *DbFormulaInfo) GetSetReportPrint() (*SetReportPrint, error) {
 
 // 修改SetAutoNext
 func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int, autoTare bool, checkCode bool) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2194,6 +2248,7 @@ func (d *DbFormulaInfo) UpdateSetAutoNext(autoNext bool, stableTime int, autoTar
 
 // 查询SetAutoNext
 func (d *DbFormulaInfo) GetSetAutoNext() (*SetAutoNext, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -2218,6 +2273,7 @@ func (d *DbFormulaInfo) GetSetAutoNext() (*SetAutoNext, error) {
 
 // 新增暂存配方称重记录头
 func (d *DbFormulaInfo) CreateDraftFmaWgtRecHeader(header DrafFmaWgtRecHeader) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2235,6 +2291,7 @@ func (d *DbFormulaInfo) CreateDraftFmaWgtRecHeader(header DrafFmaWgtRecHeader) e
 
 // 新增暂存配方称重记录详情
 func (d *DbFormulaInfo) CreateDraftFmaWgtRecDetail(detail DrafFmaWgtRecDetail) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2252,6 +2309,7 @@ func (d *DbFormulaInfo) CreateDraftFmaWgtRecDetail(detail DrafFmaWgtRecDetail) e
 
 // 查询所有的暂存配方称重记录头和明细 List
 func (d *DbFormulaInfo) GetAllDraftFmaWgtRecLists() ([]DrafFmaWgtRecInfo, error) {
+	defer func() { recover() }()
 	var draftFmaWgtRecLists []DrafFmaWgtRecInfo
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -2288,6 +2346,7 @@ func (d *DbFormulaInfo) GetAllDraftFmaWgtRecLists() ([]DrafFmaWgtRecInfo, error)
 
 // 查询暂存配方称重记录ByOrderId
 func (d *DbFormulaInfo) GetDraftFmaWgtRecByOrderId(orderIds []string) ([]DrafFmaWgtRecInfo, error) {
+	defer func() { recover() }()
 	var draftFmaWgtRecLists []DrafFmaWgtRecInfo
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -2322,6 +2381,7 @@ func (d *DbFormulaInfo) GetDraftFmaWgtRecByOrderId(orderIds []string) ([]DrafFma
 
 // 根据order_id删除某一条记录
 func (d *DbFormulaInfo) DeleteDraftFmaWgtRec(orderId string) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2355,6 +2415,7 @@ func (d *DbFormulaInfo) DeleteDraftFmaWgtRec(orderId string) error {
 
 // 删除所有暂存配方
 func (d *DbFormulaInfo) DeleteAllDraftFmaWgtRec(orderIds []string) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2386,6 +2447,7 @@ func (d *DbFormulaInfo) DeleteAllDraftFmaWgtRec(orderIds []string) error {
 
 // 更新暂存配方称重记录头和明细
 func (d *DbFormulaInfo) UpdateDraftFmaWgtRec(rec DrafFmaWgtRecInfo) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2432,6 +2494,7 @@ func (d *DbFormulaInfo) UpdateDraftFmaWgtRec(rec DrafFmaWgtRecInfo) error {
 }
 
 func (d *DbFormulaInfo) CheckFormulaRawData(scaleId int) (bool, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return false, err
@@ -2455,6 +2518,7 @@ func (d *DbFormulaInfo) CheckFormulaRawData(scaleId int) (bool, error) {
 
 // 根据原料ID获取原料信息
 func (d *DbFormulaInfo) GetRawDataByRawID(rawId string) (RawMaterial, error) {
+	defer func() { recover() }()
 	var raw RawMaterial
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -2476,6 +2540,7 @@ func (d *DbFormulaInfo) GetRawDataByRawID(rawId string) (RawMaterial, error) {
 
 // 创建一个新的上传服务器信息 服务器信息只能有一个，如果有则覆盖
 func (d *DbFormulaInfo) CreateUploadServerInfo(info UploadServerInfo) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2513,6 +2578,7 @@ func (d *DbFormulaInfo) CreateUploadServerInfo(info UploadServerInfo) error {
 
 // 获取上传服务器信息 如果不存在则返回空结构体
 func (d *DbFormulaInfo) GetUploadServerInfo() (UploadServerInfo, error) {
+	defer func() { recover() }()
 	var info UploadServerInfo
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -2534,6 +2600,7 @@ func (d *DbFormulaInfo) GetUploadServerInfo() (UploadServerInfo, error) {
 
 // 修改上传服务器信息
 func (d *DbFormulaInfo) UpdateUploadServerInfo(info UploadServerInfo) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2569,6 +2636,7 @@ func (d *DbFormulaInfo) UpdateUploadServerInfo(info UploadServerInfo) error {
 
 // //////// 配方秤输出口设置的增删改查
 func (d *DbFormulaInfo) CreateSetOutputPort() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2614,6 +2682,7 @@ func (d *DbFormulaInfo) CreateSetOutputPort() error {
 }
 
 func (d *DbFormulaInfo) GetSetOutputPort() ([]SetOutputPort, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -2637,6 +2706,7 @@ func (d *DbFormulaInfo) GetSetOutputPort() ([]SetOutputPort, error) {
 
 // SetOutputPort
 func (d *DbFormulaInfo) UpdateSetOutputPort(ports []SetOutputPort) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2684,6 +2754,7 @@ func (d *DbFormulaInfo) UpdateSetOutputPort(ports []SetOutputPort) error {
 
 // //////// 配方秤输入口设置的增删改查
 func (d *DbFormulaInfo) CreateSetInputPort() error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err
@@ -2728,6 +2799,7 @@ func (d *DbFormulaInfo) CreateSetInputPort() error {
 
 // GetSetInputPort
 func (d *DbFormulaInfo) GetSetInputPort() ([]SetInputPort, error) {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -2750,6 +2822,7 @@ func (d *DbFormulaInfo) GetSetInputPort() ([]SetInputPort, error) {
 
 // SetInputPort
 func (d *DbFormulaInfo) UpdateSetInputPort(ports []SetInputPort) error {
+	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
 		return err

@@ -6,7 +6,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -59,6 +59,7 @@ type SysOperatorPage struct {
 }
 
 func NewDbSysUser(dbName string) (*DbSysUser, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -89,6 +90,7 @@ func NewDbSysUser(dbName string) (*DbSysUser, error) {
 
 // 初始化三种角色
 func initRoles(sysUser *DbSysUser) error {
+	defer func() { recover() }()
 	var roleCount int64
 	roles, err := sysUser.ListAllRoles()
 	if err != nil {
@@ -128,6 +130,7 @@ func initRoles(sysUser *DbSysUser) error {
 
 // 初始化管理员
 func initAdmin(sysUser *DbSysUser) error {
+	defer func() { recover() }()
 	// 检查管理员账号是否已存在
 	var count int64
 	db, err := gorm.Open(sqlite.Open(sysUser.dbName), &gorm.Config{})
@@ -172,6 +175,7 @@ func initAdmin(sysUser *DbSysUser) error {
 
 // 创建角色(初始化时使用，因为角色固定为三种)
 func (d *DbSysUser) CreateRole(role *SysRole) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -192,6 +196,7 @@ func (d *DbSysUser) CreateRole(role *SysRole) error {
 
 // 获取所有角色
 func (d *DbSysUser) ListAllRoles() ([]SysRole, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -211,6 +216,7 @@ func (d *DbSysUser) ListAllRoles() ([]SysRole, error) {
 
 // 创建用户
 func (d *DbSysUser) CreateUser(user *SysUser) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -238,6 +244,7 @@ func (d *DbSysUser) CreateUser(user *SysUser) error {
 
 // 获取用户信息(通过用户名)
 func (d *DbSysUser) GetUserByUsername(userName string) (*SysUser, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -260,6 +267,7 @@ func (d *DbSysUser) GetUserByUsername(userName string) (*SysUser, error) {
 
 // 获取用户信息(通过用户名)
 func (d *DbSysUser) GetUserByUserId(userId int) (*SysUser, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -282,6 +290,7 @@ func (d *DbSysUser) GetUserByUserId(userId int) (*SysUser, error) {
 
 // 获取多个用户详情
 func (d *DbSysUser) GetManyUserByUserIds(userIds []int) ([]SysUser, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -302,6 +311,7 @@ func (d *DbSysUser) GetManyUserByUserIds(userIds []int) ([]SysUser, error) {
 // 更新用户
 
 func (d *DbSysUser) UpdateUser(user *SysUser, pswUpdated bool) error {
+	defer func() { recover() }()
 
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -344,6 +354,7 @@ func (d *DbSysUser) UpdateUser(user *SysUser, pswUpdated bool) error {
 
 // 删除用户(软删除)
 func (d *DbSysUser) DeleteUser(userID []int) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -376,6 +387,7 @@ func (d *DbSysUser) DeleteUser(userID []int) error {
 
 // 查询用户列表
 func (d *DbSysUser) ListUsers() ([]SysUser, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -401,6 +413,7 @@ func (d *DbSysUser) ListUsers() ([]SysUser, error) {
 
 // 修改密码
 func (d *DbSysUser) ChangePassword(userId int, newPassword string) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -441,6 +454,7 @@ func (d *DbSysUser) ChangePassword(userId int, newPassword string) error {
 // 禁用用户
 
 func (d *DbSysUser) DisableUser(userID int, isEnabled bool, updateBy int, updateByName string) error {
+	defer func() { recover() }()
 
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
@@ -473,6 +487,7 @@ func (d *DbSysUser) DisableUser(userID int, isEnabled bool, updateBy int, update
 
 // 撤销操作员的页面权限
 func (d *DbSysUser) updateUserPermission(userID int, pageIDList []int) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -500,6 +515,7 @@ func (d *DbSysUser) updateUserPermission(userID int, pageIDList []int) error {
 
 // 清空操作员的所有页面权限
 func (d *DbSysUser) ClearAllPagePermissions(userID int) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -517,6 +533,7 @@ func (d *DbSysUser) ClearAllPagePermissions(userID int) error {
 
 // 验证用户名和密码
 func (d *DbSysUser) Login(userName string, password string) (bool, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -567,6 +584,7 @@ type userRolePermission struct {
 }
 
 func (d *DbSysUser) GetUserRolePermission(userName string) (userRolePermission, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -630,6 +648,7 @@ func (d *DbSysUser) GetUserRolePermission(userName string) (userRolePermission, 
 const Seed_TS = "*T-Scale*" // 固定 cost 值
 
 func EncryptPassword(password string) (string, error) {
+	defer func() { recover() }()
 	pswStr := password + Seed_TS
 	hashedPassword := md5.Sum([]byte(pswStr))
 

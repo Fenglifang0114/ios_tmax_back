@@ -4,7 +4,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -54,6 +54,7 @@ type OperationMenu struct {
 }
 
 func NewDbOperationLog(dbName string) (*DbOperationLog, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -80,6 +81,7 @@ func NewDbOperationLog(dbName string) (*DbOperationLog, error) {
 
 // 创建操作日志
 func (d *DbOperationLog) CreateOperationLog(log *OperationLog) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -101,6 +103,7 @@ func (d *DbOperationLog) CreateOperationLog(log *OperationLog) error {
 
 // 删除操作日志
 func (d *DbOperationLog) DeleteOperationLog(logID []int) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -124,6 +127,7 @@ func (d *DbOperationLog) DeleteOperationLog(logID []int) error {
 
 // 查询操作日志列表
 func (d *DbOperationLog) ListOperationLogs() ([]OperationLog, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

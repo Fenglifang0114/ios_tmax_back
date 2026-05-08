@@ -5,7 +5,7 @@ import (
 	"time"
 	l "tmaxsrv/log"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -21,6 +21,7 @@ type WifiRec struct {
 }
 
 func NewDbWifiRec(dbName string) (*DbWifiRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
 	if err != nil {
@@ -41,6 +42,7 @@ func NewDbWifiRec(dbName string) (*DbWifiRec, error) {
 }
 
 func (d *DbWifiRec) GetWifiRecsList() ([]WifiRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -65,6 +67,7 @@ func (d *DbWifiRec) GetWifiRecsList() ([]WifiRec, error) {
 }
 
 func (d *DbWifiRec) GetWifiRecs(start int, quantity int) ([]WifiRec, error) {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -89,6 +92,7 @@ func (d *DbWifiRec) GetWifiRecs(start int, quantity int) ([]WifiRec, error) {
 }
 
 func (d *DbWifiRec) InsertWifiRec(rec WifiRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -112,6 +116,7 @@ func (d *DbWifiRec) InsertWifiRec(rec WifiRec) error {
 }
 
 func (d *DbWifiRec) UpdateWifiRec(rec WifiRec) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {
@@ -137,6 +142,7 @@ func (d *DbWifiRec) UpdateWifiRec(rec WifiRec) error {
 }
 
 func (d *DbWifiRec) DeleteWifiRec(id uint) error {
+	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

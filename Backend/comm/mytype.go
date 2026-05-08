@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -157,6 +158,7 @@ var (
 	SRV_DATA_PATH  = "srvdata"
 	COMM_DATA_BASE = "database"
 	COMM_SERVICE   = "service"
+	AndroidDataDir string
 )
 
 var LogFile *os.File
@@ -327,9 +329,12 @@ const (
 	SET_PASSTH_MODE_CMD_RESP       RespMsgType = "resp_set_passth_mode_cmd"
 	SET_SCAN_AP_PARAM_CMD_RESP     RespMsgType = "resp_set_scan_ap_param_cmd"
 	INIT_WIFI_RESP                 RespMsgType = "resp_init_wifi"
+	SET_SERVER_MODE_RESP           RespMsgType = "resp_set_server_mode"
 	SET_TCP_SERVER_RESP            RespMsgType = "resp_set_tcp_server"
 
-	UNKNOWN_DATA RespMsgType = "unknown_data"
+	VIRTUAL_SERIAL_READ RespMsgType = "resp_virtual_serial_read"
+	VIRTUAL_SERIAL_WRITE RespMsgType = "resp_virtual_serial_write"
+	UNKNOWN_DATA         RespMsgType = "unknown_data"
 )
 
 func GetServicePath() string {
@@ -339,62 +344,94 @@ func GetServicePath() string {
 
 func GetSrvDataPath() string {
 	myPath := GetExePath()
-	return filepath.Join(myPath, SRV_DATA_PATH)
+	res := filepath.Join(myPath, SRV_DATA_PATH)
+	os.MkdirAll(res, 0777)
+	return res
 }
 
 func GetExePath() string {
+	if runtime.GOOS == "android" {
+		homePath := "/data/user/0/com.example.t_max/files"
+		if AndroidDataDir != "" {
+			homePath = AndroidDataDir
+		}
+		os.MkdirAll(homePath, 0777)
+		return homePath
+	}
 	myPath, _ := getCurrentPath()
 	return myPath
 }
 
 func getParentPath() (string, error) {
-	file, err := exec.LookPath(os.Args[0])
-	if err != nil {
-		return "", err
+	if runtime.GOOS == "android" {
+		homePath := "/data/user/0/com.example.t_max/files"
+		if AndroidDataDir != "" {
+			homePath = AndroidDataDir
+		}
+		return homePath, nil
 	}
-	path, err := filepath.Abs(file)
-	if err != nil {
-		return "", err
+	if len(os.Args) > 0 {
+		file, err := exec.LookPath(os.Args[0])
+		if err != nil {
+			return "", err
+		}
+		path, err := filepath.Abs(file)
+		if err != nil {
+			return "", err
+		}
+		i := strings.LastIndex(path, "/")
+		if i < 0 {
+			i = strings.LastIndex(path, "\\")
+		}
+		if i < 0 {
+			return "", errors.New(`error: Can't find "/" or "\".`)
+		}
+		parentPath := path[:i]
+		j := strings.LastIndex(parentPath, "/")
+		if j < 0 {
+			j = strings.LastIndex(parentPath, "\\")
+		}
+		if j < 0 {
+			return "", errors.New(`error: Can't find "/" or "\".`)
+		}
+		return parentPath[:j+1], nil
 	}
-	i := strings.LastIndex(path, "/")
-	if i < 0 {
-		i = strings.LastIndex(path, "\\")
-	}
-	if i < 0 {
-		return "", errors.New(`error: Can't find "/" or "\".`)
-	}
-	parentPath := path[:i]
-	j := strings.LastIndex(parentPath, "/")
-	if j < 0 {
-		j = strings.LastIndex(parentPath, "\\")
-	}
-	if j < 0 {
-		return "", errors.New(`error: Can't find "/" or "\".`)
-	}
-	return parentPath[:j+1], nil
+	return "", errors.New("os.Args is empty")
 }
 
 func GetCommDataBasePath() string {
 
 	myParentPath, _ := getParentPath()
-	return filepath.Join(myParentPath, COMM_DATA_BASE)
+	res := filepath.Join(myParentPath, COMM_DATA_BASE)
+	os.MkdirAll(res, 0777)
+	return res
 }
 
 func getCurrentPath() (string, error) {
-	file, err := exec.LookPath(os.Args[0])
-	if err != nil {
-		return "", err
+	if runtime.GOOS == "android" {
+		homePath := "/data/user/0/com.example.t_max/files"
+		if AndroidDataDir != "" {
+			homePath = AndroidDataDir
+		}
+		return homePath, nil
 	}
-	path, err := filepath.Abs(file)
-	if err != nil {
-		return "", err
+	if len(os.Args) > 0 {
+		file, err := exec.LookPath(os.Args[0])
+		if err != nil {
+			return "", err
+		}
+		path, err := filepath.Abs(file)
+		if err != nil {
+			return "", err
+		}
+		i := strings.LastIndex(path, "/")
+		if i < 0 {
+			i = strings.LastIndex(path, "\\")
+		}
+		if i < 0 {
+			return "", errors.New(`error: Can't find "/" or "\".`)
+		}
+		return string(path[0 : i+1]), nil
 	}
-	i := strings.LastIndex(path, "/")
-	if i < 0 {
-		i = strings.LastIndex(path, "\\")
-	}
-	if i < 0 {
-		return "", errors.New(`error: Can't find "/" or "\".`)
-	}
-	return string(path[0 : i+1]), nil
+	return "", errors.New("os.Args is empty")
 }
