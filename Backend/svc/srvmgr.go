@@ -626,7 +626,15 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		modeInt, _ := strconv.Atoi(req.ReqData)
 		modeUint := uint(modeInt)
 		config, _ := mSrvMgr.modeSetting.GetModeSetting(modeUint)
-		configStr, _ := json.MarshalToString(config[0])
+		
+		var configStr string
+		if len(config) > 0 {
+			configStr, _ = json.MarshalToString(config[0])
+		} else {
+			configStr = "{}"
+			l.Log.Warnf("No UI config found in srvmgr for mode: %d", modeUint)
+		}
+		
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_UI_CONFIG, MsgBody: configStr}
 	case REQ_UPDATE_UI_CONF:
 		l.Log.Info("Got update UI Config request")

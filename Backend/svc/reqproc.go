@@ -716,7 +716,16 @@ func procGetUiConf(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	modeUint := uint(modeInt)
 	// TODO:需要连上之后加sn  ScaleSn
 	config, _ := mSrvMgr.modeSetting.GetModeSetting(modeUint)
-	configStr, _ := json.MarshalToString(config[0])
+	
+	var configStr string
+	if len(config) > 0 {
+		configStr, _ = json.MarshalToString(config[0])
+	} else {
+		// 如果没有找到配置，返回一个空的JSON对象，防止崩溃
+		configStr = "{}"
+		l.Log.Warnf("No UI config found for mode: %d", modeUint)
+	}
+	
 	respMsg := &ScaleRespMsg{MsgType: m.GET_UI_CONF_RESP, MsgBody: configStr, ScaleId: scale.Id}
 	return respMsg, nil
 }
