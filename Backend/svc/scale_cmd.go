@@ -332,7 +332,14 @@ func (c *Scale) RegWeightData() (*ScaleRespMsg, error) { //FLF
 	msg, err, res := openFactory(c)
 	if err != nil || !res {
 		l.Log.Debug(err)
-		msg.MsgType = m.REG_WEIGHT_RESP
+		if msg != nil {
+			msg.MsgType = m.REG_WEIGHT_RESP
+			if msg.MsgBody == nil {
+				msg.MsgBody = "fail"
+			}
+		} else {
+			msg = &ScaleRespMsg{MsgType: m.REG_WEIGHT_RESP, MsgBody: "fail", ScaleId: c.Id}
+		}
 		return msg, err
 	}
 	// DisFacMode(c) // TODO: check return value
@@ -358,18 +365,29 @@ func (c *Scale) UnRegWeightData() (*ScaleRespMsg, error) {
 	}
 	msg, err := perfCmdNwaitResult(c, mcmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, mcmd.CMD_TIMEOUT_SHORT_1500_MS)
 
-	if str, ok := msg.MsgBody.(string); ok && strings.Contains(str, "ok") {
-		return msg, err
+	if msg != nil {
+		if str, ok := msg.MsgBody.(string); ok && strings.Contains(str, "ok") {
+			return msg, err
+		}
+	} else {
+		return &ScaleRespMsg{MsgType: m.UNREG_WEIGHT_RESP, MsgBody: "fail", ScaleId: c.Id}, err
 	}
+
 	msg, err, res := openFactory(c)
 	if err != nil || !res {
 		l.Log.Debug(err)
-		msg.MsgType = m.UNREG_WEIGHT_RESP
+		if msg != nil {
+			msg.MsgType = m.UNREG_WEIGHT_RESP
+		} else {
+			msg = &ScaleRespMsg{MsgType: m.UNREG_WEIGHT_RESP, MsgBody: "fail", ScaleId: c.Id}
+		}
 		return msg, err
 	}
 	msg, err = perfCmdNwaitResult(c, mcmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, mcmd.CMD_TIMEOUT_SHORT_1500_MS)
-	//sendErrMsg(c, msg)
-	// _, _ = EnFacMode(c)
+	DisFacMode(c)
+	if msg == nil {
+		msg = &ScaleRespMsg{MsgType: m.UNREG_WEIGHT_RESP, MsgBody: "fail", ScaleId: c.Id}
+	}
 	return msg, err
 }
 

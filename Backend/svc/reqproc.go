@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	m "tmaxsrv/comm"
 
@@ -28,6 +29,12 @@ const (
 var handlers map[SReqType]reqProcFun
 
 func procToScaleReq(s *Scale, req SRequest) {
+	defer func() {
+		if err := recover(); err != nil {
+			l.Log.Errorf("procToScaleReq panic recovered: %v", err)
+		}
+	}()
+
 	var resp *ScaleRespMsg
 	var err error
 
@@ -43,18 +50,15 @@ func procToScaleReq(s *Scale, req SRequest) {
 	// send msg to web socket client
 	result, _ := json.Marshal(resp)
 
-	if s.client != nil {
-		s.client.sendCh <- result
 
+	c := s.client
+	if c != nil && c.sendCh != nil {
+		select {
+		case c.sendCh <- result:
+		case <-time.After(50 * time.Millisecond):
+			l.Log.Warn("procToScaleReq: send timeout")
+		}
 	}
-
-	// if err != nil {
-	// 	if s.client.sendCh != nil {
-	// 		s.client.sendCh <- result
-	// 	}
-	// } else {
-	// 	l.Log.Errorf("Error on marshal resp: %v", err)
-	// }
 }
 
 var conversionMap map[SReqType]m.RespMsgType

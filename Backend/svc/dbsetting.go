@@ -1,7 +1,6 @@
 package svc
 
 import (
-	"errors"
 	l "tmaxsrv/log"
 
 	"github.com/glebarez/sqlite"
@@ -89,9 +88,22 @@ func (d *DbModeSetting) UpdateModeSetting(setting ModeSetting) error {
 		defer sqlDB.Close()
 	}
 	// 明确指定要更新的字段
-	rowAffected := db.Model(&setting).Where("scale_mode=?", setting.ScaleMode).Select("*").Updates(&setting).RowsAffected
+	updates := map[string]interface{}{
+		"date_format":    setting.DateFormat,
+		"date_separator": setting.DateSeparator,
+		"stable_time":    setting.StableTime,
+		"zero_range":     setting.ZeroRange,
+		"rec_mode":       setting.RecMode,
+		"scale_sn":       setting.ScaleSn,
+		"save_mode":      setting.SaveMode,
+		"wgt_mode":       setting.WgtMode,
+	}
+	rowAffected := db.Model(&ModeSetting{}).Where("scale_mode=?", setting.ScaleMode).Updates(updates).RowsAffected
 	if rowAffected == 0 {
-		return errors.New("@UpdateScaleRec failed, maybe record not existing")
+		// 如果不存在记录，则插入新记录以保存配置
+		if err := db.Create(&setting).Error; err != nil {
+			return err
+		}
 	}
 	return nil
 }

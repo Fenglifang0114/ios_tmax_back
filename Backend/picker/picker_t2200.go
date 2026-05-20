@@ -48,7 +48,7 @@ func PickerFnT2200(inData []byte, dataLen int) (packOffset uint, packLen uint, s
 			lastHeadPos = headPos // save the last found HeadPos
 		}
 		if headPos == -1 && lastHeadPos != -1 {
-			return 0, 0, uint(headPos + 1), comm.Packet{} // remove data before header
+			return 0, 0, uint(lastHeadPos + 2), comm.Packet{} // remove data before header
 		}
 		// check tail
 		tailPos, state := verifyTailT2200(inData, headPos, dataLen)

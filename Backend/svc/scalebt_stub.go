@@ -74,6 +74,11 @@ func NewBluetoothConnection(address string, pickerFn picker.PickerFunc, isDefaul
 func (bt *TBluetooth) writeLoop() {
 	bt.wg.Add(1)
 	defer bt.wg.Done()
+	defer func() {
+		if err := recover(); err != nil {
+			log.Log.Errorf("BT writeLoop panic recovered: %v", err)
+		}
+	}()
 
 	for {
 		select {
@@ -99,6 +104,11 @@ func (t *TBluetooth) Write(data []byte) error {
 func (bt *TBluetooth) readLoop() {
 	bt.wg.Add(1)
 	defer bt.wg.Done()
+	defer func() {
+		if err := recover(); err != nil {
+			log.Log.Errorf("BT readLoop panic recovered: %v", err)
+		}
+	}()
 
 	for {
 		select {

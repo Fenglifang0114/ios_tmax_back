@@ -250,6 +250,8 @@ func extractMessageTMAX(scaleId int64, bufs *util.CircularBuffer, msgType m.Resp
 	handler := responseHandlerMap[msgType]
 	if handler == nil {
 		log.Error("handler not found, msgType: %v", msgType)
+		bufs.DequeueN(len(data)) // clear buffer to avoid getting stuck
+		return ScaleRespMsg{}
 	}
 	resp, shouldRemoveLen := handler(scaleId, data)
 	bufs.DequeueN(shouldRemoveLen)

@@ -238,14 +238,24 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 		// 设置虚拟蓝牙写入回调，将数据发回给 client (Flutter 端)
 		if bt != nil {
 			bt.VirtualWriteHandler = func(data []byte) {
-				if scale.client != nil {
+				defer func() {
+					if err := recover(); err != nil {
+						l.Log.Errorf("VirtualWriteHandler panic recovered: %v", err)
+					}
+				}()
+				c := scale.client
+				if c != nil && c.sendCh != nil {
 					scaleResp := &ScaleRespMsg{
 						MsgType: m.VIRTUAL_SERIAL_WRITE,
 						MsgBody: base64.StdEncoding.EncodeToString(data),
 						ScaleId: scale.Id,
 					}
 					outData, _ := json.Marshal(scaleResp)
-					scale.client.sendCh <- outData
+					select {
+					case c.sendCh <- outData:
+					case <-time.After(50 * time.Millisecond):
+						l.Log.Warn("VirtualWriteHandler: send timeout")
+					}
 				}
 			}
 		}
@@ -439,7 +449,13 @@ func (s *Scale) SetClient(client *Client) error {
 	// 如果是蓝牙秤，建立指令回流管道：Go -> Flutter
 	if s.MyBluetooth != nil {
 		s.MyBluetooth.VirtualWriteHandler = func(data []byte) {
-			if s.client != nil {
+			defer func() {
+				if err := recover(); err != nil {
+					l.Log.Errorf("VirtualWriteHandler panic recovered: %v", err)
+				}
+			}()
+			c := s.client
+			if c != nil && c.sendCh != nil {
 				// 将指令封装为 resp_virtual_serial_write 发回 Flutter
 				resp := &ScaleRespMsg{
 					MsgType: m.VIRTUAL_SERIAL_WRITE,
@@ -447,7 +463,11 @@ func (s *Scale) SetClient(client *Client) error {
 					ScaleId: s.Id,
 				}
 				msgBytes, _ := json.Marshal(resp)
-				s.client.sendCh <- msgBytes
+				select {
+				case c.sendCh <- msgBytes:
+				case <-time.After(50 * time.Millisecond):
+					l.Log.Warn("VirtualWriteHandler: send timeout")
+				}
 			}
 		}
 		l.Log.Infof("Scale %d: Bluetooth VirtualWriteHandler established", s.Id)
@@ -476,6 +496,11 @@ func (s *Scale) ReqVirtualSerialRead(base64Data string) {
 
 // to process msg from serial port
 func (s *Scale) procScaleRespMsg() {
+	defer func() {
+		if err := recover(); err != nil {
+			l.Log.Errorf("procScaleRespMsg panic recovered: %v", err)
+		}
+	}()
 	quit := false
 	if s.MySerial != nil {
 		for {
@@ -4561,11 +4586,6 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		return
 	}
 	if msg.MsgType == m.WEIGHT_DATA && !s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
-		// writeScale(s, cmd.DIS_CONT_MODE_CMD_TMAX)
-		if s.ScaleCat != m.SCALE_TMAX {
-			return
-		}
-		perfCmdNwaitResult(s, cmd.DIS_CONT_MODE_CMD_TMAX, m.UNREG_WEIGHT_RESP, -1, 1)
 		return
 	}
 	if msg.MsgType == m.SCALE_PASSTH_DATA && s.isScalePassth && s.client != nil { // skip sending weight data to client if it doesn't not register this message
@@ -4585,7 +4605,7 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 		if s.ScaleCat != m.SCALE_TMAX {
 			return
 		}
-		sendRespMsgScale(s)
+		go sendRespMsgScale(s)
 		return
 	}
 
@@ -4615,13 +4635,24 @@ func sendRespMsgClient(s *Scale, msg *ScaleRespMsg) {
 
 	if len(s.fromScaleMsgCh) < RECV_CH_SIZE { // no use in this moment
 		if msgStr, err := json.MarshalToString(msg); err == nil {
-			if s.client == nil {
+			defer func() {
+				if err := recover(); err != nil {
+					l.Log.Errorf("sendRespMsgClient panic recovered: %v", err)
+				}
+			}()
+			
+			c := s.client
+			if c == nil || c.sendCh == nil {
 				l.Log.Errorf("s.client is nil")
 				return
 			}
 
 			l.Log.Tracef("%%%%%%%%%%%%%%: %s", msgStr)
-			s.client.sendCh <- []byte(msgStr)
+			select {
+			case c.sendCh <- []byte(msgStr):
+			case <-time.After(50 * time.Millisecond):
+				l.Log.Warn("sendRespMsgClient: send timeout")
+			}
 		} else {
 			l.Log.Errorf("marshal msg err: %v", err.Error())
 		}

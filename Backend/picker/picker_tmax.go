@@ -109,7 +109,7 @@ func pickerFnTmax(inData []byte, dataLen int) (packOffset uint, packLen uint, sh
 			lastHeadPos = headPos // save the last found HeadPos
 		}
 		if headPos == -1 && lastHeadPos != -1 {
-			return 0, 0, uint(headPos + 1), comm.Packet{} // remove data before header
+			return 0, 0, uint(lastHeadPos + 2), comm.Packet{} // remove data before header
 		}
 		// check tail
 		tailPos, state := verifyTail(inData, headPos, dataLen)
@@ -119,13 +119,18 @@ func pickerFnTmax(inData []byte, dataLen int) (packOffset uint, packLen uint, sh
 			curpos += 2 // skip current header
 			continue
 		}
+		lenField := binary.BigEndian.Uint16(inData[headPos+2 : headPos+4])
+		if lenField < 11 {
+			return 0, 0, uint(headPos + 2), comm.Packet{} // malformed packet
+		}
+
 		if !verifyCrc(inData, headPos, tailPos) {
 			return 0, 0, uint(tailPos + TAIL_SIZE), comm.Packet{}
 		}
 
 		// 解析数据
 		packet := comm.Packet{
-			PayloadLen: binary.BigEndian.Uint16(inData[headPos+2:headPos+2+2]) - DATA_LEN_SIZE - CMD_ID_SIZE - CMD_SUB_ID_SIZE - SEQ_NO_SIZE - CRC_SIZE - TAIL_SIZE,
+			PayloadLen: lenField - DATA_LEN_SIZE - CMD_ID_SIZE - CMD_SUB_ID_SIZE - SEQ_NO_SIZE - CRC_SIZE - TAIL_SIZE,
 			CmdID:      inData[headPos+4],
 			CmdSubId:   inData[headPos+5],
 			SeqNum:     inData[headPos+6],
