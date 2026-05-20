@@ -378,7 +378,11 @@ func (h *SrvMgr) Run() {
 				client := h.clientOfScales[h.scales[scaleMessage.ScaleId]]
 				if client != nil {
 					outData, _ := json.Marshal(scaleMessage)
-					client.sendCh <- outData
+					select {
+					case client.sendCh <- outData:
+					default:
+						l.Log.Warnf("client.sendCh is full, dropping message")
+					}
 				}
 			}
 			// default:
@@ -400,8 +404,12 @@ func (h *SrvMgr) Run() {
 			println(h.scales)
 			outData, _ := json.Marshal(scaleMgrMessage)
 			if client != nil {
-				client.sendCh <- outData
-				l.Log.Debugf("ClientSendch---------- %v\n", string(outData))
+				select {
+				case client.sendCh <- outData:
+					l.Log.Debugf("ClientSendch---------- %v\n", string(outData))
+				default:
+					l.Log.Warnf("client.sendCh is full, dropping message")
+				}
 			}
 		case recvScaleMgrMsgSrv := <-h.recvScaleMgrMsgSrv: //20241118 如何将数据传出去？9999999999  99999998
 			// handle the message from the scale
@@ -410,7 +418,11 @@ func (h *SrvMgr) Run() {
 			if recvScaleMgrMsgSrv.ScaleId > SERVICE_ID {
 				client := h.clientOfService[recvScaleMgrMsgSrv.ScaleId]
 				if client != nil {
-					client.sendCh <- outData
+					select {
+					case client.sendCh <- outData:
+					default:
+						l.Log.Warnf("client.sendCh is full, dropping message")
+					}
 				}
 
 			} else {
@@ -419,7 +431,11 @@ func (h *SrvMgr) Run() {
 					if srvRel.ScaleId == recvScaleMgrMsgSrv.ScaleId && srvRel.IsUsed {
 						client := h.clientOfService[srvRel.SrvId]
 						if client != nil {
-							client.sendCh <- outData
+							select {
+							case client.sendCh <- outData:
+							default:
+								l.Log.Warnf("client.sendCh is full, dropping message")
+							}
 						}
 
 					}
@@ -442,7 +458,11 @@ func (h *SrvMgr) Run() {
 				outData, _ := json.Marshal(scaleMessage)
 				// fmt.Printf("%v\n", scaleMessage)
 				l.Log.Debugf("%v\n", string(outData))
-				client.sendCh <- outData
+				select {
+				case client.sendCh <- outData:
+				default:
+					l.Log.Warnf("client.sendCh is full, dropping message")
+				}
 			}
 		default:
 			time.Sleep(time.Microsecond * 100)
