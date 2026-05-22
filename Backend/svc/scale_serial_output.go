@@ -291,14 +291,11 @@ func WriteDataToBin(sendArray bytes.Buffer) (path string) {
 		outputData[i] = 0xFF
 	}
 	// 将 outputData 写入 bin 文件中
-	exePath, err := os.Executable()
-	if err != nil {
-		fmt.Println(err)
-	}
+	exeDir := os.TempDir()
 	// 构建 bin 文件的路径，即当前执行程序的路径下的 output.bin
-	binPath := filepath.Join(filepath.Dir(exePath), "output.bin")
+	binPath := filepath.Join(exeDir, "output.bin")
 	// 将 outputData 写入 bin 文件中
-	err = os.WriteFile(binPath, outputData, fs.FileMode(0644))
+	err := os.WriteFile(binPath, outputData, fs.FileMode(0644))
 	if err != nil {
 		fmt.Println(err)
 	}

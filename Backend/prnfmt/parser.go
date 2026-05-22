@@ -317,8 +317,7 @@ func binaryData(tempInfo printInfo) *bytes.Buffer {
 // 创建bin文件
 func creatFile(fileName string, tempBuf *bytes.Buffer) bool {
 	//先找到exe运行的路径
-	exePath, _ := os.Executable()
-	exeDir := filepath.Dir(exePath)
+	exeDir := os.TempDir()
 	// 拼接文件路径
 	filePath := filepath.Join(exeDir, fileName)
 

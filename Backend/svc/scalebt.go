@@ -878,19 +878,35 @@ func (bt *TBluetooth) write() {
 			if bt.isAlive.Load() && bt.writeChar != nil {
 				log.Log.Debugf("发送数据到蓝牙: %s", hex.EncodeToString(message))
 
-				// 写入数据
-				n, err := bt.writeChar.Write(message)
-				if err != nil {
-					log.Log.Errorf("写入蓝牙失败: %v", err)
-					bt.isAlive.Store(false)
-				} else if n != len(message) {
-					log.Log.Errorf("数据写入不完整，期望 %d 字节，实际 %d 字节", len(message), n)
-				} else {
-					log.Log.Debugf("数据写入成功: %d 字节", n)
+				// 分包发送数据，防止接收端BLE模块UART缓存溢出
+				chunkSize := 20
+				for i := 0; i < len(message); i += chunkSize {
+					end := i + chunkSize
+					if end > len(message) {
+						end = len(message)
+					}
+					chunk := message[i:end]
+					
+					var n int
+					var err error
+					// 0x04 is the GATT standard bitmask for WriteWithoutResponse
+					if (bt.writeChar.Properties() & 0x04) != 0 {
+						n, err = bt.writeChar.WriteWithoutResponse(chunk)
+					} else {
+						n, err = bt.writeChar.Write(chunk)
+					}
+					if err != nil {
+						log.Log.Errorf("写入蓝牙失败: %v", err)
+						bt.isAlive.Store(false)
+						break
+					} else if n != len(chunk) {
+						log.Log.Errorf("数据写入不完整，期望 %d 字节，实际 %d 字节", len(chunk), n)
+					}
+					
+					// 移除延时：tinygo蓝牙底层的Write会阻塞等待回调，自带自然延时。
+					// 如果额外sleep 15ms，会导致两包之间间隔达到30-40ms，触发秤端UART接收器超时丢包！
 				}
-
-				// 避免发送过快
-				time.Sleep(10 * time.Millisecond)
+				log.Log.Debugf("完整数据包写入完成，总长度: %d", len(message))
 			}
 
 		case <-bt.quitChan:

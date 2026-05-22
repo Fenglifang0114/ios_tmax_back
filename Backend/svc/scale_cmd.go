@@ -925,7 +925,7 @@ func perfCmdNwaitResult(c *Scale, cmd []byte, waitMsgType m.RespMsgType, timeout
 		case ret = <-ch:
 		case <-time.After(time.Duration(curTimeoutMs) * time.Millisecond):
 			ret = &ScaleRespMsg{MsgType: waitMsgType, ScaleId: c.Id, MsgBody: "timeout"}
-			err = fmt.Errorf("no response, time out")
+			err = fmt.Errorf("no response, time out on %v", waitMsgType)
 			time.Sleep(500 * time.Millisecond)
 			continue
 			// default:

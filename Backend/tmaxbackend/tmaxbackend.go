@@ -2,6 +2,7 @@ package tmaxbackend
 
 import (
 	"fmt"
+	"os"
 	"time"
 	"tmaxsrv/comm"
 	"tmaxsrv/svc"
@@ -17,6 +18,7 @@ const (
 func StartBackend(dataDir string) {
 	fmt.Println("TmaxService Go Backend Engine Starting on Android...")
 	comm.AndroidDataDir = dataDir
+	os.Setenv("TMPDIR", dataDir)
 
 	s := svc.NewScaleMgr() 
 	quitch := make(chan bool)

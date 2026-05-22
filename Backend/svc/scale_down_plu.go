@@ -76,7 +76,7 @@ double plu_limit_high;			8	8	上限
 double plu_limit_low;  			9	8	下限
 */
 
-func ParserPluFile(excelFileName string, nameMaxLen int) bool {
+func ParserPluFile(excelFileName string, nameMaxLen int) (bool, error) {
 
 	// columnNames := []string{
 	// 	"PLU",
@@ -97,13 +97,13 @@ func ParserPluFile(excelFileName string, nameMaxLen int) bool {
 	products, err := readExcelToJSON(excelFileName)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return false
+		return false, err
 	}
 
 	jsonData, err := json.Marshal(products)
 	if err != nil {
 		fmt.Println("Error:", err)
-		return false
+		return false, err
 	}
 
 	fmt.Println(string(jsonData))
@@ -194,18 +194,17 @@ func ParserPluFile(excelFileName string, nameMaxLen int) bool {
 		// 写入isUSED，1字节  0xFF plu有效   0x00 plu无效
 		buf.WriteByte(0xFF)
 	}
-	exePath, _ := os.Executable()
-	exeDir := filepath.Dir(exePath)
+	exeDir := os.TempDir()
 	filePath := filepath.Join(exeDir, "plu.bin")
 
 	err = os.WriteFile(filePath, buf.Bytes(), 0644)
 	if err != nil {
 		fmt.Println("Write file error:", err)
-		return false
+		return false, err
 	}
 	print(products)
 	print(pluNameMaxLenth)
-	return true
+	return true, nil
 }
 
 func fileToMd5(filePath string) string {
@@ -250,8 +249,6 @@ func readExcelToJSON(fileName string) ([]Product, error) {
 					if err != nil {
 						return products, err
 					}
-				} else {
-					return products, fmt.Errorf("data error")
 				}
 			case "ProductCode":
 				if cellValue != "" {
@@ -259,8 +256,6 @@ func readExcelToJSON(fileName string) ([]Product, error) {
 					if err != nil {
 						return products, err
 					}
-				} else {
-					return products, fmt.Errorf("data error")
 				}
 			case "ItemCode":
 				if cellValue != "" {
@@ -268,15 +263,11 @@ func readExcelToJSON(fileName string) ([]Product, error) {
 					if err != nil {
 						return products, err
 					}
-				} else {
-					return products, fmt.Errorf("data error")
 				}
 
 			case "ProductName":
 				if cellValue != "" {
 					product.ProductName = cellValue
-				} else {
-					return products, fmt.Errorf("data error")
 				}
 
 			case "GeneralUnit":
@@ -504,8 +495,7 @@ func ParserInsertPlu(excelFileName string, nameMaxLen int) ([]byte, []byte, bool
 		buf.WriteByte(0xFF)
 	}
 
-	exePath, _ := os.Executable()
-	exeDir := filepath.Dir(exePath)
+	exeDir := os.TempDir()
 	filePath := filepath.Join(exeDir, "plu.bin")
 
 	err = os.WriteFile(filePath, buf.Bytes(), 0644)

@@ -31,7 +31,7 @@ import (
 
 const (
 	DATA_LENGTH_512_TMAX = 512
-	DATA_LENGTH_256_TMAX = 256
+	DATA_LENGTH_256_TMAX = 128
 	DATA_LENGTH_8_TMAX   = 8
 )
 
@@ -2363,8 +2363,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 		if prnfmt.ParserFmtToFile(tempStr, reqData.PrinterModel, eraseLen) {
 			// 读取bin文件
-			exePath, _ := os.Executable()
-			exeDir := filepath.Dir(exePath)
+			exeDir := os.TempDir()
 			// 拼接文件路径
 			filePath := filepath.Join(exeDir, "formatBin.bin")
 			data, err := os.ReadFile(filePath)
@@ -2505,8 +2504,7 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	fn := composer.ComposeCmd
 	if prnfmt.ParserDefFmtToFile(strFileDataArray, reqData.PrinterModel, prnFmtMaxLenth) {
 		// 读取bin文件
-		exePath, _ := os.Executable()
-		exeDir := filepath.Dir(exePath)
+		exeDir := os.TempDir()
 		// 拼接文件路径
 		filePath := filepath.Join(exeDir, "formatBin.bin")
 		data, err := os.ReadFile(filePath)
@@ -2894,8 +2892,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if !bytes.Equal(headBytes, insertHeadBytes) {
 		return &ScaleRespMsg{}, fmt.Errorf("plu head is inconsistent,fail")
 	}
-	exePath, _ := os.Executable()
-	exeDir := filepath.Dir(exePath)
+	exeDir := os.TempDir()
 	filePath := filepath.Join(exeDir, "plu.bin")
 
 	if resParser {
@@ -3542,11 +3539,11 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	var file = reqData.FilePath
 	var nameMaxLen = reqData.NameMaxLen
-	exePath, _ := os.Executable()
-	exeDir := filepath.Dir(exePath)
+	exeDir := os.TempDir()
 	filePath := filepath.Join(exeDir, "plu.bin")
 
-	if ParserPluFile(string(file), nameMaxLen) {
+	resParser, errParser := ParserPluFile(string(file), nameMaxLen)
+	if resParser {
 		// 读取bin文件
 		data, err := os.ReadFile(filePath)
 		if err != nil {
@@ -3670,6 +3667,9 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		l.Log.Info("send bin ok")
 	} else {
+		if errParser != nil {
+			return &ScaleRespMsg{}, fmt.Errorf("fail,data error:%v", errParser)
+		}
 		return &ScaleRespMsg{}, fmt.Errorf("fail,data error")
 	}
 	//备份PLU表格 记录md5值和文件的对应关系

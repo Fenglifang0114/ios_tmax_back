@@ -107,19 +107,19 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return readFlashCmdTMAX(uint32(addr), data), CMD_TIMEOUT_SHORT_1500_MS, nil
 	case m.CMD_ERASE_FLASH:
 		addr := cmdData.Data.(int)
-		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MED_LONG_4000_MS, nil
 	case m.CMD_ERASE_FLASH_512:
 		addr := cmdData.Data.(int)
 		return eraseCmdTMAX_512(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WRITE_FLASH_256:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
-		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_256_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+		return wrDataCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MED_LONG_4000_MS, nil
 	case m.CMD_WRITE_FLASH_8:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
-		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_28_TMAX), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+		return wrDataCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WRITE_FLASH_512:
 		addr, data := parseWrDataTMAX(cmdData.Data.(string))
-		return wrDataCmdTMAX(uint32(addr), data, FILE_CHUNK_SIZE_512_TMAX), CMD_TIMEOUT_MED_LONG_4000_MS, nil
+		return wrDataCmdTMAX(uint32(addr), data), CMD_TIMEOUT_MED_LONG_4000_MS, nil
 	case m.CMD_WIFI_DATA_PASSTH:
 		return sendDataToWifiCmdTMAX(cmdData.Data.(string)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_WIFI_GET_AP_LIST:
@@ -587,7 +587,8 @@ func readDataCmdTMAX(addr uint32) []byte {
 }
 
 // 构建一个数据包   //FLF
-func wrDataCmdTMAX(addr uint32, data []byte, packetLen uint16) []byte {
+func wrDataCmdTMAX(addr uint32, data []byte) []byte {
+	packetLen := uint16(19 + len(data))
 	// 构建包头
 	packet := make([]byte, packetLen)
 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
@@ -957,8 +958,7 @@ func getSetGaduationValueCmdTMAX(data string) []byte {
 
 func getModifyEepromCmdTMAX(addr uint32, data []byte) []byte {
 	l.Log.Debug("compose modify eeprom info cmd")
-	var dataLen = 19 + len(data)
-	return wrDataCmdTMAX(addr, data, uint16(dataLen))
+	return wrDataCmdTMAX(addr, data)
 }
 
 func getModifyVarValueCmdTMAX(data []byte) []byte {
