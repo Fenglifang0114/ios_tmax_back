@@ -103,6 +103,9 @@ func pickerFnTmax(inData []byte, dataLen int) (packOffset uint, packLen uint, sh
 		// find header
 		headPos := findHeadPos(inData, curpos, dataLen)
 		if headPos == -1 && lastHeadPos == -1 { // no head ever found
+			if dataLen > 0 && inData[dataLen-1] == CMD_HEAD1 {
+				return 0, 0, uint(dataLen - 1), comm.Packet{}
+			}
 			return 0, 0, uint(dataLen), comm.Packet{}
 		}
 		if headPos != -1 {

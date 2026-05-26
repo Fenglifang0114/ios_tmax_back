@@ -2305,6 +2305,20 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 
 // func ReqDownPrnFmt(c *Scale, csvPrnFmt string, seqno string) error {
 func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
+	// CRITICAL FIX: Stop scale from sending continuous weight data during download to prevent buffer overflow
+	excuteSimpCmd(c, m.CMD_DIS_CONTINUE_MODE, m.UNREG_WEIGHT_RESP)
+	time.Sleep(100 * time.Millisecond)
+
+	// drain any pending garbage from the channel
+	drainCh := true
+	for drainCh {
+		select {
+		case <-c.fromScaleMsgCh:
+		default:
+			drainCh = false
+		}
+	}
+
 	reg, err, res := openFactory(c)
 	if err != nil || !res {
 		return reg, err
@@ -2384,19 +2398,36 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 
 			loopCnt := size / eraseLen
+			if loopCnt == 0 {
+				loopCnt = 1
+			}
 			addrInLoop := addr
 			for i := 0; i < loopCnt; i++ {
-				cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
+				// FORCE Factory Mode before EVERY erase command
+				openFactory(c)
+				
+				cmd, _, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
+				// CRITICAL FIX: Erase can take up to 60s, and we MUST NOT RETRY while the scale is busy!
+				if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, 60000, 1); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
 					return &ScaleRespMsg{}, fmt.Errorf("erase fail")
 				}
 				addrInLoop += eraseLen
 			}
+			
+			// Give firmware time to recover after erase
+			time.Sleep(1 * time.Second)
+			
+			// Re-enter factory mode (the 10s timer definitely expired during the long erase)
+			_, errFac, facRes := openFactory(c)
+			if errFac != nil || !facRes {
+				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail after erase")
+			}
+			
 			// 计算数据包数量
 			packetCount := len(data) / DATA_LENGTH_256_TMAX
 			if len(data)%DATA_LENGTH_256_TMAX != 0 {
@@ -3541,6 +3572,20 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	var nameMaxLen = reqData.NameMaxLen
 	exeDir := os.TempDir()
 	filePath := filepath.Join(exeDir, "plu.bin")
+	
+	// CRITICAL FIX: Stop scale from sending continuous weight data during download to prevent buffer overflow
+	excuteSimpCmd(c, m.CMD_DIS_CONTINUE_MODE, m.UNREG_WEIGHT_RESP)
+	time.Sleep(100 * time.Millisecond)
+
+	// drain any pending garbage from the channel
+	drainCh := true
+	for drainCh {
+		select {
+		case <-c.fromScaleMsgCh:
+		default:
+			drainCh = false
+		}
+	}
 
 	resParser, errParser := ParserPluFile(string(file), nameMaxLen)
 	if resParser {
@@ -3563,6 +3608,7 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		var scaleInfo SIFromScale
 		pluStartAddr := 0
 		pluMaxLenth := 0
+		eraseLen := 0
 
 		strData := reqMsg.MsgBody
 		if str, ok := strData.(string); ok {
@@ -3586,6 +3632,7 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			if addrInfo.Type == SI_PLU_INFO {
 				pluStartAddr = addrInfo.Addr
 				pluMaxLenth = addrInfo.Lenth
+				eraseLen = addrInfo.EraseLen
 			}
 		}
 		if pluStartAddr == 0 || pluMaxLenth == 0 {
@@ -3593,13 +3640,17 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		// 擦除原本秤上的PLU
 		// addr, size := mycmd.GetPluRomAddrNSize(c.ScaleCat)
+		if eraseLen == 0 {
+			eraseLen = 4096 // Fallback to 4096 (0x1000)
+		}
+		
 		addr := pluStartAddr
 		maxSize := pluMaxLenth
 		size := len(data)
 		if maxSize < size {
 			return &ScaleRespMsg{}, fmt.Errorf("no enough space to download")
 		}
-		loopCnt := size/4096 + 1
+		loopCnt := size/eraseLen + 1
 		addrInLoop := addr
 		for i := 0; i < loopCnt; i++ {
 			cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
@@ -3611,8 +3662,9 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			} else if res.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("erase fail")
 			}
-			addrInLoop += 4096
+			addrInLoop += eraseLen
 		}
+		
 		//擦除完成后送进度
 		respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(10), ScaleId: c.Id}
 		result, _ := json.Marshal(respMsg100)
@@ -4581,11 +4633,11 @@ func sendMsgIntoChsOrWeightToClient(s *Scale, msg *ScaleRespMsg) {
 			ch <- msg
 		}
 	}
-	if msg.MsgType == m.WEIGHT_DATA && s.isSendUnolicitedData && s.client != nil { // skip sending weight data to client if it doesn't not register this message
-		sendRespMsgClient(s, msg)
-		return
-	}
-	if msg.MsgType == m.WEIGHT_DATA && !s.isSendUnolicitedData { // skip sending weight data to client if it doesn't not register this message
+	if msg.MsgType == m.WEIGHT_DATA {
+		if s.isSendUnolicitedData && s.client != nil { // skip sending weight data to client if it doesn't not register this message
+			sendRespMsgClient(s, msg)
+		}
+		// CRITICAL FIX: NEVER let continuous WEIGHT_DATA fill up fromScaleMsgCh, otherwise it drops other command responses!
 		return
 	}
 	if msg.MsgType == m.SCALE_PASSTH_DATA && s.isScalePassth && s.client != nil { // skip sending weight data to client if it doesn't not register this message

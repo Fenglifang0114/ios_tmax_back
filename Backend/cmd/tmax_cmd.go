@@ -107,7 +107,7 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		return readFlashCmdTMAX(uint32(addr), data), CMD_TIMEOUT_SHORT_1500_MS, nil
 	case m.CMD_ERASE_FLASH:
 		addr := cmdData.Data.(int)
-		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MED_LONG_4000_MS, nil
+		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_ERASE_FLASH_512:
 		addr := cmdData.Data.(int)
 		return eraseCmdTMAX_512(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
