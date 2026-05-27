@@ -2,16 +2,23 @@ package prnfmt
 
 import (
 	"bufio"
+	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/xuri/excelize/v2"
 )
+
+//go:embed varTable.json
+var embeddedVarTable []byte
+
+//go:embed barcode.xlsx
+var embeddedBarcodeExcel []byte
 
 type VarStruct struct {
 	id       uint16
@@ -75,17 +82,11 @@ func GetFormatLines(fileNames string) ([]string, bool) {
 }
 
 func ReadTableFromFile(tableFilePath string) ScaleVarOrder {
-	jsonFile, err := os.Open(tableFilePath)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer jsonFile.Close()
-	jsonfile, _ := ioutil.ReadAll(jsonFile)
-	// fmt.Print(byteValue)
 	var tempTable ScaleVarOrder
-	err = json.Unmarshal(jsonfile, &tempTable)
+	
+	err := json.Unmarshal(embeddedVarTable, &tempTable)
 	if err != nil {
-		log.Panic(err)
+		log.Println(err)
 	}
 	return tempTable
 }
@@ -93,7 +94,7 @@ func ReadTableFromFile(tableFilePath string) ScaleVarOrder {
 // 读取excel文件，返回行列数组
 func getBarCodeTypeId(filename string, tempLan string, tempType string) string {
 	ret := ""
-	f, err := excelize.OpenFile(filename)
+	f, err := excelize.OpenReader(bytes.NewReader(embeddedBarcodeExcel))
 	if err != nil {
 		fmt.Println("读取excel文件出错", err.Error())
 		return ret

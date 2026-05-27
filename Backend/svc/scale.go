@@ -2403,29 +2403,16 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 			addrInLoop := addr
 			for i := 0; i < loopCnt; i++ {
-				// FORCE Factory Mode before EVERY erase command
-				openFactory(c)
-				
-				cmd, _, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
+				cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// CRITICAL FIX: Erase can take up to 60s, and we MUST NOT RETRY while the scale is busy!
-				if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, 60000, 1); err != nil {
+				if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
 					return &ScaleRespMsg{}, fmt.Errorf("erase fail")
 				}
 				addrInLoop += eraseLen
-			}
-			
-			// Give firmware time to recover after erase
-			time.Sleep(1 * time.Second)
-			
-			// Re-enter factory mode (the 10s timer definitely expired during the long erase)
-			_, errFac, facRes := openFactory(c)
-			if errFac != nil || !facRes {
-				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail after erase")
 			}
 			
 			// 计算数据包数量
