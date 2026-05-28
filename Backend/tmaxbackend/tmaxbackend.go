@@ -15,9 +15,10 @@ const (
 )
 
 // StartBackend is the entry point for Android gomobile integration
-func StartBackend(dataDir string) {
+func StartBackend(dataDir string, androidId string) {
 	fmt.Println("TmaxService Go Backend Engine Starting on Android...")
 	comm.AndroidDataDir = dataDir
+	comm.AndroidMachineID = androidId
 	os.Setenv("TMPDIR", dataDir)
 
 	s := svc.NewScaleMgr() 

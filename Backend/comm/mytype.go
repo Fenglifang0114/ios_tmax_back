@@ -159,6 +159,7 @@ var (
 	COMM_DATA_BASE = "database"
 	COMM_SERVICE   = "service"
 	AndroidDataDir string
+	AndroidMachineID string
 )
 
 var LogFile *os.File

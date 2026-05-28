@@ -14,13 +14,27 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 
+	"tmaxsrv/comm"
 	"tmaxsrv/log"
 )
+
+func getStableMachineID() string {
+	if comm.AndroidMachineID != "" {
+		return comm.AndroidMachineID
+	}
+
+	machineIDStr, err := machineid.ProtectedID("")
+	if err == nil && machineIDStr != "" {
+		return machineIDStr
+	}
+
+	return ""
+}
 
 // 检验Key是否认证通过
 func IsKeyValid(licenseKey string) (bool, string, string, string) {
 	// Get a unique machine ID based on the CPUID and Hard Disk ID
-	machineIDStr, _ := machineid.ProtectedID("")
+	machineIDStr := getStableMachineID()
 	if len(machineIDStr) < 10 {
 		machineIDStr = machineIDStr + "0000000000"
 	}
@@ -174,25 +188,24 @@ func SaveKey(filePath string, content string) error {
 	result := []string{}
 	if len(contentStr) > 0 {
 		listContent = strings.Split(string(contentStr), "\r\n")
-		if len(content) == 74 {
-			for _, item := range listContent {
+		for _, item := range listContent {
+			item = strings.TrimSpace(item)
+			if item == "" {
+				continue
+			}
+			if len(content) == 74 {
 				if len(item) == 78 {
 					result = append(result, item)
 				}
-
-			}
-
-		} else if len(content) == 78 {
-			for _, item := range listContent {
-				if len(item) == 78 && item[32:36] != content[32:36] {
-					result = append(result, item)
+			} else if len(content) == 78 {
+				if len(item) == 78 {
+					if item[32:36] != content[32:36] {
+						result = append(result, item)
+					}
 				} else {
 					result = append(result, item)
 				}
-
-			}
-		} else if strings.Contains(content, "++==") {
-			for _, item := range listContent {
+			} else if strings.Contains(content, "++==") {
 				if len(item) == 78 {
 					result = append(result, item)
 				}
@@ -207,5 +220,4 @@ func SaveKey(filePath string, content string) error {
 	}
 
 	return os.WriteFile(filePath, []byte(lastStr), 0644)
-
 }
