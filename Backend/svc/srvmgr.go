@@ -283,8 +283,10 @@ func (h *SrvMgr) Run() {
 				if scaleId < SERVICE_ID {
 					h.clientOfScales[h.scales[scaleId]] = client
 				}
-				if scaleId != 0 && scaleId < SERVICE_ID { // id 0 is reserved for common information channel
-					h.scales[scaleId].SetClient(client)
+				if scaleId > 0 && scaleId < SERVICE_ID { // id 0 and -1 are reserved for common information channel
+					if h.scales[scaleId] != nil {
+						h.scales[scaleId].SetClient(client)
+					}
 				}
 
 				if scaleId > SERVICE_ID { // id 0 is reserved for common information channel
