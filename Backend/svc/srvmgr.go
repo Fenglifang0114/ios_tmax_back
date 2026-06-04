@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -239,6 +240,51 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 
 	// 注册默认处理器
 	sm.registerDefaultHandlers()
+
+	// 启动UDP监听，用于接收Flutter代理过来的串口数据
+	go func() {
+		addr, err := net.ResolveUDPAddr("udp", "0.0.0.0:8081")
+		if err != nil {
+			l.Log.Errorf("ResolveUDPAddr error: %v", err)
+			return
+		}
+		conn, err := net.ListenUDP("udp", addr)
+		if err != nil {
+			l.Log.Errorf("ListenUDP error: %v", err)
+			return
+		}
+		defer conn.Close()
+		
+		l.Log.Infof("Started UDP listener for serial proxy on 0.0.0.0:8081")
+		buf := make([]byte, 2048)
+		for {
+			n, remoteAddr, err := conn.ReadFromUDP(buf)
+			if err != nil {
+				l.Log.Errorf("ReadFromUDP error: %v", err)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			if n > 0 {
+				data := make([]byte, n)
+				copy(data, buf[:n])
+				l.Log.Debugf("Go UDP [RECV] <- Flutter USB from %v: %d bytes (Hex: %x)", remoteAddr, n, data)
+				
+				// 将数据直接推送到配置为 USB 的所有秤的接收队列中
+				for _, scale := range sm.scales {
+					if scale != nil && scale.Pcnf.DevPath == "USB" && scale.MySerial != nil {
+						scale.MySerial.InjectData(data)
+					}
+				}
+
+				// 将数据压入串口输入缓冲区进行业务解析（兼容旧的单例解析模式）
+				select {
+				case sm.inputBuffer <- data:
+				default:
+					l.Log.Warnf("inputBuffer is full, dropping proxied serial data")
+				}
+			}
+		}
+	}()
 
 	// 如果配置了自动打开，则打开串口
 

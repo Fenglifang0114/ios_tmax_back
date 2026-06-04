@@ -2,6 +2,7 @@ package svc
 
 import (
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -157,21 +158,20 @@ func (c *TSerial) read() {
 			break // quit immediately
 		}
 
-		if c.port == nil {
-			time.Sleep(10 * time.Millisecond) // to avoid consume too much cpu time
-			continue
-		}
-
-		// read data from serial at least PACK_MIN_LEN or timeout (2 * 1/baud)
-		if n, err := c.readScale(); err != nil { // data will be stored in the queue
-			log.Log.Errorf("@TSerial read(), err: %v\n", err)
-			if !IsPacketChClosed(c.recvCh) {
-				c.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0xff, CmdSubId: 0x12, SeqNum: 0, Payload: []byte{}}
+		if c.port != nil {
+			// read data from serial at least PACK_MIN_LEN or timeout (2 * 1/baud)
+			if n, err := c.readScale(); err != nil { // data will be stored in the queue
+				log.Log.Errorf("@TSerial read(), err: %v\n", err)
+				if !IsPacketChClosed(c.recvCh) {
+					c.recvCh <- comm.Packet{PayloadLen: uint16(len(RESP_SERIAL_ERROR)), CmdID: 0xff, CmdSubId: 0x12, SeqNum: 0, Payload: []byte{}}
+				}
+				time.Sleep(10 * time.Second) // to avoid sending error too often to UI
+				continue
+			} else if n == 0 {
+				time.Sleep(1 * time.Millisecond) // to avoid consume too much cpu time
 			}
-			time.Sleep(10 * time.Second) // to avoid sending error too often to UI
-			continue
-		} else if n == 0 {
-			time.Sleep(1 * time.Millisecond) // to avoid consume too much cpu time
+		} else {
+			time.Sleep(10 * time.Millisecond) // to avoid consume too much cpu time
 		}
 		if c.queue.GetDataLen() > MIN_PACK_SIZE {
 			// call the packet picker function
@@ -224,6 +224,18 @@ func (s *TSerial) readScale() (int, error) {
 	return n, nil
 }
 
+// InjectData allows external proxy (like UDP listener) to push data into the serial queue
+func (s *TSerial) InjectData(data []byte) {
+	if s.queue.IsFull() {
+		s.queue.DequeueN(s.queue.Capacity)
+	}
+	if len(data) > 0 {
+		if err := s.queue.EnqueueN(data, len(data)); err != nil {
+			s.queue.Reset()
+		}
+	}
+}
+
 // A goroutine running write is started for the scale. The
 func (s *TSerial) write() {
 	for message := range s.sendCh {
@@ -234,6 +246,17 @@ func (s *TSerial) write() {
 			// fmt.Printf("out:%s\n", string(message))
 			if err != nil || n != len(message) {
 				log.Log.Error(fmt.Sprintf("Error on sending message to scale, to send: %v, sent:%v, err:%v\n", len(message), n, err.Error()))
+			}
+		} else if s.port == nil {
+			// Proxy to Flutter app via UDP
+			addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:8082")
+			if err == nil {
+				conn, err := net.DialUDP("udp", nil, addr)
+				if err == nil {
+					log.Log.Debugf("Go UDP -> [SEND] Flutter USB: %d bytes (Hex: %x)", len(message), message)
+					conn.Write(message)
+					conn.Close()
+				}
 			}
 		}
 	}
