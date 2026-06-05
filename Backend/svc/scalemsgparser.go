@@ -1506,15 +1506,15 @@ func handleRevDetailTailResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	}
 
 	//直接失败不要数据了
-	// // mSrvMgr.scaleMgr.detailPb.InsertTotalRec(head)//主服务不再写数据库
+	mSrvMgr.scaleMgr.detailPb.InsertTotalRec(head) // 恢复主服务写入数据库的功能
 	// totalStr, _ := json.MarshalToString(head)
 	// recStr := ""
 	// mSrvMgr.recvScaleMgrMsgSrv <- &SrvMgrRespMsg{MsgType: SCALE_MGR_RESP_DETAIL_LIST, MsgBody: totalStr, ScaleId: scaleId}
-	// for _, rec := range mid {
-	// 	// mSrvMgr.scaleMgr.detailPb.InsertDetailRec(rec) //主服务不再写数据库
+	for _, rec := range mid {
+		mSrvMgr.scaleMgr.detailPb.InsertDetailRec(rec) // 恢复主服务写入数据库的功能
 	// 	recStr, _ = json.MarshalToString(rec)
 	// 	mSrvMgr.recvScaleMgrMsgSrv <- &SrvMgrRespMsg{MsgType: SCALE_MGR_RESP_DETAIL_LIST, MsgBody: recStr, ScaleId: scaleId}
-	// }
+	}
 	list := mSrvMgr.scales[scaleId].detailInfo
 	recStr, _ := json.MarshalToString(list)
 	mSrvMgr.recvScaleMgrMsgSrv <- &SrvMgrRespMsg{MsgType: SCALE_MGR_RESP_DETAIL_LIST, MsgBody: recStr, ScaleId: scaleId}
