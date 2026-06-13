@@ -2,12 +2,14 @@ package svc
 
 import (
 	"path/filepath"
+	"sync"
 	"tmaxsrv/comm"
 )
 
 type ProductRecProvider struct {
 	myId  string
 	recPb *DbProductRec
+	mu    sync.Mutex
 }
 
 var (
@@ -58,10 +60,14 @@ func (p *ProductRecProvider) ModifyRec(rec ProductRec) error {
 }
 
 func (p *ProductRecProvider) Insert100Rec(rec []ProductRec) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	return p.recPb.Insert100ProductsWithGorm(rec)
 }
 
 func (p *ProductRecProvider) BatchModifyRec(rec []ProductRec) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	return p.recPb.BatchUpdateProductRec(rec)
 }
 
