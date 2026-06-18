@@ -3014,93 +3014,73 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 func unzipAndReadFilesSrec(zipPath string) ([]byte, []byte) {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
-		fmt.Println("Error opening ZIP:", err)
+		l.Log.Errorf("Error opening ZIP: %v", err)
 		return nil, nil
 	}
 	defer r.Close()
 
 	var binData, infoData []byte
-	res1 := false
-	res2 := false
-
-	if len(r.File) != 3 {
-		return nil, nil
-	}
 
 	for _, f := range r.File {
-		rc, err := f.Open()
-		if err != nil {
-			fmt.Println("Error opening file:", err)
-			return nil, nil
-		}
-		defer rc.Close()
-
-		buf := make([]byte, f.UncompressedSize64)
-		_, err = io.ReadFull(rc, buf)
-		if err != nil && err != io.EOF {
-			fmt.Println("Error reading file:", err)
-			return nil, nil
-		}
-
-		if strings.Contains(f.Name, ".srec") {
-			binData = buf
-			res1 = true
-		} else if strings.Contains(f.Name, ".json") {
-			infoData = buf
-			res2 = true
+		if strings.HasSuffix(f.Name, ".srec") || strings.HasSuffix(f.Name, ".SREC") {
+			rc, err := f.Open()
+			if err != nil {
+				l.Log.Errorf("Error opening file in ZIP: %v", err)
+				continue
+			}
+			binData, _ = io.ReadAll(rc)
+			rc.Close()
+		} else if strings.HasSuffix(f.Name, ".json") || strings.HasSuffix(f.Name, ".txt") {
+			rc, err := f.Open()
+			if err != nil {
+				l.Log.Errorf("Error opening file in ZIP: %v", err)
+				continue
+			}
+			infoData, _ = io.ReadAll(rc)
+			rc.Close()
 		}
 	}
-	if res1 && res2 {
+	
+	if binData != nil && infoData != nil {
 		return binData, infoData
 	}
 	return nil, nil
-
 }
 
 func unzipAndReadFiles(zipPath string) ([]byte, []byte) {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
-		fmt.Println("Error opening ZIP:", err)
+		l.Log.Errorf("Error opening ZIP: %v", err)
 		return nil, nil
 	}
 	defer r.Close()
 
 	var binData, infoData []byte
-	res1 := false
-	res2 := false
-
-	if len(r.File) != 3 {
-		return nil, nil
-	}
 
 	for _, f := range r.File {
-		rc, err := f.Open()
-		if err != nil {
-			fmt.Println("Error opening file:", err)
-			return nil, nil
-		}
-		defer rc.Close()
-
-		buf := make([]byte, f.UncompressedSize64)
-		_, err = io.ReadFull(rc, buf)
-		if err != nil && err != io.EOF {
-			fmt.Println("Error reading file:", err)
-			return nil, nil
-		}
-
-		if strings.Contains(f.Name, ".bin") {
-			binData = buf
-			res1 = true
-		} else if strings.Contains(f.Name, ".json") {
-			infoData = buf
-			res2 = true
+		if strings.HasSuffix(f.Name, ".bin") || strings.HasSuffix(f.Name, ".BIN") {
+			rc, err := f.Open()
+			if err != nil {
+				l.Log.Errorf("Error opening file in ZIP: %v", err)
+				continue
+			}
+			binData, _ = io.ReadAll(rc)
+			rc.Close()
+		} else if strings.HasSuffix(f.Name, ".json") || strings.HasSuffix(f.Name, ".txt") {
+			rc, err := f.Open()
+			if err != nil {
+				l.Log.Errorf("Error opening file in ZIP: %v", err)
+				continue
+			}
+			infoData, _ = io.ReadAll(rc)
+			rc.Close()
 		}
 	}
-	if res1 && res2 {
+	
+	if binData != nil && infoData != nil {
 		return binData, infoData
 	}
 	return nil, nil
-
 }
 
 func bytesToMd5(data []byte) string {
@@ -3176,18 +3156,18 @@ func getZipInfoSrec(fileName string) ([]byte, string, string, error) {
 
 	readSrecData, txtData := unzipAndReadFilesSrec(fileName)
 	if readSrecData == nil || txtData == nil {
-		return nil, "", "", fmt.Errorf("file error")
+		return nil, "", "", fmt.Errorf("unzip failed: missing .srec or .json/.txt")
 	}
 	var firmwareInfo ReqFirmwareInfo
 	if err := json.UnmarshalFromString(string(txtData), &firmwareInfo); err != nil {
-		return nil, "", "", fmt.Errorf("file error")
+		return nil, "", "", fmt.Errorf("json parse error: %v", err)
 	}
 	readMd5 := firmwareInfo.SrecKey
 
 	tempByte := mergeByteSlices(readSrecData, []byte(MD5SEED))
 	calMd5Str := bytesToMd5(tempByte)
 	if strings.Trim(readMd5, " ") != calMd5Str {
-		return nil, "", "", fmt.Errorf("file error")
+		return nil, "", "", fmt.Errorf("md5 mismatch: expected %s, got %s", readMd5, calMd5Str)
 	}
 
 	return readSrecData, firmwareInfo.ModelName, firmwareInfo.BootloaderVersion, nil
@@ -3211,8 +3191,8 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if len(parts) != 2 {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
 	}
-
-	readSrecData, modelName, bootloaderVersion, err := getZipInfoSrec(parts[0])
+	filePath := strings.TrimSpace(parts[0])
+	readSrecData, modelName, bootloaderVersion, err := getZipInfoSrec(filePath)
 
 	if err != nil || len(readSrecData) == 0 {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
