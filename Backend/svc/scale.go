@@ -3367,6 +3367,20 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,check connection")
 	}
 
+	// CRITICAL FIX: Stop scale from sending continuous weight data during download to prevent buffer overflow
+	excuteSimpCmd(c, m.CMD_DIS_CONTINUE_MODE, m.UNREG_WEIGHT_RESP)
+	time.Sleep(100 * time.Millisecond)
+
+	// drain any pending garbage from the channel
+	drainCh := true
+	for drainCh {
+		select {
+		case <-c.fromScaleMsgCh:
+		default:
+			drainCh = false
+		}
+	}
+
 	_, err, res := openFactory(c)
 	if err != nil || !res {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,check connection")
@@ -3433,7 +3447,18 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	binary.BigEndian.PutUint16(last4kByte[loopDataLen-4:], 0x5aa5)
 	binary.BigEndian.PutUint16(last4kByte[loopDataLen-2:], 0xa55a)
 
-	packetCount := len(binDataAdd) / DATA_LENGTH_256_TMAX
+	var dataLength int
+	if c.Conn.TMedia == MEDIA_BT {
+		dataLength = 40 // Smaller chunks for Bluetooth to prevent MTU drops
+	} else {
+		dataLength = DATA_LENGTH_256_TMAX
+	}
+
+	packetCount := len(binDataAdd) / dataLength
+	if len(binDataAdd)%dataLength != 0 {
+		packetCount++
+	}
+
 	println(packetCount)
 
 	process := 1.0
@@ -3450,8 +3475,8 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	loopAddr := addr
 	for i := 0; i < packetCount; i++ {
 		// 计算本包数据
-		start := i * DATA_LENGTH_256_TMAX
-		end := start + DATA_LENGTH_256_TMAX
+		start := i * dataLength
+		end := start + dataLength
 		if end > len(binDataAdd) {
 			end = len(binDataAdd)
 		}
@@ -3466,7 +3491,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		} else if res.MsgBody != "ok" {
 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 		}
-		loopAddr += DATA_LENGTH_256_TMAX
+		loopAddr += dataLength
 
 		totalProcessFloat := 11.0 + float64(i)*process
 		totalProcessInt := int(math.Round(totalProcessFloat))
@@ -3480,7 +3505,10 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	}
 	//写最后4K
-	lastLoop := len(last4kByte) / DATA_LENGTH_256_TMAX
+	lastLoop := len(last4kByte) / dataLength
+	if len(last4kByte)%dataLength != 0 {
+		lastLoop++
+	}
 	println(lastLoop)
 
 	l.Log.Debug("send data package to scale")
@@ -3488,8 +3516,8 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	for i := 0; i < lastLoop; i++ {
 		// 计算本包数据
-		start := i * DATA_LENGTH_256_TMAX
-		end := start + DATA_LENGTH_256_TMAX
+		start := i * dataLength
+		end := start + dataLength
 		if end > len(last4kByte) {
 			end = len(last4kByte)
 		}
@@ -3504,7 +3532,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		} else if res.MsgBody != "ok" {
 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 		}
-		lastLoopAddr += DATA_LENGTH_256_TMAX
+		lastLoopAddr += dataLength
 	}
 
 	l.Log.Info("send bin ok")
