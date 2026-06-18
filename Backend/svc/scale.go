@@ -3405,13 +3405,25 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	loopCnt := size / 4096
 	addrInLoop := addr
 	for i := 0; i < loopCnt; i++ {
-		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
-		if err != nil {
-			return &ScaleRespMsg{}, err
+		var eraseErr error
+		var eraseRes *ScaleRespMsg
+		retryCnt := 3
+		for r := 0; r < retryCnt; r++ {
+			cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			eraseRes, eraseErr = perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs)
+			if eraseErr == nil && eraseRes != nil && eraseRes.MsgBody == "ok" {
+				break
+			}
+			l.Log.Errorf("ReqDownFirmware erase flash retry %d for addr %08x", r+1, addrInLoop)
+			time.Sleep(200 * time.Millisecond)
 		}
-		if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
-			return &ScaleRespMsg{}, err
-		} else if res.MsgBody != "ok" {
+
+		if eraseErr != nil {
+			return &ScaleRespMsg{}, eraseErr
+		} else if eraseRes.MsgBody != "ok" {
 			return &ScaleRespMsg{}, fmt.Errorf("erase fail")
 		}
 		addrInLoop += 4096
@@ -3482,13 +3494,26 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		packetData := binDataAdd[start:end]
 		packDataHexStr := hex.EncodeToString(packetData)
-		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, packDataHexStr)})
-		if err != nil {
-			return &ScaleRespMsg{}, err
+		
+		var writeErr error
+		var writeRes *ScaleRespMsg
+		retryCnt := 3
+		for r := 0; r < retryCnt; r++ {
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			writeRes, writeErr = perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs)
+			if writeErr == nil && writeRes != nil && writeRes.MsgBody == "ok" {
+				break // Success
+			}
+			l.Log.Errorf("ReqDownFirmware write flash retry %d for addr %08x", r+1, loopAddr)
+			time.Sleep(200 * time.Millisecond)
 		}
-		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
-			return &ScaleRespMsg{}, err
-		} else if res.MsgBody != "ok" {
+
+		if writeErr != nil {
+			return &ScaleRespMsg{}, writeErr
+		} else if writeRes.MsgBody != "ok" {
 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 		}
 		loopAddr += dataLength
@@ -3523,13 +3548,26 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		packetData := last4kByte[start:end]
 		packDataHexStr := hex.EncodeToString(packetData)
-		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", lastLoopAddr, packDataHexStr)})
-		if err != nil {
-			return &ScaleRespMsg{}, err
+
+		var writeErr error
+		var writeRes *ScaleRespMsg
+		retryCnt := 3
+		for r := 0; r < retryCnt; r++ {
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", lastLoopAddr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			writeRes, writeErr = perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs)
+			if writeErr == nil && writeRes != nil && writeRes.MsgBody == "ok" {
+				break // Success
+			}
+			l.Log.Errorf("ReqDownFirmware last4K write flash retry %d for addr %08x", r+1, lastLoopAddr)
+			time.Sleep(200 * time.Millisecond)
 		}
-		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
-			return &ScaleRespMsg{}, err
-		} else if res.MsgBody != "ok" {
+
+		if writeErr != nil {
+			return &ScaleRespMsg{}, writeErr
+		} else if writeRes.MsgBody != "ok" {
 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 		}
 		lastLoopAddr += dataLength
