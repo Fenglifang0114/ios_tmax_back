@@ -1604,7 +1604,7 @@ func getPluTranslate(pluMap map[string]string, title string) string {
 // 设置PLU字段
 func (p pluSettingNotifier) Handle(mgr *SrvMgr, payload ReqPluSetting) {
 	l.Log.Debug("Handle pluSettingNotifier called")
-	_, username, _ := GetCurrentUser()
+	_, username, _ := getCurrentUser()
 
 	err := mgr.productPd.SetPluSetting(payload.Plu, username)
 	if err != nil {
@@ -2685,7 +2685,7 @@ func (p checkFmaIdAndBarcodeNotifier) Handle(mgr *SrvMgr, payload ReqCheckFmaIdA
 	if barcode == "" {
 		barcode = payload.FormulaID
 	}
-	idFlag, barcodeFlag, _ := mgr.formulaPd.CheckFmaIdAndBarcode(payload.RecId, payload.FormulaID, barcode)
+	idFlag, barcodeFlag, _ := mgr.formulaPd.checkFmaIdAndBarcode(payload.RecId, payload.FormulaID, barcode)
 	result := strconv.FormatBool(idFlag) + "," + strconv.FormatBool(barcodeFlag)
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_CHECK_FMA_ID_AND_BARCODE, MsgBody: result}
 
@@ -3958,7 +3958,7 @@ func (p addSysUserNotifier) Handle(mgr *SrvMgr, payload ReqAddSysUser) {
 	// Do something for this event
 	l.Log.Debug("Handle addSysUserNotifier called")
 
-	_, username, _ := GetCurrentUser()
+	_, username, _ := getCurrentUser()
 
 	userInfo := SysUser{
 		CreatedBy:     payload.CreatedBy,
@@ -4034,7 +4034,7 @@ func (p updateSysUserNotifier) Handle(mgr *SrvMgr, payload ReqUpdateSysUser) {
 
 	// 检查页面权限是否有变化
 	pagesChanged, oldPages := ComparePages(user.UserName, payload.PagesId)
-	_, username, _ := GetCurrentUser()
+	_, username, _ := getCurrentUser()
 	userInfo := SysUser{
 		UserId:        user.UserId,
 		CreatedBy:     user.CreatedBy,
@@ -4111,7 +4111,7 @@ func (p disableSysUserNotifier) Handle(mgr *SrvMgr, payload ReqEnabledSysUserId)
 	// Do something for this event
 	l.Log.Debug("Handle disableSysUserNotifier called")
 
-	userid, username, _ := GetCurrentUser()
+	userid, username, _ := getCurrentUser()
 
 	err := mSrvMgr.sysUserPd.DisableUser(payload.UserId, payload.IsEnabled, userid, username)
 	if err != nil {
@@ -4159,7 +4159,7 @@ func (p loginNotifier) Handle(mgr *SrvMgr, payload ReqLogin) {
 	l.Log.Debug("Handle loginNotifier called")
 
 	if payload.AutoLogin {
-		userPerm, _ := mSrvMgr.sysUserPd.GetUserDetail(payload.UserName)
+		userPerm, _ := mSrvMgr.sysUserPd.getUserDetail(payload.UserName)
 		SetCurrentUser(userPerm.UserID, userPerm.NickName, userPerm.RoleID)
 		// 记录登录日志
 		LogSysOperation(MenuSystem, SubSysLogin, OpLoginStr, "", "ok", "")
@@ -4175,7 +4175,7 @@ func (p loginNotifier) Handle(mgr *SrvMgr, payload ReqLogin) {
 		if res {
 
 			mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_LOGIN, MsgBody: "ok"}
-			userPerm, _ := mSrvMgr.sysUserPd.GetUserDetail(payload.UserName)
+			userPerm, _ := mSrvMgr.sysUserPd.getUserDetail(payload.UserName)
 			SetCurrentUser(userPerm.UserID, userPerm.NickName, userPerm.RoleID)
 			// 记录登录日志
 			LogSysOperation(MenuSystem, SubSysLogin, OpLoginStr, "", "ok", "")
@@ -4222,7 +4222,7 @@ func (p getAllUsersNotifier) Handle(mgr *SrvMgr) {
 func (p getUserDetailNotifier) Handle(mgr *SrvMgr, payload ReqSysUserName) {
 	// Do something for this event
 	l.Log.Debug("Handle getUserDetailNotifier called")
-	userPerm, err := mSrvMgr.sysUserPd.GetUserDetail(payload.UserName)
+	userPerm, err := mSrvMgr.sysUserPd.getUserDetail(payload.UserName)
 	if err != nil {
 		l.Log.Error(err)
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_USER_DETAIL, MsgBody: "fail,get user detail failed"}

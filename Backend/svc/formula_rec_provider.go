@@ -140,8 +140,8 @@ func (p *FormulaRecProvider) GetFormulaDataByBarcode(barcode string) ([]FormulaL
 }
 
 // 检查配方ID和条码是否匹配
-func (p *FormulaRecProvider) CheckFmaIdAndBarcode(recId int, formulaID string, formulaBarcode string) (bool, bool, error) {
-	return p.infoPb.CheckFmaIdAndBarcode(recId, formulaID, formulaBarcode)
+func (p *FormulaRecProvider) checkFmaIdAndBarcode(recId int, formulaID string, formulaBarcode string) (bool, bool, error) {
+	return p.infoPb.checkFmaIdAndBarcode(recId, formulaID, formulaBarcode)
 }
 
 // 获取单个配方信息

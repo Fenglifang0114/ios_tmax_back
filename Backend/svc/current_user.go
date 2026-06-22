@@ -35,7 +35,7 @@ func SetCurrentUser(userID int, username string, roleId int) {
 }
 
 // GetCurrentUser 获取当前登录用户
-func GetCurrentUser() (int, string, int) {
+func getCurrentUser() (int, string, int) {
 	currentUser.mutex.Lock()
 	defer currentUser.mutex.Unlock()
 	return currentUser.UserID, currentUser.Username, currentUser.RoleId
@@ -45,7 +45,7 @@ func GetCurrentUser() (int, string, int) {
 func SingleUserMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 直接从全局存储获取当前用户
-		userID, username, roleId := GetCurrentUser()
+		userID, username, roleId := getCurrentUser()
 		if userID == 0 {
 			http.Error(w, "未登录", http.StatusUnauthorized)
 			return

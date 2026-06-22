@@ -111,7 +111,7 @@ const (
 // LogSysOperation 统一操作日志记录接口
 func LogSysOperation(module string, subModule string, opType string, opContent string, result string, remarks string) {
 	// 1. 获取当前用户信息
-	userID, username, roleID := GetCurrentUser()
+	userID, username, roleID := getCurrentUser()
 	if userID == 0 {
 		return
 	}
@@ -168,7 +168,7 @@ func GetScaleWgtMode(mode int) (module string) {
 // LogSysOperation 统一操作日志记录接口
 func LogScaleWgtOperation(mode int, wgtInfo ScaleRec, remarks string) {
 	// 1. 获取当前用户信息
-	userID, username, roleID := GetCurrentUser()
+	userID, username, roleID := getCurrentUser()
 	if userID == 0 {
 		return
 	}
@@ -205,7 +205,7 @@ func LogScaleWgtOperation(mode int, wgtInfo ScaleRec, remarks string) {
 // LogSysOperation 统一操作日志记录接口
 func LogCalLogOperation(rec CalibrationLog) {
 	// 1. 获取当前用户信息
-	userID, username, roleID := GetCurrentUser()
+	userID, username, roleID := getCurrentUser()
 	if userID == 0 {
 		return
 	}

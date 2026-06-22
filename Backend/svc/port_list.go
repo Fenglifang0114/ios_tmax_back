@@ -10,6 +10,13 @@ import (
 )
 
 func getPortsList() ([]string, error) {
+	if runtime.GOOS == "android" {
+		// Android cannot scan /dev directly due to SELinux.
+		// It causes avc: denied logs which crashes the WiFi driver (WifiVendorHal).
+		// Android uses Flutter's usb_serial plugin instead.
+		return []string{}, nil
+	}
+
 	if arch := runtime.GOARCH; arch != "arm" {
 
 		ports, err := serial.GetPortsList()

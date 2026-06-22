@@ -583,7 +583,7 @@ type userRolePermission struct {
 	PageIDList    []int  `json:"pageIdList"`
 }
 
-func (d *DbSysUser) GetUserRolePermission(userName string) (userRolePermission, error) {
+func (d *DbSysUser) getUserRolePermission(userName string) (userRolePermission, error) {
 	defer func() { recover() }()
 	var err error
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})

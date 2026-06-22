@@ -65,7 +65,7 @@ func NewUiConfig() *UiConfig {
 	return &UiConfig{Config: &config}
 }
 
-func (c *UiConfig) GetConfig() (*Config, error) {
+func (c *UiConfig) getConfig() (*Config, error) {
 	return c.Config, nil
 }
 

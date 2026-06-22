@@ -390,7 +390,7 @@ func ParserDelPlu(pluIdList []string) ([]byte, bool) {
 	return buf.Bytes(), true
 }
 
-func ParserInsertPlu(excelFileName string, nameMaxLen int) ([]byte, []byte, bool) {
+func parserInsertPlu(excelFileName string, nameMaxLen int) ([]byte, []byte, bool) {
 	// columnNames := []string{
 	// 	"ProductNumber",
 	// 	"ProductName",

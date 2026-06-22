@@ -526,8 +526,8 @@ func procSetWifiStaticIp(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return ReqSetWifiStaticIp(scale, data["ip"].(string), data["gateway"].(string), data["netmask"].(string))
 }
 
-func procGetIpInfo(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
-	return ReqGetIpInfo(scale)
+func procGetipInfoStruct(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
+	return ReqGetipInfoStruct(scale)
 }
 
 func procChangeWifiMode(scale *Scale, req SRequest) (*ScaleRespMsg, error) {
@@ -773,7 +773,7 @@ func init() {
 		SREQ_CONNECT_AP_ONE_KEY:       procConnectApOneKey,
 		SREQ_SET_WIFI_DYNAMIC_IP:      procSetWifiDynamicIp,
 		SREQ_SET_WIFI_STATIC_IP:       procSetWifiStaticIp,
-		SREQ_GET_IP_INFO:              procGetIpInfo,
+		SREQ_GET_IP_INFO:              procGetipInfoStruct,
 		SREQ_MODIFY_BT_NAME:           procModifyBTName,
 		SREQ_SEND_DATA_TO_BT:          procSendDataToBT,
 		SREQ_SEND_DATA_TO_WIFI:        procSendDataToWifi,

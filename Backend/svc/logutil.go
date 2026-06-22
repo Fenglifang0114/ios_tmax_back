@@ -31,7 +31,7 @@ import (
 // LogOperation 统一操作日志记录接口
 func LogOperation(ctx context.Context, opTypeID int, menuID int, content string, status int, result string, deviceID int, deviceSn string) {
 	// 1. 获取当前用户信息
-	userID, username, roleID := GetCurrentUser()
+	userID, username, roleID := getCurrentUser()
 	if userID == 0 && ctx != nil {
 		// 尝试从Context获取（适用于HTTP请求场景）
 		if userInfo, ok := ctx.Value(UserContextKey{}).(UserInfo); ok {

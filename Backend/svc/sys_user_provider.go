@@ -17,8 +17,8 @@ func NewSysUserProvider() *SysUserProvider {
 }
 
 // 获取用户详情
-func (p *SysUserProvider) GetUserDetail(userName string) (*userRolePermission, error) {
-	user, err := p.infoPb.GetUserRolePermission(userName)
+func (p *SysUserProvider) getUserDetail(userName string) (*userRolePermission, error) {
+	user, err := p.infoPb.getUserRolePermission(userName)
 	return &user, err
 }
 

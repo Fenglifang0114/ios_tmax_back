@@ -156,7 +156,7 @@ func CompareUserFields(oldUser *SysUser, newUser UpdateUser) (map[string]interfa
 // 比较页面权限是否有变化
 func ComparePages(userName string, newPages []int) (bool, []int) {
 	// 获取用户当前的页面权限
-	currentPages, err := mSrvMgr.sysUserPd.infoPb.GetUserRolePermission(userName)
+	currentPages, err := mSrvMgr.sysUserPd.infoPb.getUserRolePermission(userName)
 	if err != nil {
 		l.Log.Error("Failed to get user page permissions:", err)
 		return true, currentPages.PageIDList // 如果获取失败，认为有变化

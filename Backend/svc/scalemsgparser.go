@@ -171,7 +171,7 @@ func init() {
 		m.RESCAN_AP_LIST_RESP:       handleRescanApListResp,
 		m.SET_WIFI_DYNAMIC_IP_RESP:  handleSetWifiDynamicIpResp,
 		m.SET_WIFI_STATIC_IP_RESP:   handleSetWifiStaticIpResp,
-		m.GET_IP_INFO_RESP:          handleGetIpInfoResp,
+		m.GET_IP_INFO_RESP:          handleGetipInfoStructResp,
 		m.GET_IP_MODE_RESP:          handleGetIpModeResp,
 		m.MODIFY_BT_NAME_RESP:       handleModifyBtNameResp,
 		m.BT_PASSTH_DATA_RESP:       handleBTPassthResp,
@@ -681,7 +681,7 @@ func formatIPv4(b []byte) string {
 	return fmt.Sprintf("%d.%d.%d.%d", b[0], b[1], b[2], b[3])
 }
 
-type IpInfo struct {
+type ipInfoStruct struct {
 	Ip      string `json:"Ip"`
 	Gateway string `json:"Gateway"`
 	Netmask string `json:"Netmask"`
@@ -695,12 +695,12 @@ func handleGetWiredIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	gateway := formatIPv4(data[4:8])
 	netmask := formatIPv4(data[8:12])
 
-	IpInfo := IpInfo{
+	ipInfoStruct := ipInfoStruct{
 		Ip:      ip,
 		Gateway: gateway,
 		Netmask: netmask,
 	}
-	jsonStr, _ := json.MarshalToString(IpInfo)
+	jsonStr, _ := json.MarshalToString(ipInfoStruct)
 	return ScaleRespMsg{ScaleId: scaleId, MsgType: m.GET_WIRED_IP_RESP, MsgBody: jsonStr}, len(data)
 }
 
@@ -1808,7 +1808,7 @@ func handleWifiPassthResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	case m.GET_WIFI_AP_INFO_RESP:
 		return handleGetApInfoResp(scaleId, data)
 	case m.GET_IP_INFO_RESP:
-		return handleGetIpInfoResp(scaleId, data)
+		return handleGetipInfoStructResp(scaleId, data)
 	case m.GET_IP_MODE_RESP:
 		return handleGetIpModeResp(scaleId, data)
 	case m.SET_WIFI_STATIC_IP_RESP:
@@ -2093,7 +2093,7 @@ func handleSetWifiStaticIpResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	}
 }
 
-type IPInfo struct {
+type ipInfoStruct2 struct {
 	IP      string
 	Gateway string
 	Netmask string
@@ -2158,8 +2158,8 @@ func extractWifiAPInfo(response string) (WifiAPInfo, error) {
 	return info, nil
 }
 
-func extractIPInfo(response string) (IPInfo, error) {
-	var info IPInfo
+func extractipInfoStruct2(response string) (ipInfoStruct2, error) {
+	var info ipInfoStruct2
 
 	// 根据字符串中的换行符分割字符串
 	lines := strings.Split(response, "\r\n")
@@ -2262,10 +2262,10 @@ func handleGetApInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	}
 }
 
-func handleGetIpInfoResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+func handleGetipInfoStructResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	println("IP:" + string(data))
 	if strings.Contains(string(data), GET_IP_INFO_OK_RESP) { // success
-		ipInfo, err := extractIPInfo(string(data))
+		ipInfo, err := extractipInfoStruct2(string(data))
 		if err != nil {
 			return ScaleRespMsg{m.GET_IP_INFO_RESP, "fail", scaleId}, len(data)
 		}

@@ -791,7 +791,7 @@ func ConnectWifiApOneKey(s *Scale, ssid string, bssid string, passwd string) (*S
 }
 
 // Get IP info from scale
-func GetIpInfo(s *Scale) (*ScaleRespMsg, error) {
+func GetipInfoStruct(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Get IP info from Scale")
 	GExpectWifiResp = m.GET_IP_INFO_RESP
 	// return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO, m.GET_IP_INFO_RESP)
@@ -804,7 +804,7 @@ func GetIpInfo(s *Scale) (*ScaleRespMsg, error) {
 }
 
 // Get IP info from scale
-func GetIpInfo32(s *Scale) (*ScaleRespMsg, error) {
+func GetipInfoStruct32(s *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("Get IP info from Scale")
 	GExpectWifiResp = m.GET_IP_INFO_RESP
 	// return excuteSimpCmd(s, m.CMD_WIFI_GET_IP_INFO_32, m.GET_IP_INFO_RESP)

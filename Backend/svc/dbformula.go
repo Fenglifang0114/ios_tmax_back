@@ -1235,7 +1235,7 @@ func (d *DbFormulaInfo) GetFormulaData(id int) ([]FormulaList, error) {
 }
 
 // 检查配方ID和条码是否匹配
-func (d *DbFormulaInfo) CheckFmaIdAndBarcode(recId int, formulaID string, formulaBarcode string) (bool, bool, error) {
+func (d *DbFormulaInfo) checkFmaIdAndBarcode(recId int, formulaID string, formulaBarcode string) (bool, bool, error) {
 	defer func() { recover() }()
 	db, err := gorm.Open(sqlite.Open(d.dbName), &gorm.Config{})
 	if err != nil {

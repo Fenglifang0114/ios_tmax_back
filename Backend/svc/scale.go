@@ -1130,7 +1130,7 @@ func ReqSetWifiStaticIp(s *Scale, ip string, gateway string, netmask string) (*S
 	return SetWifiStaticIp32(s, ip, gateway, netmask)
 }
 
-func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
+func ReqGetipInfoStruct(s *Scale) (*ScaleRespMsg, error) {
 	reg, err, res := openFactory(s)
 	if err != nil || !res {
 		reg.MsgType = m.SET_WIFI_STATIC_IP_RESP
@@ -1147,13 +1147,13 @@ func ReqGetIpInfo(s *Scale) (*ScaleRespMsg, error) {
 	// msg, _ = getAtVersion(s)
 	// switch msg.MsgBody {
 	// case m.AT_VERSION:
-	// 	return GetIpInfo32(s)
+	// 	return GetipInfoStruct32(s)
 	// case m.AT_VERSION8266:
-	// 	return GetIpInfo(s)
+	// 	return GetipInfoStruct(s)
 	// default:
-	// 	return GetIpInfo32(s)
+	// 	return GetipInfoStruct32(s)
 	// }
-	return GetIpInfo32(s)
+	return GetipInfoStruct32(s)
 
 }
 
@@ -2905,7 +2905,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 	}
 
-	bufPluNumData, insertHeadBytes, resParser := ParserInsertPlu(string(file), nameMaxLen)
+	bufPluNumData, insertHeadBytes, resParser := parserInsertPlu(string(file), nameMaxLen)
 
 	if !bytes.Equal(headBytes, insertHeadBytes) {
 		return &ScaleRespMsg{}, fmt.Errorf("plu head is inconsistent,fail")
@@ -3405,12 +3405,22 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	loopCnt := size / 4096
 	addrInLoop := addr
 	for i := 0; i < loopCnt; i++ {
-		cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
-		if err != nil {
-			return &ScaleRespMsg{}, err
+		var eraseErr error
+		var eraseRes *ScaleRespMsg
+		retryCnt := 3
+		for r := 0; r < retryCnt; r++ {
+			cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			eraseRes, eraseErr = perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs)
+			if eraseErr == nil && eraseRes != nil && eraseRes.MsgBody == "ok" {
+				break
+			}
+			l.Log.Errorf("ReqDownFirmware erase flash retry %d for addr %08x", r+1, addrInLoop)
+			time.Sleep(200 * time.Millisecond)
 		}
-		
-		eraseRes, eraseErr := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs)
+
 		if eraseErr != nil {
 			return &ScaleRespMsg{}, eraseErr
 		} else if eraseRes.MsgBody != "ok" {
@@ -3452,8 +3462,10 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	var dataLength int
 	if c.Conn.TMedia == MEDIA_BT {
 		dataLength = 40 // Smaller chunks for Bluetooth to prevent MTU drops
+	} else if c.MyNet != nil {
+		dataLength = 256 // MUST be 256. MCU bootloader crashes if 512 is used.
 	} else {
-		dataLength = 64 // Reduced from 128 to 64 bytes for WiFi to improve stability over weak networks
+		dataLength = DATA_LENGTH_256_TMAX // Default for Serial
 	}
 
 	packetCount := len(binDataAdd) / dataLength
@@ -3473,6 +3485,8 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 	}
 
+	lastProgressInt := -1
+
 	l.Log.Debug("send data package to scale")
 	loopAddr := addr
 	for i := 0; i < packetCount; i++ {
@@ -3483,13 +3497,74 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			end = len(binDataAdd)
 		}
 		packetData := binDataAdd[start:end]
+
+		isAllFF := true
+		for _, b := range packetData {
+			if b != 0xFF {
+				isAllFF = false
+				break
+			}
+		}
+		if isAllFF {
+			loopAddr += dataLength
+			continue
+		}
+
 		packDataHexStr := hex.EncodeToString(packetData)
 		
-		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, packDataHexStr)})
-		if err != nil {
-			return &ScaleRespMsg{}, err
+		var writeErr error
+		var writeRes *ScaleRespMsg
+		retryCnt := 3
+		startTime := time.Now()
+		l.Log.Infof("ReqDownFirmware Start chunk %d/%d (addr: %08x, isWiFi: %v)", i, packetCount, loopAddr, c.MyNet != nil)
+
+		for r := 0; r < retryCnt; r++ {
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", loopAddr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			
+			writeRes, writeErr = perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs)
+			
+			resBody := "nil"
+			if writeRes != nil {
+				resBody = fmt.Sprintf("%v", writeRes.MsgBody)
+			}
+			l.Log.Infof("ReqDownFirmware Chunk %d (addr: %08x) Retry %d RTT: %v, writeErr: %v, res: %s", i, loopAddr, r, time.Since(startTime), writeErr, resBody)
+			
+			if writeErr == nil && writeRes != nil && writeRes.MsgBody == "ok" {
+				if c.MyNet == nil {
+					time.Sleep(40 * time.Millisecond) // Bluetooth
+				} else {
+					time.Sleep(150 * time.Millisecond) // WiFi breather
+				}
+				break // Success
+			}
+			
+			if writeErr != nil && strings.Contains(writeErr.Error(), "time out") {
+				if c.MyNet != nil {
+					l.Log.Errorf("ReqDownFirmware TCP Timeout detected. Forcing reconnect...")
+					if c.MyNet.conn != nil {
+						c.MyNet.conn.Close()
+						c.MyNet.conn = nil
+					}
+					c.MyNet.isAlive = false
+					
+					// Wait for background keepNetState to reconnect
+					for wait := 0; wait < 15; wait++ {
+						time.Sleep(1 * time.Second)
+						if c.MyNet.isAlive && c.MyNet.conn != nil {
+							l.Log.Infof("ReqDownFirmware TCP Reconnected successfully!")
+							break
+						}
+					}
+				}
+			}
+
+			l.Log.Errorf("ReqDownFirmware write flash retry %d for addr %08x", r+1, loopAddr)
+			time.Sleep(200 * time.Millisecond)
+			startTime = time.Now() // Reset timer for next retry
 		}
-		writeRes, writeErr := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs)
 
 		if writeErr != nil {
 			return &ScaleRespMsg{}, writeErr
@@ -3504,9 +3579,12 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			totalProcessInt = 95
 		}
 
-		respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(totalProcessInt), ScaleId: c.Id}
-		result, _ := json.Marshal(respMsg100)
-		c.client.sendCh <- result
+		if totalProcessInt != lastProgressInt {
+			lastProgressInt = totalProcessInt
+			respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(totalProcessInt), ScaleId: c.Id}
+			result, _ := json.Marshal(respMsg100)
+			c.client.sendCh <- result
+		}
 
 	}
 	//写最后4K
@@ -3527,14 +3605,74 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			end = len(last4kByte)
 		}
 		packetData := last4kByte[start:end]
+
+		isAllFF := true
+		for _, b := range packetData {
+			if b != 0xFF {
+				isAllFF = false
+				break
+			}
+		}
+		if isAllFF {
+			lastLoopAddr += dataLength
+			continue
+		}
+
 		packDataHexStr := hex.EncodeToString(packetData)
 
-		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", lastLoopAddr, packDataHexStr)})
-		if err != nil {
-			return &ScaleRespMsg{}, err
+		var writeErr error
+		var writeRes *ScaleRespMsg
+		retryCnt := 3
+		startTime := time.Now()
+		l.Log.Infof("ReqDownFirmware last4K Start chunk %d/%d (addr: %08x, isWiFi: %v)", i, lastLoop, lastLoopAddr, c.MyNet != nil)
+
+		for r := 0; r < retryCnt; r++ {
+			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", lastLoopAddr, packDataHexStr)})
+			if err != nil {
+				return &ScaleRespMsg{}, err
+			}
+			
+			writeRes, writeErr = perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs)
+			
+			resBody := "nil"
+			if writeRes != nil {
+				resBody = fmt.Sprintf("%v", writeRes.MsgBody)
+			}
+			l.Log.Infof("ReqDownFirmware last4K Chunk %d (addr: %08x) Retry %d RTT: %v, writeErr: %v, res: %s", i, lastLoopAddr, r, time.Since(startTime), writeErr, resBody)
+			
+			if writeErr == nil && writeRes != nil && writeRes.MsgBody == "ok" {
+				if c.MyNet == nil {
+					time.Sleep(40 * time.Millisecond) // Bluetooth
+				} else {
+					time.Sleep(150 * time.Millisecond) // WiFi breather
+				}
+				break // Success
+			}
+			
+			if writeErr != nil && strings.Contains(writeErr.Error(), "time out") {
+				if c.MyNet != nil {
+					l.Log.Errorf("ReqDownFirmware last4K TCP Timeout detected. Forcing reconnect...")
+					if c.MyNet.conn != nil {
+						c.MyNet.conn.Close()
+						c.MyNet.conn = nil
+					}
+					c.MyNet.isAlive = false
+					
+					// Wait for background keepNetState to reconnect
+					for wait := 0; wait < 15; wait++ {
+						time.Sleep(1 * time.Second)
+						if c.MyNet.isAlive && c.MyNet.conn != nil {
+							l.Log.Infof("ReqDownFirmware last4K TCP Reconnected successfully!")
+							break
+						}
+					}
+				}
+			}
+
+			l.Log.Errorf("ReqDownFirmware last4K write flash retry %d for addr %08x", r+1, lastLoopAddr)
+			time.Sleep(200 * time.Millisecond)
+			startTime = time.Now() // Reset timer for next retry
 		}
-		
-		writeRes, writeErr := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs)
 
 		if writeErr != nil {
 			return &ScaleRespMsg{}, writeErr
@@ -5020,7 +5158,7 @@ func ReqGetGravAcc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_GRAV_ACC, m.GET_GRAV_ACC_RESP)
 }
 
-func convertIPConfigToHex(inInfo IpInfo) (string, error) {
+func convertIPConfigToHex(inInfo ipInfoStruct) (string, error) {
 	// 解析 IP 地址
 	ip := net.ParseIP(inInfo.Ip)
 	if ip == nil {
@@ -5078,7 +5216,7 @@ func ReqSetWiredIp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if err != nil || !res {
 		return &ScaleRespMsg{m.SET_WIRED_IP_RESP, "fail", c.Id}, nil
 	}
-	inInfo := IpInfo{}
+	inInfo := ipInfoStruct{}
 
 	err = json.Unmarshal([]byte(req.ReqData), &inInfo)
 	if err != nil {
@@ -5506,7 +5644,7 @@ func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if res, err := perfCmdNwaitResult(c, cmd, m.SOFT_SEAL_RESP, timeoutMs); err != nil {
 		return &ScaleRespMsg{m.SOFT_SEAL_RESP, "fail", c.Id}, nil
 	} else if res.MsgBody == "ok" {
-		_, username, roleID := GetCurrentUser()
+		_, username, roleID := getCurrentUser()
 		SealLog := SealLog{
 			ScaleId:   int(c.Id),
 			Model:     c.Model,
@@ -5546,7 +5684,7 @@ func ReqRemoveSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if res, err := perfCmdNwaitResult(c, cmd, m.REMOVE_SOFT_SEAL_RESP, timeoutMs); err != nil {
 		return &ScaleRespMsg{m.REMOVE_SOFT_SEAL_RESP, "fail", c.Id}, nil
 	} else if res.MsgBody == "ok" {
-		_, username, roleID := GetCurrentUser()
+		_, username, roleID := getCurrentUser()
 		SealLog := SealLog{
 			ScaleId:   int(c.Id),
 			Model:     c.Model,
@@ -5570,7 +5708,7 @@ func ReqRemoveSoftSealOnce(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	reqMsg, _ := excuteSimpCmd(c, m.CMD_REMOVE_SOFT_SEAL_ONCE, m.REMOVE_SOFT_SEAL_ONCE_RESP)
 	if reqMsg.MsgBody == "ok" {
-		_, username, roleID := GetCurrentUser()
+		_, username, roleID := getCurrentUser()
 		SealLog := SealLog{
 			ScaleId:   int(c.Id),
 			Model:     c.Model,
