@@ -53,7 +53,7 @@ const (
 	FCX_MD5_ADDR        = FCX_SN_ADDR + 0x10         //8字节
 	FCX_TAIL_ADDR       = FCX_ADDR + 0x200 - 0x08    //尾巴8字节
 
-	FCX_DEF_FLASH_ADDR = 0x1001DE00 //默认参数位置
+	FCX_DEF_FLASH_ADDR = 0x1001DE00 //榛樿鍙傛暟浣嶇疆
 )
 
 var WRITE_FACTORY_TAIL_CMD_TMAX []byte = []byte{0xff, 0xff, 0xff, 0xff, 0x5a, 0xa5, 0xa5, 0x5a}
@@ -235,7 +235,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 			detailInfo:    detailInfo,
 			packDetailMid: packDetailMid,
 		}
-		// 设置虚拟蓝牙写入回调，将数据发回给 client (Flutter 端)
+		// 璁剧疆铏氭嫙钃濈墮鍐欏叆鍥炶皟锛屽皢鏁版嵁鍙戝洖缁?client (Flutter 绔?
 		if bt != nil {
 			bt.VirtualWriteHandler = func(data []byte) {
 				defer func() {
@@ -302,7 +302,7 @@ func NewScale(scaleMgr *ScaleMgr, conn *ScaleConnMedia, scaleCat m.ScaleCat, mod
 		go scale.keepNetState(scale.MyNet)
 		// scale.keepNetState(scale.MyNet)
 	case MEDIA_BT:
-		// 蓝牙秤的物理连接由 Flutter 维护，一旦创建，Go 侧应视为逻辑在线
+		// 钃濈墮绉ょ殑鐗╃悊杩炴帴鐢?Flutter 缁存姢锛屼竴鏃﹀垱寤猴紝Go 渚у簲瑙嗕负閫昏緫鍦ㄧ嚎
 		scale.Conn.IsOnline = true
 	}
 
@@ -324,7 +324,7 @@ func (s *Scale) setC51Offline() {
 
 func (s *Scale) keepSerialPortState() {
 	cont := 1
-	isReconnecting := false // 添加一个标记表示是否正在重连
+	isReconnecting := false // 娣诲姞涓€涓爣璁拌〃绀烘槸鍚︽鍦ㄩ噸杩?
 
 	for {
 		if s.MySerial == nil {
@@ -342,7 +342,7 @@ func (s *Scale) keepSerialPortState() {
 				time.Sleep(5000 * time.Millisecond)
 
 			} else {
-				// 正在重连过程中，跳过本次循环
+				// 姝ｅ湪閲嶈繛杩囩▼涓紝璺宠繃鏈寰幆
 				time.Sleep(5 * time.Second)
 				continue
 			}
@@ -369,7 +369,7 @@ func (s *Scale) keepNetState(myNet *TNet) {
 		if myNet == nil {
 			break
 		}
-		// 用户要求退出
+		// 鐢ㄦ埛瑕佹眰閫€鍑?
 		if myNet.toQuit {
 			if myNet.conn != nil {
 				myNet.conn.Close()
@@ -377,17 +377,17 @@ func (s *Scale) keepNetState(myNet *TNet) {
 			break
 		}
 
-		// [核心逻辑] 如果当前是存活状态，休眠并继续检测
+		// [鏍稿績閫昏緫] 濡傛灉褰撳墠鏄瓨娲荤姸鎬侊紝浼戠湢骞剁户缁娴?
 		if myNet.isAlive && myNet.conn != nil {
 			time.Sleep(5 * time.Second)
 			continue
 		}
 
-		// [核心逻辑] 如果代码运行到这里，说明断开了。
-		// 1. 发送离线通知给界面
+		// [鏍稿績閫昏緫] 濡傛灉浠ｇ爜杩愯鍒拌繖閲岋紝璇存槑鏂紑浜嗐€?
+		// 1. 鍙戦€佺绾块€氱煡缁欑晫闈?
 		sendScaleOnlineToUi(s, false, "", "")
 
-		// 2. 检查连接状态是否需要清理
+		// 2. 妫€鏌ヨ繛鎺ョ姸鎬佹槸鍚﹂渶瑕佹竻鐞?
 		if myNet.conn != nil {
 			myNet.conn.Close()
 			myNet.conn = nil
@@ -401,7 +401,7 @@ func (s *Scale) keepNetState(myNet *TNet) {
 		if err == nil {
 			myNet.isAlive = true
 			fmt.Printf("Reconnect successful: %v\n", myNet.ip)
-			// 重连成功，同步一次在线状态
+			// 閲嶈繛鎴愬姛锛屽悓姝ヤ竴娆″湪绾跨姸鎬?
 			sendScaleOnlineToUi(s, true, s.Conn.ScaleModel, s.Sn)
 		} else {
 			// 连不上则等待 2 秒后再试
@@ -410,7 +410,7 @@ func (s *Scale) keepNetState(myNet *TNet) {
 	}
 }
 
-// 移除 keepNetOnline 函数，因为不再需要通过指令获取 SN 和型号
+// 绉婚櫎 keepNetOnline 鍑芥暟锛屽洜涓轰笉鍐嶉渶瑕侀€氳繃鎸囦护鑾峰彇 SN 鍜屽瀷鍙?
 
 func sendScaleOnlineToUi(s *Scale, isOnline bool, modelName string, sn string) {
 	sta := &ScaleIsOnlineInfo{ScaleId: s.Conn.ScaleId, IsOnline: isOnline, ModelName: modelName, Sn: sn}
@@ -446,7 +446,7 @@ func (s *Scale) Close() error {
 func (s *Scale) SetClient(client *Client) error {
 	s.client = client
 
-	// 如果是蓝牙秤，建立指令回流管道：Go -> Flutter
+	// 濡傛灉鏄摑鐗欑Г锛屽缓绔嬫寚浠ゅ洖娴佺閬擄細Go -> Flutter
 	if s.MyBluetooth != nil {
 		s.MyBluetooth.VirtualWriteHandler = func(data []byte) {
 			defer func() {
@@ -473,7 +473,7 @@ func (s *Scale) SetClient(client *Client) error {
 		l.Log.Infof("Scale %d: Bluetooth VirtualWriteHandler established", s.Id)
 	}
 
-	// 当客户端（WebSocket）连接时，通知 UI 该秤已上线
+	// 褰撳鎴风锛圵ebSocket锛夎繛鎺ユ椂锛岄€氱煡 UI 璇ョГ宸蹭笂绾?
 	sendScaleOnlineToUi(s, true, s.Conn.ScaleModel, s.Sn)
 	return nil
 }
@@ -482,7 +482,7 @@ func (s *Scale) HandleClientDisconnect() error {
 	l.Log.Warn("Client disconnected, HandleClientDisconnect called")
 
 	s.client = nil
-	// 当客户端断开时，通知 UI 该秤已下线
+	// 褰撳鎴风鏂紑鏃讹紝閫氱煡 UI 璇ョГ宸蹭笅绾?
 	sendScaleOnlineToUi(s, false, s.Conn.ScaleModel, s.Sn)
 
 	return nil
@@ -641,7 +641,7 @@ func (s *Scale) procScaleRespMsg() {
 				if inPack.PayloadLen == 0 {
 					continue
 				}
-				l.Log.Debugf("BT: 收到解析后的指令包 - ID: %v, SubID: %v, 长度: %d", inPack.CmdID, inPack.CmdSubId, inPack.PayloadLen)
+				l.Log.Debugf("BT: 鏀跺埌瑙ｆ瀽鍚庣殑鎸囦护鍖?- ID: %v, SubID: %v, 闀垮害: %d", inPack.CmdID, inPack.CmdSubId, inPack.PayloadLen)
 
 				if s.ScaleCat == m.SCALE_C51 {
 				} else if s.ScaleCat == m.SCALE_T2200 {
@@ -760,7 +760,7 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 		} else {
 			pickFun = picker.GetPickerFn(s.ScaleCat)
 		}
-		// 释放锁再进行休眠
+		// 閲婃斁閿佸啀杩涜浼戠湢
 		s.mu.Unlock()
 		time.Sleep(1 * time.Second)
 		s.mu.Lock()
@@ -819,7 +819,7 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 		go s.keepNetState(s.MyNet)
 
 	case MEDIA_BT:
-		//TODO: 要做修改蓝牙    202406
+		//TODO: 瑕佸仛淇敼钃濈墮    202406
 		s.mu.Unlock()
 		return false
 	default:
@@ -833,7 +833,7 @@ func (s *Scale) ModifyMedia(conf MediaConf) bool {
 	return true
 }
 
-// 移除不再使用的全局锁
+// 绉婚櫎涓嶅啀浣跨敤鐨勫叏灞€閿?
 // var mu sync.Mutex
 
 func (c *Scale) RegisterNotif(msgType m.RespMsgType, inCh chan *ScaleRespMsg) {
@@ -954,7 +954,7 @@ func ReqVirtualSerialRead(scale *Scale, base64Data string) (*ScaleRespMsg, error
 	if scale.MyBluetooth == nil {
 		return nil, fmt.Errorf("Scale Bluetooth is nil")
 	}
-	// 在 Android 上，我们通过 VirtualSerialRead 将数据推入蓝牙接收队列
+	// 鍦?Android 涓婏紝鎴戜滑閫氳繃 VirtualSerialRead 灏嗘暟鎹帹鍏ヨ摑鐗欐帴鏀堕槦鍒?
 	if err := scale.MyBluetooth.VirtualSerialRead(base64Data); err != nil {
 		return nil, err
 	}
@@ -1178,13 +1178,13 @@ func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return msg, err
 	}
 
-	// 如果机种是DPM 就初始化
+	// 濡傛灉鏈虹鏄疍PM 灏卞垵濮嬪寲
 	// if s.Model == "DPM" {
 	// 	ReqInitWifi(s, req)
 	// } else {
 	// 	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
 
-	// 	//问了模式不对再切换模式
+	// 	//闂簡妯″紡涓嶅鍐嶅垏鎹㈡ā寮?
 	// 	msg, err = getAtMode(s)
 	// 	if err != nil {
 	// 		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
@@ -1199,7 +1199,7 @@ func ReqChangeWifiMode(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	msg.MsgType = m.CHANGE_WIFI_MODE_RESP
 
-	//问了模式不对再切换模式
+	//闂簡妯″紡涓嶅鍐嶅垏鎹㈡ā寮?
 	msg, err = getAtMode(s)
 	if err != nil {
 		msg.MsgType = m.CHANGE_WIFI_MODE_RESP
@@ -1259,7 +1259,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				return &ScaleRespMsg{}, err
 			}
 
-			// 发送数据包
+			// 鍙戦€佹暟鎹寘
 			if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 				return &ScaleRespMsg{}, err
 			} else if res.MsgBody != "ok" {
@@ -1278,7 +1278,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1291,7 +1291,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1304,7 +1304,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1321,7 +1321,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1334,7 +1334,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1346,7 +1346,7 @@ func ReqDownEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return &ScaleRespMsg{m.DOWN_EEPROM_INFO_RESP, "ok", s.Id}, nil
 }
 
-// Tmax 的更新默认参数 bin
+// Tmax 鐨勬洿鏂伴粯璁ゅ弬鏁?bin
 func ReqSetEepromFromBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	filePath := req.ReqData
 	composer := c.composer
@@ -1376,7 +1376,7 @@ func ReqSetEepromFromBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	addr := 61
 
 	for i := 0; i < packetCount; i++ {
-		// 计算本包数据
+		// 璁＄畻鏈寘鏁版嵁
 		start := i*8 + 61
 		end := start + 8
 		if end > len(dataInfo) {
@@ -1388,13 +1388,13 @@ func ReqSetEepromFromBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
 			return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 		}
-		// 地址自增
+		// 鍦板潃鑷
 		addr += 0x08
 	}
 
@@ -1403,7 +1403,7 @@ func ReqSetEepromFromBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return &ScaleRespMsg{m.SET_EEPROM_FROM_BIN_RESP, "ok", c.Id}, nil
 }
 
-// 下面是FCX的
+// 涓嬮潰鏄疐CX鐨?
 func ReqSetEepromFromBinFc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	filePath := req.ReqData
 	composer := c.composer
@@ -1433,7 +1433,7 @@ func ReqSetEepromFromBinFc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	addr := 61
 
 	for i := 0; i < packetCount; i++ {
-		// 计算本包数据
+		// 璁＄畻鏈寘鏁版嵁
 		start := i*8 + 61
 		end := start + 8
 		if end > len(dataInfo) {
@@ -1445,13 +1445,13 @@ func ReqSetEepromFromBinFc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
 			return &ScaleRespMsg{}, fmt.Errorf("write eeprom fail")
 		}
-		// 地址自增
+		// 鍦板潃鑷
 		addr += 0x08
 	}
 
@@ -1473,15 +1473,15 @@ func ReqSetEepromFromBinFc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{}, fmt.Errorf("erase fail")
 	}
 
-	// 计算数据包数量
+	// 璁＄畻鏁版嵁鍖呮暟閲?
 	packetCount = len(dataInfo) / DATA_LENGTH_8_TMAX
 	if len(dataInfo)%DATA_LENGTH_8_TMAX != 0 {
 		packetCount += 1
 	}
-	// 遍历所有数据包
+	// 閬嶅巻鎵€鏈夋暟鎹寘
 	l.Log.Debug("send data package to scale")
 	for i := 0; i < packetCount; i++ {
-		// 计算本包数据
+		// 璁＄畻鏈寘鏁版嵁
 		start := i * DATA_LENGTH_8_TMAX
 		end := start + DATA_LENGTH_8_TMAX
 		if end > len(dataInfo) {
@@ -1489,20 +1489,20 @@ func ReqSetEepromFromBinFc(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		packetData := dataInfo[start:end]
 
-		// 构建数据包
+		// 鏋勫缓鏁版嵁鍖?
 		// dataPackCmd := buildSendDataPacket(addr, packetData)
 		packDataHexStr := hex.EncodeToString(packetData)
 		cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
 			return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 		}
-		// 地址自增
+		// 鍦板潃鑷
 		addr += 0x08
 	}
 	l.Log.Info("send bin ok")
@@ -1520,7 +1520,7 @@ func ReqGetEepromInfoToBin(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	dataInfo, _ := getEepromData(c, 512)
 	if len(dataInfo) == 512 {
-		//前面61个字节不写
+		//鍓嶉潰61涓瓧鑺備笉鍐?
 		for i := 0; i < 61; i++ {
 			dataInfo[i] = 0xff
 		}
@@ -1609,7 +1609,7 @@ func ReqDownFactoryInfoTmax(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				return &ScaleRespMsg{}, err
 			}
 
-			// 发送数据包
+			// 鍙戦€佹暟鎹寘
 			if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 				return &ScaleRespMsg{}, err
 			} else if res.MsgBody != "ok" {
@@ -1617,7 +1617,7 @@ func ReqDownFactoryInfoTmax(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 		}
 	}
-	//计算MD5值
+	//璁＄畻MD5鍊?
 	if len(modelNameSnStr) > 0 {
 		modelNameSnStr = modelNameSnStr + MD5SEED
 		crc16Byte := calculateMD5(modelNameSnStr)
@@ -1634,7 +1634,7 @@ func ReqDownFactoryInfoTmax(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
@@ -1642,7 +1642,7 @@ func ReqDownFactoryInfoTmax(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 
 	}
-	//写校验  秤上说是老版本校验
+	//鍐欐牎楠? 绉や笂璇存槸鑰佺増鏈牎楠?
 	packetData := WRITE_FACTORY_TAIL_CMD_TMAX
 	packDataHexStr := hex.EncodeToString(packetData)
 	addr := tmaxTailAddr
@@ -1650,7 +1650,7 @@ func ReqDownFactoryInfoTmax(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
-	// 发送数据包
+	// 鍙戦€佹暟鎹寘
 	if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 		return &ScaleRespMsg{}, err
 	} else if res.MsgBody != "ok" {
@@ -1664,7 +1664,7 @@ func ReqDownFactoryInfoTmax(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
-	// 发送数据包
+	// 鍙戦€佹暟鎹寘
 	if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 		return &ScaleRespMsg{}, err
 	} else if res.MsgBody != "ok" {
@@ -1725,7 +1725,7 @@ func ReqDownFactoryInfoFc(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				return &ScaleRespMsg{}, err
 			}
 
-			// 发送数据包
+			// 鍙戦€佹暟鎹寘
 			if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 				return &ScaleRespMsg{}, err
 			} else if res.MsgBody != "ok" {
@@ -1733,7 +1733,7 @@ func ReqDownFactoryInfoFc(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 		}
 	}
-	//计算MD5值
+	//璁＄畻MD5鍊?
 	if len(modelNameSnStr) > 0 {
 		modelNameSnStr = modelNameSnStr + MD5SEED
 		crc16Byte := calculateMD5(modelNameSnStr)
@@ -1750,7 +1750,7 @@ func ReqDownFactoryInfoFc(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
@@ -1766,7 +1766,7 @@ func ReqDownFactoryInfoFc(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if err != nil {
 		return &ScaleRespMsg{}, err
 	}
-	// 发送数据包
+	// 鍙戦€佹暟鎹寘
 	if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 		return res, err
 	} else if res.MsgBody != "ok" {
@@ -1802,7 +1802,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				return &ScaleRespMsg{}, err
 			}
 
-			// 发送数据包
+			// 鍙戦€佹暟鎹寘
 			if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 				return &ScaleRespMsg{}, err
 			} else if res.MsgBody != "ok" {
@@ -1821,7 +1821,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1834,7 +1834,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1847,7 +1847,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1863,7 +1863,7 @@ func ReqModifyEepromInfo(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
@@ -1939,7 +1939,7 @@ func getServerAddr() ServerIpAddr {
 			}
 			count++
 			if count == 6 {
-				break // 找到五个后跳出循环
+				break // 鎵惧埌浜斾釜鍚庤烦鍑哄惊鐜?
 			}
 		}
 	}
@@ -1974,7 +1974,7 @@ func ReqSetServerIp(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
@@ -1988,7 +1988,7 @@ func ReqSetServerIp(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
@@ -2003,7 +2003,7 @@ func ReqSetServerIp(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
@@ -2018,7 +2018,7 @@ func ReqSetServerIp(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
@@ -2033,7 +2033,7 @@ func ReqSetServerIp(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if err != nil {
 			return &ScaleRespMsg{}, err
 		}
-		// 发送数据包
+		// 鍙戦€佹暟鎹寘
 		if res, err := perfCmdNwaitResult(s, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 			return &ScaleRespMsg{}, err
 		} else if res.MsgBody != "ok" {
@@ -2103,9 +2103,9 @@ func ReqModifyVarValue(s *Scale, req SRequest) (*ScaleRespMsg, error) {
 					return &ScaleRespMsg{m.MODIFY_VAR_RESP, "fail", s.Id}, err
 				}
 				for _, b := range cmd {
-					fmt.Printf("%02x ", b) // 打印每个字节的 16 进制表示并用空格分隔
+					fmt.Printf("%02x ", b) // 鎵撳嵃姣忎釜瀛楄妭鐨?16 杩涘埗琛ㄧず骞剁敤绌烘牸鍒嗛殧
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(s, cmd, m.MODIFY_VAR_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{m.MODIFY_VAR_RESP, "fail", s.Id}, err
 				} else if res.MsgBody != "ok" {
@@ -2129,9 +2129,9 @@ func StringToFloat64Bytes(s string) []byte {
 	return bytes
 }
 
-// StringToFloat32Bytes 将字符串转换为 4 个字节的 32 位浮点数
+// StringToFloat32Bytes 灏嗗瓧绗︿覆杞崲涓?4 涓瓧鑺傜殑 32 浣嶆诞鐐规暟
 func StringToFloat32Bytes(s string) []byte {
-	// 解析字符串为浮点数
+	// 瑙ｆ瀽瀛楃涓蹭负娴偣鏁?
 	f, err := strconv.ParseFloat(s, 32)
 	if err != nil {
 		return nil
@@ -2232,8 +2232,8 @@ func stringToLittleEndianBytes(dataStr string, size int) []byte {
 }
 
 func calculateMD5(input string) [16]byte {
-	hash := md5.Sum([]byte(input)) // 计算 MD5 校验值
-	return hash                    // 转换为十六进制并返回
+	hash := md5.Sum([]byte(input)) // 璁＄畻 MD5 鏍￠獙鍊?
+	return hash                    // 杞崲涓哄崄鍏繘鍒跺苟杩斿洖
 }
 func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 	if c.ScaleCat != m.SCALE_TMAX {
@@ -2263,7 +2263,7 @@ func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 	crc16Byte := calculateMD5(scaleModel + sn + MD5SEED)
 	byte4Md5 := crc16Byte[0:4]
 	fmt.Println(byte4Md5)
-	//------拿到随机数
+	//------鎷垮埌闅忔満鏁?
 	var nums []uint8
 	cmd, timeoutMs, err := fn(composer, m.CMD_GET_RANDOM_DATA, m.CmdData{})
 	if err != nil {
@@ -2378,14 +2378,14 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		if prnfmt.ParserFmtToFile(tempStr, reqData.PrinterModel, eraseLen) {
 			// 读取bin文件
 			exeDir := os.TempDir()
-			// 拼接文件路径
+			// 鎷兼帴鏂囦欢璺緞
 			filePath := filepath.Join(exeDir, "formatBin.bin")
 			data, err := os.ReadFile(filePath)
 			if err != nil {
 				l.Log.Errorf("ReqDownPrnFmt read file error: %v", err)
 				return &ScaleRespMsg{}, err
 			}
-			// 擦除原本秤上的打印格式
+			// 鎿﹂櫎鍘熸湰绉や笂鐨勬墦鍗版牸寮?
 			l.Log.Debug("erase flash on scale")
 			no, err := strconv.Atoi(fileOrderNo)
 			if err != nil {
@@ -2415,15 +2415,15 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				addrInLoop += eraseLen
 			}
 			
-			// 计算数据包数量
+			// 璁＄畻鏁版嵁鍖呮暟閲?
 			packetCount := len(data) / DATA_LENGTH_256_TMAX
 			if len(data)%DATA_LENGTH_256_TMAX != 0 {
 				packetCount += 1
 			}
-			// 遍历所有数据包
+			// 閬嶅巻鎵€鏈夋暟鎹寘
 			l.Log.Debug("send data package to scale")
 			for i := 0; i < packetCount; i++ {
-				// 计算本包数据
+				// 璁＄畻鏈寘鏁版嵁
 				start := i * DATA_LENGTH_256_TMAX
 				end := start + DATA_LENGTH_256_TMAX
 				if end > len(data) {
@@ -2431,7 +2431,7 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				}
 				packetData := data[start:end]
 
-				// 构建数据包
+				// 鏋勫缓鏁版嵁鍖?
 				// dataPackCmd := buildSendDataPacket(addr, packetData)
 				packDataHexStr := hex.EncodeToString(packetData)
 				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
@@ -2439,13 +2439,13 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				if err != nil {
 					return &ScaleRespMsg{}, err
 				}
-				// 发送数据包
+				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 					return &ScaleRespMsg{}, err
 				} else if res.MsgBody != "ok" {
 					return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 				}
-				// 地址自增
+				// 鍦板潃鑷
 				addr += 0x100
 			}
 			l.Log.Info("send bin ok")
@@ -2511,7 +2511,7 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 
 	zipFilePath := reqData.FilePaths
-	//将所有文件解密后的内容和md5都存储到数组里
+	//灏嗘墍鏈夋枃浠惰В瀵嗗悗鐨勫唴瀹瑰拰md5閮藉瓨鍌ㄥ埌鏁扮粍閲?
 	strFileDataArray, res := getFileData(zipFilePath)
 	if !res {
 		return &ScaleRespMsg{}, fmt.Errorf("fail,file error")
@@ -2523,14 +2523,14 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if prnfmt.ParserDefFmtToFile(strFileDataArray, reqData.PrinterModel, prnFmtMaxLenth) {
 		// 读取bin文件
 		exeDir := os.TempDir()
-		// 拼接文件路径
+		// 鎷兼帴鏂囦欢璺緞
 		filePath := filepath.Join(exeDir, "formatBin.bin")
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			l.Log.Errorf("ReqDownDefaultPrnFmt read file error: %v", err)
 			return &ScaleRespMsg{}, err
 		}
-		// 擦除原本秤上的打印格式
+		// 鎿﹂櫎鍘熸湰绉や笂鐨勬墦鍗版牸寮?
 		l.Log.Debug("erase flash on scale")
 
 		addr := prnFmtAddr
@@ -2550,15 +2550,15 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 			addrInLoop += eraseLen
 		}
-		// 计算数据包数量
+		// 璁＄畻鏁版嵁鍖呮暟閲?
 		packetCount := len(data) / DATA_LENGTH_256_TMAX
 		if len(data)%DATA_LENGTH_256_TMAX != 0 {
 			packetCount += 1
 		}
-		// 遍历所有数据包
+		// 閬嶅巻鎵€鏈夋暟鎹寘
 		l.Log.Debug("send data package to scale")
 		for i := 0; i < packetCount; i++ {
-			// 计算本包数据
+			// 璁＄畻鏈寘鏁版嵁
 			start := i * DATA_LENGTH_256_TMAX
 			end := start + DATA_LENGTH_256_TMAX
 			if end > len(data) {
@@ -2566,20 +2566,20 @@ func ReqDownDefaultPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 			packetData := data[start:end]
 
-			// 构建数据包
+			// 鏋勫缓鏁版嵁鍖?
 			// dataPackCmd := buildSendDataPacket(addr, packetData)
 			packDataHexStr := hex.EncodeToString(packetData)
 			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 			if err != nil {
 				return &ScaleRespMsg{}, err
 			}
-			// 发送数据包
+			// 鍙戦€佹暟鎹寘
 			if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 				return &ScaleRespMsg{}, err
 			} else if res.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 			}
-			// 地址自增
+			// 鍦板潃鑷
 			addr += 0x100
 		}
 		l.Log.Info("send bin ok")
@@ -2695,15 +2695,15 @@ func ReqBackupDefSetting(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			return &ScaleRespMsg{}, fmt.Errorf("erase fail")
 		}
 
-		// 计算数据包数量
+		// 璁＄畻鏁版嵁鍖呮暟閲?
 		packetCount := len(dataInfo) / DATA_LENGTH_8_TMAX
 		if len(dataInfo)%DATA_LENGTH_8_TMAX != 0 {
 			packetCount += 1
 		}
-		// 遍历所有数据包
+		// 閬嶅巻鎵€鏈夋暟鎹寘
 		l.Log.Debug("send data package to scale")
 		for i := 0; i < packetCount; i++ {
-			// 计算本包数据
+			// 璁＄畻鏈寘鏁版嵁
 			start := i * DATA_LENGTH_8_TMAX
 			end := start + DATA_LENGTH_8_TMAX
 			if end > len(dataInfo) {
@@ -2711,20 +2711,20 @@ func ReqBackupDefSetting(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 			packetData := dataInfo[start:end]
 
-			// 构建数据包
+			// 鏋勫缓鏁版嵁鍖?
 			// dataPackCmd := buildSendDataPacket(addr, packetData)
 			packDataHexStr := hex.EncodeToString(packetData)
 			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_8, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 			if err != nil {
 				return &ScaleRespMsg{}, err
 			}
-			// 发送数据包
+			// 鍙戦€佹暟鎹寘
 			if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
 				return &ScaleRespMsg{}, err
 			} else if res.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 			}
-			// 地址自增
+			// 鍦板潃鑷
 			addr += 0x08
 		}
 		l.Log.Info("send bin ok")
@@ -2802,10 +2802,10 @@ func getFileData(zipFilePath []string) ([]string, bool) {
 // func checkFilesMd5(strFileDataArray [12]string, strMd5Array [12]string) bool {
 // 	for i := 0; i < 12; i++ {
 // 		if strFileDataArray[i] != "" {
-// 			tempMd5Arr := calculateMD5(strFileDataArray[i] + MD5SEED) //统一为seed,要改打包的UI，此处先暂定这样
+// 			tempMd5Arr := calculateMD5(strFileDataArray[i] + MD5SEED) //缁熶竴涓簊eed,瑕佹敼鎵撳寘鐨刄I锛屾澶勫厛鏆傚畾杩欐牱
 // 			var md5TmpStr string
 // 			for _, b := range tempMd5Arr {
-// 				md5TmpStr += fmt.Sprintf("%02X", b) // 将每个字节转换为两位16进制格式的字符串并拼接
+// 				md5TmpStr += fmt.Sprintf("%02X", b) // 灏嗘瘡涓瓧鑺傝浆鎹负涓や綅16杩涘埗鏍煎紡鐨勫瓧绗︿覆骞舵嫾鎺?
 // 			}
 // 			if !strings.EqualFold(md5TmpStr, strMd5Array[i]) {
 // 				return false
@@ -2816,12 +2816,12 @@ func getFileData(zipFilePath []string) ([]string, bool) {
 // }
 
 // func getFileNum(fNameStr string) (int, bool) {
-// 	re := regexp.MustCompile(`(\d+)`) // 使用正则表达式提取数字部分
+// 	re := regexp.MustCompile(`(\d+)`) // 浣跨敤姝ｅ垯琛ㄨ揪寮忔彁鍙栨暟瀛楅儴鍒?
 // 	match := re.FindStringSubmatch(fNameStr)
 
 // 	if len(match) > 1 {
 // 		numStr := match[1]               // 提取到的数字部分
-// 		num, err := strconv.Atoi(numStr) // 将字符串转换为int类型
+// 		num, err := strconv.Atoi(numStr) // 灏嗗瓧绗︿覆杞崲涓篿nt绫诲瀷
 // 		if err == nil {
 // 			return num, true
 // 		} else {
@@ -2894,7 +2894,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 					return &ScaleRespMsg{}, fmt.Errorf("get plu head fail")
 				}
 
-				//前4个是起始地址，中间4个字节是现在可用的地址，最后四个是可用空间大小
+				//鍓?涓槸璧峰鍦板潃锛屼腑闂?涓瓧鑺傛槸鐜板湪鍙敤鐨勫湴鍧€锛屾渶鍚庡洓涓槸鍙敤绌洪棿澶у皬
 				// insertPluAddr = int(binary.BigEndian.Uint32(addrBytes[4:8]))
 				// insertPluSize = int(binary.BigEndian.Uint32(addrBytes[8:12]))
 			} else {
@@ -2946,7 +2946,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			if str, ok := strData.(string); ok {
 				addrBytes := []byte(str)
 				if len(addrBytes) >= 12 {
-					//前4个是起始地址，中间4个字节是现在可用的地址，最后四个是可用空间大小
+					//鍓?涓槸璧峰鍦板潃锛屼腑闂?涓瓧鑺傛槸鐜板湪鍙敤鐨勫湴鍧€锛屾渶鍚庡洓涓槸鍙敤绌洪棿澶у皬
 					insertPluAddr = int(binary.BigEndian.Uint32(addrBytes[4:8]))
 					insertPluSize = int(binary.BigEndian.Uint32(addrBytes[8:12]))
 				} else {
@@ -2988,7 +2988,7 @@ func ReqInsertPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		l.Log.Debug("send data package to scale")
 		for i := 0; i < packetCount; i++ {
-			// 计算本包数据
+			// 璁＄畻鏈寘鏁版嵁
 			start := i * DATA_LENGTH_256_TMAX
 			end := start + DATA_LENGTH_256_TMAX
 			if end > len(data) {
@@ -3129,7 +3129,7 @@ func getModelNameSn(c *Scale) (string, string, error) {
 	return dataStruct.ModelName, dataStruct.ScaleSn, nil
 }
 
-// 从zip中获取bin和机种名
+// 浠巣ip涓幏鍙朾in鍜屾満绉嶅悕
 func getZipInfo(fileName string) ([]byte, string, error) {
 	readBinData, txtData := unzipAndReadFiles(fileName)
 	if readBinData == nil || txtData == nil {
@@ -3151,7 +3151,7 @@ func getZipInfo(fileName string) ([]byte, string, error) {
 	return readBinData, modelName, nil
 }
 
-// 从zip中获取srec 和机种
+// 浠巣ip涓幏鍙杝rec 鍜屾満绉?
 func getZipInfoSrec(fileName string) ([]byte, string, string, error) {
 
 	readSrecData, txtData := unzipAndReadFilesSrec(fileName)
@@ -3179,7 +3179,7 @@ const (
 	BOOTLOADER_TMAX = "new_tmax_boot"
 )
 
-// 更新srec之前要先验证 机种是否匹配
+// 鏇存柊srec涔嬪墠瑕佸厛楠岃瘉 鏈虹鏄惁鍖归厤
 func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	if c.ScaleCat == m.SCALE_C51 {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,scale type error.", c.Id}, nil
@@ -3198,7 +3198,7 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		return &ScaleRespMsg{m.UPDATE_FIRMWARE_RESP, "fail,file error.", c.Id}, nil
 	}
 	println(modelName)
-	//现在都是强制更新，不问机种名序列号
+	//鐜板湪閮芥槸寮哄埗鏇存柊锛屼笉闂満绉嶅悕搴忓垪鍙?
 	// if parts[1] == "0" {
 	// 	err, scaleName, _ := getModelNameSn(c)
 	// 	if err != nil {
@@ -3216,7 +3216,7 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	defer func() {
 		tmpFile.Close()
 		if err := os.Remove(tmpFile.Name()); err != nil {
-			l.Log.Printf("删除临时文件失败: %v, 路径: %s", err, tmpFile.Name())
+			l.Log.Printf("鍒犻櫎涓存椂鏂囦欢澶辫触: %v, 璺緞: %s", err, tmpFile.Name())
 		}
 	}()
 
@@ -3229,7 +3229,7 @@ func ReqUpdateFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	case BOOTLOADER_OLD:
 		return c.UpdateFirmwareOld(tmpFile.Name()) //不带CRC的boot升级，bootcommander
 	case BOOTLOADER_TMAX:
-		return c.TmaxUpdateFirmware(tmpFile.Name()) //Tmax升级，串口自己升级
+		return c.TmaxUpdateFirmware(tmpFile.Name()) //Tmax鍗囩骇锛屼覆鍙ｈ嚜宸卞崌绾?
 	default:
 		return c.UpdateFirmware(tmpFile.Name()) //带有CRC的boot升级，bootcommander
 	}
@@ -3285,7 +3285,7 @@ func ReqOpenSerialPort(c *Scale) (*ScaleRespMsg, error) {
 	return &ScaleRespMsg{m.OPEN_SERIAL_PORT_RESP, "ok", c.Id}, nil
 }
 
-// 获取基础数据 OL UL 开关机次数等
+// 鑾峰彇鍩虹鏁版嵁 OL UL 寮€鍏虫満娆℃暟绛?
 func ReqGetBasicData(c *Scale) (*ScaleRespMsg, error) {
 	reg, err, res := openFactory(c)
 	if err != nil || !res {
@@ -3294,7 +3294,7 @@ func ReqGetBasicData(c *Scale) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_BASIC_DATA, m.GET_BASIC_DATA_RESP)
 }
 
-// 将string 转为 浮点数的小端模式的8个字节  Tmax是这样存的
+// 灏唖tring 杞负 娴偣鏁扮殑灏忕妯″紡鐨?涓瓧鑺? Tmax鏄繖鏍峰瓨鐨?
 // 123.456   77 BE 9F 1A 2F DD 5E 40
 func stringToLittleEndianDouble(s string) ([]byte, error) {
 	buf := make([]byte, 8)
@@ -3306,7 +3306,7 @@ func stringToLittleEndianDouble(s string) ([]byte, error) {
 	return buf, err
 }
 
-// 设置上下限
+// 璁剧疆涓婁笅闄?
 func ReqSetLimitToScale(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// reg, err, res := openFactory(c)
 	// if err != nil || !res {
@@ -3400,7 +3400,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	fn := composer.ComposeCmd
 
 	// 擦除
-	addr := 0x2002A000 //这个地址是不是统一的？
+	addr := 0x2002A000 //杩欎釜鍦板潃鏄笉鏄粺涓€鐨勶紵
 	size := 128 * 1024
 	loopCnt := size / 4096
 	addrInLoop := addr
@@ -3434,16 +3434,16 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	c.client.sendCh <- result
 
 	//开始写
-	//开辟4K的空间来存储校验和尾巴，尾巴为8个字节，前四个字节为bin长度，后四个字节为固定的 5a a5 a5 5a
+	//寮€杈?K鐨勭┖闂存潵瀛樺偍鏍￠獙鍜屽熬宸达紝灏惧反涓?涓瓧鑺傦紝鍓嶅洓涓瓧鑺備负bin闀垮害锛屽悗鍥涗釜瀛楄妭涓哄浐瀹氱殑 5a a5 a5 5a
 	loopDataLen := 4096
 	last4kByte := make([]byte, loopDataLen)
-	// 	// 填充数据不够4096的部分
+	// 	// 濉厖鏁版嵁涓嶅4096鐨勯儴鍒?
 	binDataAdd := padOrReturnBytes(binData)
 
 	crcLoop := len(binDataAdd) / loopDataLen
 	crcLen := 4
 	for i := 0; i < crcLoop; i++ {
-		// 计算本包数据
+		// 璁＄畻鏈寘鏁版嵁
 		start := i * loopDataLen
 		end := start + loopDataLen
 		startCrc := i * crcLen
@@ -3478,19 +3478,18 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	process := 1.0
 
 	if packetCount > 0 {
-		// 浮点数除法，得到小数结果
+		// 娴偣鏁伴櫎娉曪紝寰楀埌灏忔暟缁撴灉
 		process = 85.0 / float64(packetCount)
-		if process < 0.01 {
-			process = 0.01
-		}
 	}
 
 	lastProgressInt := -1
 
 	l.Log.Debug("send data package to scale")
+	actualSentCount := 0
 	loopAddr := addr
+	FirmwareLoop:
 	for i := 0; i < packetCount; i++ {
-		// 计算本包数据
+		// 璁＄畻鏈寘鏁版嵁
 		start := i * dataLength
 		end := start + dataLength
 		if end > len(binDataAdd) {
@@ -3534,16 +3533,24 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			
 			if writeErr == nil && writeRes != nil && writeRes.MsgBody == "ok" {
 				if c.MyNet == nil {
-					time.Sleep(40 * time.Millisecond) // Bluetooth
+					time.Sleep(10 * time.Millisecond) // Bluetooth / USB Serial
 				} else {
-					time.Sleep(150 * time.Millisecond) // WiFi breather
+					time.Sleep(10 * time.Millisecond) // WiFi breather
+					
+					actualSentCount++
+					// Deep Breath every 50 ACTUAL packets sent to prevent hardware thermal/buffer crash
+					if actualSentCount % 50 == 0 {
+						l.Log.Infof("ReqDownFirmware taking a 500ms Deep Breath...")
+						time.Sleep(500 * time.Millisecond)
+					}
 				}
 				break // Success
 			}
 			
+			// Sector Rewind & Re-Erase for Resilient Auto-Resume
 			if writeErr != nil && strings.Contains(writeErr.Error(), "time out") {
 				if c.MyNet != nil {
-					l.Log.Errorf("ReqDownFirmware TCP Timeout detected. Forcing reconnect...")
+					l.Log.Errorf("ReqDownFirmware TCP Timeout detected. Forcing reconnect & Sector Rewind...")
 					if c.MyNet.conn != nil {
 						c.MyNet.conn.Close()
 						c.MyNet.conn = nil
@@ -3556,6 +3563,37 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 						if c.MyNet.isAlive && c.MyNet.conn != nil {
 							l.Log.Infof("ReqDownFirmware TCP Reconnected successfully!")
 							break
+						}
+					}
+					
+					if c.MyNet.isAlive && c.MyNet.conn != nil {
+						sectorStartAddr := (loopAddr / 4096) * 4096
+						l.Log.Infof("ReqDownFirmware Sector Rewind triggered! Erasing sector %08x to clear Flash Error...", sectorStartAddr)
+						
+						eraseCmd, eraseTimeout, eErr := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: sectorStartAddr})
+						if eErr != nil {
+							l.Log.Errorf("ReqDownFirmware Compose ERASE_FLASH failed: %v", eErr)
+						} else {
+							eraseSuccess := false
+							for eRetry := 0; eRetry < 3; eRetry++ {
+								eRes, eE := perfCmdNwaitResult(c, eraseCmd, m.ERASE_FLASH_RESP, eraseTimeout)
+								if eE == nil && eRes != nil && eRes.MsgBody == "ok" {
+									eraseSuccess = true
+									break
+								}
+								time.Sleep(500 * time.Millisecond)
+							}
+							
+							if eraseSuccess {
+								l.Log.Infof("ReqDownFirmware Sector %08x erased! Rewinding pointers...", sectorStartAddr)
+								loopAddr = sectorStartAddr
+								bytesFromStart := sectorStartAddr - addr
+								targetI := bytesFromStart / dataLength
+								i = targetI - 1 // the for loop will increment it to targetI
+								continue FirmwareLoop
+							} else {
+								l.Log.Errorf("ReqDownFirmware Sector Erase failed! Cannot safely resume.")
+							}
 						}
 					}
 				}
@@ -3587,7 +3625,7 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 
 	}
-	//写最后4K
+	//鍐欐渶鍚?K
 	lastLoop := len(last4kByte) / dataLength
 	if len(last4kByte)%dataLength != 0 {
 		lastLoop++
@@ -3597,8 +3635,9 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	l.Log.Debug("send data package to scale")
 	lastLoopAddr := addr + 1024*124
 
+	Last4KLoop:
 	for i := 0; i < lastLoop; i++ {
-		// 计算本包数据
+		// 璁＄畻鏈寘鏁版嵁
 		start := i * dataLength
 		end := start + dataLength
 		if end > len(last4kByte) {
@@ -3642,16 +3681,24 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			
 			if writeErr == nil && writeRes != nil && writeRes.MsgBody == "ok" {
 				if c.MyNet == nil {
-					time.Sleep(40 * time.Millisecond) // Bluetooth
+					time.Sleep(10 * time.Millisecond) // Bluetooth / USB Serial
 				} else {
-					time.Sleep(150 * time.Millisecond) // WiFi breather
+					time.Sleep(10 * time.Millisecond) // WiFi breather
+					
+					actualSentCount++
+					// Deep Breath every 50 ACTUAL packets sent to prevent hardware thermal/buffer crash
+					if actualSentCount % 50 == 0 {
+						l.Log.Infof("ReqDownFirmware taking a 500ms Deep Breath...")
+						time.Sleep(500 * time.Millisecond)
+					}
 				}
 				break // Success
 			}
 			
+			// Sector Rewind & Re-Erase for Resilient Auto-Resume
 			if writeErr != nil && strings.Contains(writeErr.Error(), "time out") {
 				if c.MyNet != nil {
-					l.Log.Errorf("ReqDownFirmware last4K TCP Timeout detected. Forcing reconnect...")
+					l.Log.Errorf("ReqDownFirmware last4K TCP Timeout detected. Forcing reconnect & Sector Rewind...")
 					if c.MyNet.conn != nil {
 						c.MyNet.conn.Close()
 						c.MyNet.conn = nil
@@ -3664,6 +3711,37 @@ func ReqDownFirmware(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 						if c.MyNet.isAlive && c.MyNet.conn != nil {
 							l.Log.Infof("ReqDownFirmware last4K TCP Reconnected successfully!")
 							break
+						}
+					}
+					
+					if c.MyNet.isAlive && c.MyNet.conn != nil {
+						sectorStartAddr := (lastLoopAddr / 4096) * 4096
+						l.Log.Infof("ReqDownFirmware last4K Sector Rewind triggered! Erasing sector %08x...", sectorStartAddr)
+						
+						eraseCmd, eraseTimeout, eErr := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: sectorStartAddr})
+						if eErr != nil {
+							l.Log.Errorf("ReqDownFirmware last4K Compose ERASE_FLASH failed: %v", eErr)
+						} else {
+							eraseSuccess := false
+							for eRetry := 0; eRetry < 3; eRetry++ {
+								eRes, eE := perfCmdNwaitResult(c, eraseCmd, m.ERASE_FLASH_RESP, eraseTimeout)
+								if eE == nil && eRes != nil && eRes.MsgBody == "ok" {
+									eraseSuccess = true
+									break
+								}
+								time.Sleep(500 * time.Millisecond)
+							}
+							
+							if eraseSuccess {
+								l.Log.Infof("ReqDownFirmware last4K Sector %08x erased! Rewinding pointers...", sectorStartAddr)
+								lastLoopAddr = sectorStartAddr
+								bytesFromStart := sectorStartAddr - (addr + 1024*124)
+								targetI := bytesFromStart / dataLength
+								i = targetI - 1
+								continue Last4KLoop
+							} else {
+								l.Log.Errorf("ReqDownFirmware last4K Sector Erase failed! Cannot safely resume.")
+							}
 						}
 					}
 				}
@@ -3695,7 +3773,7 @@ func padOrReturnBytes(data []byte) []byte {
 	if remainder == 0 {
 		return data
 	}
-	//补上最后一个不够4096的数据
+	//琛ヤ笂鏈€鍚庝竴涓笉澶?096鐨勬暟鎹?
 	paddedData := make([]byte, len(data)+(4096-remainder))
 	copy(paddedData, data)
 	for i := len(data); i < len(paddedData); i++ {
@@ -3805,9 +3883,18 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 				return &ScaleRespMsg{}, fmt.Errorf("erase fail")
 			}
 			addrInLoop += eraseLen
+
+			// 棰勬摝闄ら樁娈佃繘搴?(0% -> 10%)
+			eraseProgress := int((float64(i) / float64(loopCnt)) * 10.0)
+			if eraseProgress > 10 {
+				eraseProgress = 10
+			}
+			respMsg := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(eraseProgress), ScaleId: c.Id}
+			result, _ := json.Marshal(respMsg)
+			c.client.sendCh <- result
 		}
 		
-		//擦除完成后送进度
+		//鎿﹂櫎瀹屾垚鍚庨€佽繘搴?
 		respMsg100 := ScaleRespMsg{MsgType: m.UPDATE_FIRMWARE_PROGRESS, MsgBody: strconv.Itoa(10), ScaleId: c.Id}
 		result, _ := json.Marshal(respMsg100)
 		c.client.sendCh <- result
@@ -3820,16 +3907,14 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		process := 1.0
 
 		if packetCount > 0 {
-			// 浮点数除法，得到小数结果
+			// 娴偣鏁伴櫎娉曪紝寰楀埌灏忔暟缁撴灉
 			process = 85.0 / float64(packetCount)
-			if process < 0.01 {
-				process = 0.01
-			}
 		}
 
 		l.Log.Debug("send data package to scale")
+		PluLoop:
 		for i := 0; i < packetCount; i++ {
-			// 计算本包数据
+			// 璁＄畻鏈寘鏁版嵁
 			start := i * DATA_LENGTH_256_TMAX
 			end := start + DATA_LENGTH_256_TMAX
 			if end > len(data) {
@@ -3837,13 +3922,101 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 			packetData := data[start:end]
 			packDataHexStr := hex.EncodeToString(packetData)
-			cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
-			if err != nil {
-				return &ScaleRespMsg{}, err
+
+			var writeErr error
+			var writeRes *ScaleRespMsg
+			retryCnt := 3
+			
+			for r := 0; r < retryCnt; r++ {
+				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
+				if err != nil {
+					return &ScaleRespMsg{}, err
+				}
+				
+				writeRes, writeErr = perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs)
+				
+				if writeErr == nil && writeRes != nil && writeRes.MsgBody == "ok" {
+					if c.MyNet == nil {
+						time.Sleep(10 * time.Millisecond) // Bluetooth / USB Serial
+					} else {
+						time.Sleep(10 * time.Millisecond) // WiFi breather
+						
+						// Deep Breath every 50 packets to prevent hardware thermal/buffer crash
+						if (i > 0) && (i % 50 == 0) {
+							l.Log.Infof("ReqDownPlu taking a 500ms Deep Breath...")
+							time.Sleep(500 * time.Millisecond)
+						}
+					}
+					break // Success
+				}
+				
+				// Sector Rewind & Re-Erase for Resilient Auto-Resume
+				if writeErr != nil && strings.Contains(writeErr.Error(), "time out") {
+					if c.MyNet != nil {
+						l.Log.Errorf("ReqDownPlu TCP Timeout detected. Forcing reconnect & Sector Rewind...")
+						if c.MyNet.conn != nil {
+							c.MyNet.conn.Close()
+							c.MyNet.conn = nil
+						}
+						c.MyNet.isAlive = false
+						
+						// Wait for background keepNetState to reconnect
+						for wait := 0; wait < 15; wait++ {
+							time.Sleep(1 * time.Second)
+							if c.MyNet.isAlive && c.MyNet.conn != nil {
+								l.Log.Infof("ReqDownPlu TCP Reconnected successfully!")
+								break
+							}
+						}
+						
+						if c.MyNet.isAlive && c.MyNet.conn != nil {
+							l.Log.Infof("ReqDownPlu Re-entering Factory Mode after reconnect...")
+							_, oErr, oRes := openFactory(c)
+							if oErr != nil || !oRes {
+								l.Log.Errorf("ReqDownPlu failed to re-enter Factory Mode: %v", oErr)
+							} else {
+								time.Sleep(100 * time.Millisecond) // Give the scale a brief moment after entering factory mode
+							}
+
+							sectorStartAddr := (addr / eraseLen) * eraseLen
+							l.Log.Infof("ReqDownPlu Sector Rewind triggered! Erasing sector %08x...", sectorStartAddr)
+							
+							eraseCmd, eraseTimeout, eErr := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: sectorStartAddr})
+							if eErr != nil {
+								l.Log.Errorf("ReqDownPlu Compose ERASE_FLASH failed: %v", eErr)
+							} else {
+								eraseSuccess := false
+								for eRetry := 0; eRetry < 3; eRetry++ {
+									eRes, eE := perfCmdNwaitResult(c, eraseCmd, m.ERASE_FLASH_RESP, eraseTimeout)
+									if eE == nil && eRes != nil && eRes.MsgBody == "ok" {
+										eraseSuccess = true
+										break
+									}
+									time.Sleep(500 * time.Millisecond)
+								}
+								
+								if eraseSuccess {
+									l.Log.Infof("ReqDownPlu Sector %08x erased! Rewinding pointers...", sectorStartAddr)
+									addr = sectorStartAddr
+									bytesFromStart := sectorStartAddr - pluStartAddr
+									targetI := bytesFromStart / DATA_LENGTH_256_TMAX
+									i = targetI - 1 // the for loop will increment it to targetI
+									continue PluLoop
+								} else {
+									l.Log.Errorf("ReqDownPlu Sector Erase failed! Cannot safely resume.")
+								}
+							}
+						}
+					}
+				}
+
+				l.Log.Errorf("ReqDownPlu write flash retry %d for addr %08x", r+1, addr)
+				time.Sleep(200 * time.Millisecond)
 			}
-			if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
-				return &ScaleRespMsg{}, err
-			} else if res.MsgBody != "ok" {
+			
+			if writeErr != nil {
+				return &ScaleRespMsg{}, writeErr
+			} else if writeRes.MsgBody != "ok" {
 				return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
 			}
 			addr += DATA_LENGTH_256_TMAX
@@ -3866,16 +4039,16 @@ func ReqDownPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 		return &ScaleRespMsg{}, fmt.Errorf("fail,data error")
 	}
-	//备份PLU表格 记录md5值和文件的对应关系
+	//澶囦唤PLU琛ㄦ牸 璁板綍md5鍊煎拰鏂囦欢鐨勫搴斿叧绯?
 	destPath := getPluFilePath(getCurrPath())
-	CopyFile(string(file), destPath) //备份plu下发的数据
+	CopyFile(string(file), destPath) //澶囦唤plu涓嬪彂鐨勬暟鎹?
 	md5Str := fileToMd5(destPath)
 	var pluDown PluRec
 	pluDown.FileName = destPath
 	pluDown.Md5 = md5Str
 	c.AddPluDownRec(pluDown)
 	l.Log.Info("erase insert addr")
-	//下命令让秤擦除新增区
+	//涓嬪懡浠よ绉ゆ摝闄ゆ柊澧炲尯
 	composer := c.composer
 	cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_INSERT_PLU, m.CmdData{})
 	if err != nil {
@@ -3946,7 +4119,7 @@ func CopyFile(srcFilePath, dstFilePath string) (written int64, err error) {
 
 }
 
-// 设置秤上的时间
+// 璁剧疆绉や笂鐨勬椂闂?
 func ReqSetScaleTime(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 	num, err := strconv.ParseUint(reqData, 10, 32)
@@ -4010,9 +4183,9 @@ func ReqDelPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 // 		l.Log.Debug("failed get current path")
 // 		return nil
 // 	}
-// 	// 拼接文件的完整路径
+// 	// 鎷兼帴鏂囦欢鐨勫畬鏁磋矾寰?
 // 	fullPath := filepath.Join(currentDir, fileName)
-// 	// 检查文件是否存在
+// 	// 妫€鏌ユ枃浠舵槸鍚﹀瓨鍦?
 // 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 // 		l.Log.Debug("file does not exist ")
 // 		return nil
@@ -4026,7 +4199,7 @@ func ReqDelPlu(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 // 	return nil
 // }
 
-// 获取OL UL的异常数据
+// 鑾峰彇OL UL鐨勫紓甯告暟鎹?
 func ReqGetWeightErr(c *Scale) (*ScaleRespMsg, error) {
 	l.Log.Debug("send enable factory mode cmd to scale")
 	reg, err, res := openFactory(c)
@@ -4127,7 +4300,7 @@ func getOlUlFromScale(c *Scale, addr int) ([]byte, bool) {
 				if len(addrBytes) == 8 &&
 					addrBytes[0] == 0xFF && addrBytes[1] == 0xFF && addrBytes[2] == 0xFF && addrBytes[3] == 0xFF &&
 					addrBytes[4] == 0xFF && addrBytes[5] == 0xFF && addrBytes[6] == 0xFF && addrBytes[7] == 0xFF {
-					// 0到7位置都是 FF
+					// 0鍒?浣嶇疆閮芥槸 FF
 					break
 				} else if len(addrBytes) != 8 {
 					return byteArray, false
@@ -4618,7 +4791,7 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	}
 	recvFileNames := req.ReqData
 	fileDataInfoList := initSerialOutputInfo()
-	//1 解出路径
+	//1 瑙ｅ嚭璺緞
 	var fileList ReqSerialFileList
 	err = json.Unmarshal([]byte(recvFileNames), &fileList)
 	if err != nil {
@@ -4641,7 +4814,7 @@ func ReqSetOutputFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			}
 		}
 	}
-	//3 删除当前程序下的output.bin  先屏蔽
+	//3 删除当前程序下的output.bin 先屏蔽
 	// if err := deleteFile("output.bin"); err != nil {
 	// 	return &ScaleRespMsg{}, err
 	// }
@@ -4895,7 +5068,7 @@ func ReqSetMaxRange2(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return perfCmdNwaitResult(c, cmd, m.SET_MAX_RANGE2_RESP, timeoutMs)
 }
 
-// 获取最大量程1
+// 获取最大量程
 func ReqGetMaxRange1(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
@@ -4905,7 +5078,7 @@ func ReqGetMaxRange1(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_MAX_RANGE1, m.GET_MAX_RANGE1_RESP)
 }
 
-// 获取最大量程2
+// 获取最大量程
 func ReqGetMaxRange2(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
@@ -5004,7 +5177,7 @@ func ReqSetWeightUnit(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 }
 
-// 设置分度值2
+// 璁剧疆鍒嗗害鍊?
 func ReqSetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 
@@ -5023,7 +5196,7 @@ func ReqSetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 }
 
-// 获取分度值2
+// 鑾峰彇鍒嗗害鍊?
 func ReqGetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
@@ -5033,7 +5206,7 @@ func ReqGetGaduation2Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_GADUATION2_VALUE, m.GET_GADUATION2_VALUE_RESP)
 }
 
-// 获取分度值1
+// 鑾峰彇鍒嗗害鍊?
 func ReqGetGaduation1Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
@@ -5043,7 +5216,7 @@ func ReqGetGaduation1Value(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_GADUATION1_VALUE, m.GET_GADUATION1_VALUE_RESP)
 }
 
-// 获取小数点位数
+// 鑾峰彇灏忔暟鐐逛綅鏁?
 func ReqGetDecimalValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 	_, err, res := openFactory(c)
@@ -5053,7 +5226,7 @@ func ReqGetDecimalValue(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_DECIMAL_VALUE, m.GET_DECIMAL_VALUE_RESP)
 }
 
-// 设置初始置零
+// 璁剧疆鍒濆缃浂
 func ReqSetInitialZero(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	reqData := req.ReqData
 	_, err, res := openFactory(c)
@@ -5179,7 +5352,7 @@ func convertIPConfigToHex(inInfo ipInfoStruct) (string, error) {
 		return "", fmt.Errorf("gateway is not IPv4: %s", inInfo.Gateway)
 	}
 
-	// 解析子网掩码（正确方式）
+	// 瑙ｆ瀽瀛愮綉鎺╃爜锛堟纭柟寮忥級
 	var mask net.IPMask
 	if strings.Contains(inInfo.Netmask, ".") {
 		// 点分十进制格式：255.255.255.0
@@ -5192,7 +5365,7 @@ func convertIPConfigToHex(inInfo ipInfoStruct) (string, error) {
 			return "", fmt.Errorf("netmask is not IPv4: %s", inInfo.Netmask)
 		}
 	} else {
-		// CIDR 格式：24
+		// CIDR 鏍煎紡锛?4
 		prefixLen, err := strconv.Atoi(inInfo.Netmask)
 		if err != nil || prefixLen < 0 || prefixLen > 32 {
 			return "", fmt.Errorf("invalid netmask prefix: %s", inInfo.Netmask)
@@ -5206,7 +5379,7 @@ func convertIPConfigToHex(inInfo ipInfoStruct) (string, error) {
 	data = append(data, gateway...)
 	data = append(data, mask...)
 
-	// 转为十六进制字符串
+	// 杞负鍗佸叚杩涘埗瀛楃涓?
 	dataByteStr := fmt.Sprintf("%x", data)
 	return dataByteStr, nil
 }
@@ -5273,7 +5446,7 @@ func ReqGetWiredDhcp(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func ReqInitWifiAPListRef(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
-	//设置扫描AP参数
+	//璁剧疆鎵弿AP鍙傛暟
 	GExpectWifiResp = m.SET_SCAN_AP_PARAM_CMD_RESP
 
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5293,7 +5466,7 @@ func ReqInitWifiAPListRef(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
-	//关闭TCP服务器
+	//鍏抽棴TCP鏈嶅姟鍣?
 	GExpectWifiResp = m.CLOSE_SERVER_CMD_RESP
 
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_CLOSE_SERVER_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5320,7 +5493,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.DIS_BT_CMD_RESP, "fail", c.Id}, nil
 	}
-	//打开自动连接
+	//鎵撳紑鑷姩杩炴帴
 	GExpectWifiResp = m.EN_AUTO_CONN_CMD_RESP
 
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_EN_AUTO_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5345,7 +5518,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.SET_WIFI_STATION_MODE_CMD_RESP, "fail", c.Id}, nil
 	}
-	// //设置多连接
+	// //璁剧疆澶氳繛鎺?
 	// GExpectWifiResp = m.SET_MULTI_CONN_CMD_RESP
 	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_MULTI_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	// println(fmt.Sprintf("%x", cmd))
@@ -5357,7 +5530,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// } else if res.MsgBody != "ok" {
 	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
 	// }
-	// //设置单连接
+	// //璁剧疆鍗曡繛鎺?
 	// GExpectWifiResp = m.SET_SINGLE_CONN_CMD_RESP
 
 	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SINGLE_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5370,7 +5543,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// } else if res.MsgBody != "ok" {
 	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
 	// }
-	// //断开重连
+	// //鏂紑閲嶈繛
 	// GExpectWifiResp = m.DIS_RECONN_CMD_RESP
 	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_RECONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	// println(fmt.Sprintf("%x", cmd))
@@ -5382,7 +5555,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// } else if res.MsgBody != "ok" {
 	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
 	// }
-	// //不提示对端IP及端口号
+	// //涓嶆彁绀哄绔疘P鍙婄鍙ｅ彿
 	// GExpectWifiResp = m.DIS_IP_PORT_INFO_CMD_RESP
 	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_IP_PORT_INFO_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	// println(fmt.Sprintf("%x", cmd))
@@ -5394,7 +5567,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// } else if res.MsgBody != "ok" {
 	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
 	// }
-	// //设置端口号
+	// //璁剧疆绔彛鍙?
 	// GExpectWifiResp = m.SET_TCP_SERVER_CMD_RESP
 
 	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_CONN_PORT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5407,7 +5580,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// } else if res.MsgBody != "ok" {
 	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
 	// }
-	// //设置本地TCP服务器超时
+	// //璁剧疆鏈湴TCP鏈嶅姟鍣ㄨ秴鏃?
 	// GExpectWifiResp = m.SET_TIME_OUT_CMD_RESP
 
 	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_TIME_OUT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5420,7 +5593,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// } else if res.MsgBody != "ok" {
 	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
 	// }
-	// //设置传输模式 0-普通 1-透传
+	// //璁剧疆浼犺緭妯″紡 0-鏅€?1-閫忎紶
 	// GExpectWifiResp = m.SET_PASSTH_MODE_CMD_RESP
 
 	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_PASSTH_MODE_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5433,7 +5606,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	// } else if res.MsgBody != "ok" {
 	// 	return &ScaleRespMsg{m.INIT_WIFI_RESP, "fail", c.Id}, nil
 	// }
-	//设置扫描AP参数
+	//璁剧疆鎵弿AP鍙傛暟
 	GExpectWifiResp = m.SET_SCAN_AP_PARAM_CMD_RESP
 
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5453,7 +5626,7 @@ func ReqInitWifi(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
 func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 
-	//设置多连接
+	//璁剧疆澶氳繛鎺?
 	GExpectWifiResp = m.SET_MULTI_CONN_CMD_RESP
 	cmd, timeoutMs, err := c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_MULTI_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
@@ -5465,7 +5638,7 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.SET_MULTI_CONN_CMD_RESP, "fail", c.Id}, nil
 	}
-	//设置单连接
+	//璁剧疆鍗曡繛鎺?
 	GExpectWifiResp = m.SET_SINGLE_CONN_CMD_RESP
 
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SINGLE_CONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5478,7 +5651,7 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.SET_SINGLE_CONN_CMD_RESP, "fail", c.Id}, nil
 	}
-	//断开重连
+	//鏂紑閲嶈繛
 	GExpectWifiResp = m.DIS_RECONN_CMD_RESP
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_RECONN_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
@@ -5490,7 +5663,7 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.DIS_RECONN_CMD_RESP, "fail", c.Id}, nil
 	}
-	//不提示对端IP及端口号
+	//涓嶆彁绀哄绔疘P鍙婄鍙ｅ彿
 	GExpectWifiResp = m.DIS_IP_PORT_INFO_CMD_RESP
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_DIS_IP_PORT_INFO_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
 	println(fmt.Sprintf("%x", cmd))
@@ -5502,7 +5675,7 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.DIS_IP_PORT_INFO_CMD_RESP, "fail", c.Id}, nil
 	}
-	//设置端口号
+	//璁剧疆绔彛鍙?
 	GExpectWifiResp = m.SET_TCP_SERVER_CMD_RESP
 
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_CONN_PORT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5515,7 +5688,7 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.SET_TCP_SERVER_CMD_RESP, "fail", c.Id}, nil
 	}
-	//设置本地TCP服务器超时
+	//璁剧疆鏈湴TCP鏈嶅姟鍣ㄨ秴鏃?
 	GExpectWifiResp = m.SET_TIME_OUT_CMD_RESP
 
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_TIME_OUT_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5528,7 +5701,7 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.SET_TIME_OUT_CMD_RESP, "fail", c.Id}, nil
 	}
-	//设置传输模式 0-普通 1-透传
+	//璁剧疆浼犺緭妯″紡 0-鏅€?1-閫忎紶
 	GExpectWifiResp = m.SET_PASSTH_MODE_CMD_RESP
 
 	cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_PASSTH_MODE_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5541,7 +5714,7 @@ func ReqSetServerMode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	} else if res.MsgBody != "ok" {
 		return &ScaleRespMsg{m.SET_PASSTH_MODE_CMD_RESP, "fail", c.Id}, nil
 	}
-	// //设置扫描AP参数
+	// //璁剧疆鎵弿AP鍙傛暟
 	// GExpectWifiResp = m.SET_SCAN_AP_PARAM_CMD_RESP
 
 	// cmd, timeoutMs, err = c.composer.ComposeCmd(c.composer, m.CMD_WIFI_SET_SCAN_AP_PARAM_CMD, m.CmdData{Type: m.DATA_TYPE_INT, Data: 0x00})
@@ -5574,7 +5747,7 @@ func ReqSetForceUnTare(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_SET_FORCE_UNTARE, m.SET_FORCE_UNTARE_RESP)
 }
 
-// 获取封印状态
+// 鑾峰彇灏佸嵃鐘舵€?
 func ReqGetSealStatus(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
@@ -5592,7 +5765,7 @@ func ReqGetModel(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_GET_MODEL, m.GET_MODEL_RESP)
 }
 
-// 开启打开内码
+// 寮€鍚墦寮€鍐呯爜
 func ReqEnCode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
@@ -5610,7 +5783,7 @@ func ReqDisCode(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	return excuteSimpCmd(c, m.CMD_DIS_CODE, m.DIS_CODE_RESP)
 }
 
-// 询问Tmax rom 版本号
+// 璇㈤棶Tmax rom 鐗堟湰鍙?
 func ReqAskRomVersion(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	_, err, res := openFactory(c)
 	if err != nil || !res {
@@ -5620,7 +5793,7 @@ func ReqAskRomVersion(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
-	// 1. 停止连续发送，确保指令能被秤接收
+	// 1. 鍋滄杩炵画鍙戦€侊紝纭繚鎸囦护鑳借绉ゆ帴鏀?
 	excuteSimpCmd(c, m.CMD_DIS_CONTINUE_MODE, m.UNREG_WEIGHT_RESP)
 	time.Sleep(100 * time.Millisecond)
 
@@ -5662,7 +5835,7 @@ func ReqSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 }
 
 func ReqRemoveSoftSeal(c *Scale, req SRequest) (*ScaleRespMsg, error) {
-	// 1. 停止连续发送
+	// 1. 鍋滄杩炵画鍙戦€?
 	excuteSimpCmd(c, m.CMD_DIS_CONTINUE_MODE, m.UNREG_WEIGHT_RESP)
 	time.Sleep(100 * time.Millisecond)
 
