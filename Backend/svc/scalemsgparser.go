@@ -1263,8 +1263,9 @@ func splitByDelimiter(str string, delimiter byte) []string {
 }
 
 func handleRevDetailHeadResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	log.Info("【零售报表】收到 HEAD 数据 (16进制): %X", data)
+	log.Info("【零售报表】收到 HEAD 数据 (字符串): %s", string(data))
 	detailHeadData := parseDetailHeadData(string(data))
-	println(string(data))
 
 	model := mSrvMgr.scales[scaleId].Model
 	sn := mSrvMgr.scales[scaleId].Sn
@@ -1380,6 +1381,7 @@ func parseDetailMidData(str string) PackDetailMidData {
 }
 
 func handleRevDetailMidResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	log.Info("【零售报表】收到 MID 数据 (字符串): %s", string(data))
 	detailMidData := parseDetailMidData(string(data))
 	if detailMidData.PackS == "1" {
 		mSrvMgr.scales[scaleId].packDetailMid = []PackDetailMidData{}
@@ -1491,6 +1493,7 @@ func parseDetailTailData(str string) DetailTailData {
 }
 
 func handleRevDetailTailResp(scaleId int64, data []byte) (ScaleRespMsg, int) {
+	log.Info("【零售报表】收到 TAIL 数据 (字符串): %s", string(data))
 	parseDetailTailData := parseDetailTailData(string(data))
 	head := mSrvMgr.scales[scaleId].detailInfo.Total
 
