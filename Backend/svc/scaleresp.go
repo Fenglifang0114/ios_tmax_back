@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	l "tmaxsrv/log"
 	// m "tmaxsrv/comm"
 )
 
@@ -32,10 +33,12 @@ import (
 func retreiveWeightC51(data []byte) (pack WeightMsg, err error) {
 	weightMsg := WeightMsg{}
 	dataStr := string(data)
+	l.Log.Debugf("retreiveWeightC51 raw data: %q, bytes: %v", dataStr, data)
 	re := regexp.MustCompile(`(\w+),(\w+),\s*([\-\d.]+)(\w+|%)|(--UL--|--OL--)`)
 
 	matches := re.FindAllStringSubmatch(dataStr, -1)
 	if matches == nil || len(matches[0]) == 0 {
+		l.Log.Debugf("retreiveWeightC51 regex failed to match on: %q", dataStr)
 		return weightMsg, fmt.Errorf("parse error on %v", string(data))
 	}
 	if matches[0][len(matches[0])-1] != "" { // --OL--, --UL--
@@ -132,6 +135,7 @@ func retreiveWeightC51(data []byte) (pack WeightMsg, err error) {
 func retreiveWeightNewC51(data []byte) (pack WeightMsg, err error) {
 	weightMsg := WeightMsg{}
 	dataStr := string(data)
+	l.Log.Debugf("retreiveWeightNewC51 raw data: %q, hex: %x", dataStr, data)
 
 	//先去掉左括号和右括号
 	dataStr = strings.ReplaceAll(dataStr, "(", "")
@@ -140,6 +144,7 @@ func retreiveWeightNewC51(data []byte) (pack WeightMsg, err error) {
 	re := regexp.MustCompile(`^([A-Z]{2}),([A-Z]{2})(,?)\s*([+-]?)\s+([0-9]+\.[0-9]+(?:\.[0-9]+\.[0-9]+)?|[0-9]+)\s*,?\s*([a-zA-Z%]+)\s*$|^(--(?:OL|UL)--|-{6,})\s*$`)
 	matches := re.FindAllStringSubmatch(dataStr, -1)
 	if matches == nil || len(matches[0]) < 7 {
+		l.Log.Debugf("retreiveWeightNewC51 regex failed to match on: %q", dataStr)
 		return weightMsg, fmt.Errorf("parse error on %v", string(data))
 	}
 

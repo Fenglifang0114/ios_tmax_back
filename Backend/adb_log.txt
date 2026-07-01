@@ -1,0 +1,351 @@
+07-01 08:25:50.338  9140  9188 I GoLog   : TmaxService Go Backend Engine Starting on Android...
+07-01 08:25:50.828  9140  9188 E GoLog   : [37mDEBU[0m[00:25:50]D:/AndroidPhone/tmaxBack/Backend/svc/dbsysuser.go:123 tmaxsrv/svc.initRoles() ok                                           
+07-01 08:25:50.865  9140  9195 E GoLog   : [37mDEBU[0m[00:25:50]D:/AndroidPhone/tmaxBack/Backend/lic/lic.go:50 tmaxsrv/lic.IsKeyValid() MachineId:92c23697d0                         
+07-01 08:25:50.865  9140  9195 E GoLog   : [37mDEBU[0m[00:25:50]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:179 tmaxsrv/svc.NewSrvMgr() configPath yaml:/data/user/0/com.example.t_max/files/config.yaml 
+07-01 08:25:50.866  9140  9195 I GoLog   : 加载串口配置失败: failed to read config file: open /data/user/0/com.example.t_max/files/config.yaml: no such file or directory
+07-01 08:25:50.866  9140  9195 E GoLog   : [37mDEBU[0m[00:25:50]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:291 tmaxsrv/svc.NewSrvMgr() sm.autoOpenSerial:true                       
+07-01 08:25:50.866  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:50.867  9140  9194 E GoLog   : [36mINFO[0m[00:25:50]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:258 tmaxsrv/svc.NewSrvMgr.func1() Started UDP listener for serial proxy on 0.0.0.0:8081 
+07-01 08:25:51.006  9140  9194 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/wsserver.go:77 tmaxsrv/svc.(*WsServer).ServeHTTP() ScaleId:0                                    
+07-01 08:25:51.006  9140  9196 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/wsserver.go:87 tmaxsrv/svc.(*WsServer).ServeHTTP() client connect : 127.0.0.1:55622             
+07-01 08:25:51.010  9140  9201 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_license","ReqData":""}           
+07-01 08:25:51.010  9140  9201 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"Req":"get_license","ReqData":""} 
+07-01 08:25:51.011  9140  9201 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/lic/lic.go:50 tmaxsrv/lic.IsKeyValid() MachineId:92c23697d0                         
+07-01 08:25:51.011  9140  9201 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:443 tmaxsrv/svc.(*SrvMgr).Run() 秤客户端的数量---------- 1                          
+07-01 08:25:51.011  9140  9201 E GoLog   : 0x40004e8570
+07-01 08:25:51.013  9140  9196 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:457 tmaxsrv/svc.(*SrvMgr).Run() ClientSendch---------- {"MsgType":"resp_get_license","MsgBody":"[{\"Id\":\"92c23697d0\",\"ModuleName\":\"\",\"IsValid\":false,\"ValidDate\":\"\"}]"} 
+07-01 08:25:51.013  9140  9197 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_get_license","MsgBody":"[{\"Id\":\"92c23697d0\",\"ModuleName\":\"\",\"IsValid\":false,\"ValidDate\":\"\"}]"} 
+07-01 08:25:51.139  9140  9197 I GoLog   : ports: []
+07-01 08:25:51.211  9140  9195 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_scale_list","ReqData":""}        
+07-01 08:25:51.211  9140  9195 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"Req":"get_scale_list","ReqData":""} 
+07-01 08:25:51.211  9140  9195 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/scalemgr.go:682 tmaxsrv/svc.scaleListedNotifier.Handle() Handle scaleListedNotifier called            
+07-01 08:25:51.224  9140  9196 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:443 tmaxsrv/svc.(*SrvMgr).Run() 秤客户端的数量---------- 1                          
+07-01 08:25:51.224  9140  9196 E GoLog   : 0x40004e8570
+07-01 08:25:51.225  9140  9188 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:457 tmaxsrv/svc.(*SrvMgr).Run() ClientSendch---------- {"MsgType":"resp_scales_list","MsgBody":"[]"} 
+07-01 08:25:51.225  9140  9188 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_scales_list","MsgBody":"[]"} 
+07-01 08:25:51.412  9140  9196 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_all_users","ReqData":""}         
+07-01 08:25:51.412  9140  9196 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"Req":"get_all_users","ReqData":""} 
+07-01 08:25:51.412  9140  9188 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:4201 tmaxsrv/svc.getAllUsersNotifier.Handle() Handle getAllUsersNotifier called            
+07-01 08:25:51.414  9140  9196 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:443 tmaxsrv/svc.(*SrvMgr).Run() 秤客户端的数量---------- 1                          
+07-01 08:25:51.414  9140  9196 E GoLog   : 0x40004e8570
+07-01 08:25:51.414  9140  9188 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:457 tmaxsrv/svc.(*SrvMgr).Run() ClientSendch---------- {"MsgType":"resp_get_all_users","MsgBody":"[{\"UserId\":1,\"UserName\":\"Super Admin\",\"NickName\":\"Super Admin\",\"RoleId\":1,\"Password\":\"f7ec53fbb7caf4a893590d2f3f14176f\",\"IsEnabled\":true,\"Email\":\"\",\"Phone\":\"\",\"InitialPageId\":9999,\"Remark\":\"super admin\",\"CreatedTime\":\"2026-07-01T00:25:50.830163252Z\",\"UpdatedTime\":\"2026-07-01T00:25:50.830163252Z\",\"CreatedBy\":0,\"UpdatedBy\":0,\"CreatedByName\":\"\",\"UpdatedByName\":\"\",\"IsChanged\":false}]"} 
+07-01 08:25:51.414  9140  9188 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_get_all_users","MsgBody":"[{\"UserId\":1,\"UserName\":\"Super Admin\",\"NickName\":\"Super Admin\",\"RoleId\":1,\"Password\":\"f7ec53fbb7caf4a893590d2f3f14176f\",\"IsEnabled\":true,\"Email\":\"\",\"Phone\":\"\",\"InitialPageId\":9999,\"Remark\":\"super admin\",\"CreatedTime\":\"2026-07-01T00:25:50.830163252Z\",\"UpdatedTime\":\"2026-07-01T00:25:50.830163252Z\",\"CreatedBy\":0,\"UpdatedBy\":0,\"CreatedByName\":\"\",\"UpdatedByName\":\"\",\"IsChanged\":false}]"} 
+07-01 08:25:51.416  9140  9196 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"login","ReqData":"{\"UserName\":\"Super Admin\",\"Password\":\"\",\"AutoLogin\":true}"} 
+07-01 08:25:51.416  9140  9196 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"Req":"login","ReqData":"{\"UserName\":\"Super Admin\",\"Password\":\"\",\"AutoLogin\":true}"} 
+07-01 08:25:51.416  9140  9196 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:4159 tmaxsrv/svc.loginNotifier.Handle() Handle loginNotifier called                  
+07-01 08:25:51.419  9140  9185 I GoLog   : LogSysOperation:  {0 Super Admin 1 system login login  ok  2026-07-01 00:25:51.41960544 +0000 UTC m=+1.090978647}
+07-01 08:25:51.435  9140  9196 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/logsysutil.go:140 tmaxsrv/svc.LogSysOperation.func1() Operation log written successfully: {RecId:0 Operator:Super Admin RoleId:1 Module:system FuncName:login OperationType:login Operation: Result:ok Remarks: CreateTime:2026-07-01 00:25:51.41960544 +0000 UTC m=+1.090978647} 
+07-01 08:25:51.448  9140  9202 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_port_list","ReqData":""}         
+07-01 08:25:51.448  9140  9202 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"Req":"get_port_list","ReqData":""} 
+07-01 08:25:51.449  9140  9202 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_scale_list","ReqData":""}        
+07-01 08:25:51.449  9140  9202 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/scalemgr.go:652 tmaxsrv/svc.portListedNotifier.Handle() Handle portListedNotifier called             
+07-01 08:25:51.449  9140  9185 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"Req":"get_scale_list","ReqData":""} 
+07-01 08:25:51.449  9140  9185 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:443 tmaxsrv/svc.(*SrvMgr).Run() 秤客户端的数量---------- 1                          
+07-01 08:25:51.449  9140  9185 E GoLog   : 0x40004e8570
+07-01 08:25:51.449  9140  9185 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:457 tmaxsrv/svc.(*SrvMgr).Run() ClientSendch---------- {"MsgType":"resp_ports_list","MsgBody":"[]"} 
+07-01 08:25:51.449  9140  9185 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_ports_list","MsgBody":"[]"} 
+07-01 08:25:51.449  9140  9194 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/scalemgr.go:682 tmaxsrv/svc.scaleListedNotifier.Handle() Handle scaleListedNotifier called            
+07-01 08:25:51.450  9140  9202 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:443 tmaxsrv/svc.(*SrvMgr).Run() 秤客户端的数量---------- 1                          
+07-01 08:25:51.450  9140  9202 E GoLog   : 0x40004e8570
+07-01 08:25:51.450  9140  9202 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:457 tmaxsrv/svc.(*SrvMgr).Run() ClientSendch---------- {"MsgType":"resp_scales_list","MsgBody":"[]"} 
+07-01 08:25:51.450  9140  9188 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_scales_list","MsgBody":"[]"} 
+07-01 08:25:51.615  9140  9196 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"code":9999,"msg":"heartbeat","timestamp":1782865551612} 
+07-01 08:25:51.618  9140  9196 E GoLog   : [36mINFO[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"code":9999,"msg":"heartbeat","timestamp":1782865551612} 
+07-01 08:25:51.867  9140  9188 I GoLog   : Created default configuration file: /data/user/0/com.example.t_max/files/config.yaml
+07-01 08:25:51.869  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:51.870  9140  9188 I GoLog   : 自动打开串口失败: failed to open serial port: no such file or directory
+07-01 08:25:51.870  9140  9188 I GoLog   : serial port error: no such file or directory
+07-01 08:25:51.870  9140  9194 E GoLog   : [37mDEBU[0m[00:25:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:297 tmaxsrv/svc.NewSrvMgr.func2() 自动打开串口失败:failed to open serial port: no such file or directory 
+07-01 08:25:52.871  9140  9185 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:53.140  9140  9194 I GoLog   : ports: []
+07-01 08:25:53.872  9140  9185 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:54.872  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:55.140  9140  9188 I GoLog   : ports: []
+07-01 08:25:55.873  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:56.874  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:57.142  9140  9185 I GoLog   : ports: []
+07-01 08:25:57.878  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:58.878  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:25:59.142  9140  9188 I GoLog   : ports: []
+07-01 08:25:59.878  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:00.879  9140  9185 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:01.143  9140  9196 I GoLog   : ports: []
+07-01 08:26:01.880  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:02.880  9140  9195 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:03.144  9140  9195 I GoLog   : ports: []
+07-01 08:26:03.313  9140  9195 E GoLog   : [37mDEBU[0m[00:26:03]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"add_scale","ReqData":"{\"ScaleId\":10,\"ScaleModel\":\"TMax\",\"MediaConf\":{\"Type\":2,\"MediaInfoJson\":\"{\\\"Mac\\\":\\\"62:00:A1:3E:62:A7\\\",\\\"Name\\\":\\\"Scale-4502-a13e62a7\\\"}\"}}"} 
+07-01 08:26:03.314  9140  9195 E GoLog   : [36mINFO[0m[00:26:03]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"Req":"add_scale","ReqData":"{\"ScaleId\":10,\"ScaleModel\":\"TMax\",\"MediaConf\":{\"Type\":2,\"MediaInfoJson\":\"{\\\"Mac\\\":\\\"62:00:A1:3E:62:A7\\\",\\\"Name\\\":\\\"Scale-4502-a13e62a7\\\"}\"}}"} 
+07-01 08:26:03.315  9140  9195 E GoLog   : [37mDEBU[0m[00:26:03]D:/AndroidPhone/tmaxBack/Backend/svc/scalemgr.go:735 tmaxsrv/svc.addScaleNotifier.Handle() Handle addScaleNotifier called               
+07-01 08:26:03.591  9140  9191 I GoLog   : 
+07-01 08:26:03.591  9140  9191 I GoLog   : 2026/07/01 00:26:03 [31;1mD:/AndroidPhone/tmaxBack/Backend/svc/dbconn.go:87 [35;1mrecord not found
+07-01 08:26:03.591  9140  9191 I GoLog   : [0m[33m[3.494ms] [34;1m[rows:0][0m SELECT * FROM `scale_conn_media` WHERE scale_model="T-Max" AND scale_sn="1782865563" ORDER BY `scale_conn_media`.`is_online` LIMIT 1
+07-01 08:26:03.880  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:04.484  9140  9202 I GoLog   : LogSysOperation:  {0 Super Admin 1 scale_manage add add  ok  2026-07-01 00:26:04.483914292 +0000 UTC m=+14.155288540}
+07-01 08:26:04.484  9140  9197 E GoLog   : [37mDEBU[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:443 tmaxsrv/svc.(*SrvMgr).Run() 秤客户端的数量---------- 1                          
+07-01 08:26:04.484  9140  9197 E GoLog   : 0x40004e8570
+07-01 08:26:04.485  9140  9197 E GoLog   : [37mDEBU[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:457 tmaxsrv/svc.(*SrvMgr).Run() ClientSendch---------- {"MsgType":"resp_scales_list","MsgBody":"[{\"IsOnline\":false,\"ScaleModel\":\"T-Max\",\"ScaleCat\":5,\"ScaleSn\":\"1782865563\",\"ScaleId\":1,\"TMedia\":2,\"MediaConf\":{\"Type\":2,\"MediaInfoJson\":\"{\\\"Mac\\\":\\\"62:00:A1:3E:62:A7\\\",\\\"Name\\\":\\\"Scale-4502-a13e62a7\\\"}\"},\"IsDefault\":true,\"ScaleName\":\"Scale1\",\"SendService\":false,\"CustomModel\":\"\",\"InnerModel\":\"\",\"ProtocolName\":\"\"}]"} 
+07-01 08:26:04.485  9140  9191 E GoLog   : [37mDEBU[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_scales_list","MsgBody":"[{\"IsOnline\":false,\"ScaleModel\":\"T-Max\",\"ScaleCat\":5,\"ScaleSn\":\"1782865563\",\"ScaleId\":1,\"TMedia\":2,\"MediaConf\":{\"Type\":2,\"MediaInfoJson\":\"{\\\"Mac\\\":\\\"62:00:A1:3E:62:A7\\\",\\\"Name\\\":\\\"Scale-4502-a13e62a7\\\"}\"},\"IsDefault\":true,\"ScaleName\":\"Scale1\",\"SendService\":false,\"CustomModel\":\"\",\"InnerModel\":\"\",\"ProtocolName\":\"\"}]"} 
+07-01 08:26:04.496  9140  9191 E GoLog   : [36mINFO[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/wsserver.go:77 tmaxsrv/svc.(*WsServer).ServeHTTP() ScaleId:1                                    
+07-01 08:26:04.497  9140  9202 E GoLog   : [36mINFO[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/wsserver.go:87 tmaxsrv/svc.(*WsServer).ServeHTTP() client connect : 127.0.0.1:55624             
+07-01 08:26:04.498  9140  9191 E GoLog   : [36mINFO[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:473 tmaxsrv/svc.(*Scale).SetClient() Scale 1: Bluetooth VirtualWriteHandler established 
+07-01 08:26:04.499  9140  9194 E GoLog   : [37mDEBU[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:443 tmaxsrv/svc.(*SrvMgr).Run() 秤客户端的数量---------- 2                          
+07-01 08:26:04.499  9140  9194 E GoLog   : 0x40004e8570
+07-01 08:26:04.499  9140  9194 E GoLog   : [37mDEBU[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:457 tmaxsrv/svc.(*SrvMgr).Run() ClientSendch---------- {"MsgType":"resp_scale_online","MsgBody":"{\"scaleId\":1,\"isOnline\":true,\"modelName\":\"T-Max\",\"sn\":\"1782865563\"}"} 
+07-01 08:26:04.499  9140  9194 E GoLog   : [37mDEBU[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_scale_online","MsgBody":"{\"scaleId\":1,\"isOnline\":true,\"modelName\":\"T-Max\",\"sn\":\"1782865563\"}"} 
+07-01 08:26:04.504  9140  9194 E GoLog   : [37mDEBU[0m[00:26:04]D:/AndroidPhone/tmaxBack/Backend/svc/logsysutil.go:140 tmaxsrv/svc.LogSysOperation.func1() Operation log written successfully: {RecId:0 Operator:Super Admin RoleId:1 Module:scale_manage FuncName:add OperationType:add Operation: Result:ok Remarks: CreateTime:2026-07-01 00:26:04.483914292 +0000 UTC m=+14.155288540} 
+07-01 08:26:04.881  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:05.144  9140  9188 I GoLog   : ports: []
+07-01 08:26:05.882  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:06.883  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:07.883  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:08.144  9140  9197 I GoLog   : ports: []
+07-01 08:26:08.884  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:09.884  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:10.884  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:11.145  9140  9194 I GoLog   : ports: []
+07-01 08:26:11.885  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:12.885  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:13.886  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:14.147  9140  9202 I GoLog   : ports: []
+07-01 08:26:14.888  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:15.888  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:16.889  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:17.151  9140  9197 I GoLog   : ports: []
+07-01 08:26:17.890  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:18.890  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:19.891  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:20.152  9140  9194 I GoLog   : ports: []
+07-01 08:26:20.895  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:21.011  9140  9195 E GoLog   : [37mDEBU[0m[00:26:21]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"code":9999,"msg":"heartbeat","timestamp":1782865581009} 
+07-01 08:26:21.012  9140  9197 E GoLog   : [36mINFO[0m[00:26:21]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"code":9999,"msg":"heartbeat","timestamp":1782865581009} 
+07-01 08:26:21.894  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:22.895  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:23.153  9140  9188 I GoLog   : ports: []
+07-01 08:26:23.896  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:24.898  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:25.899  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:26.154  9140  9191 I GoLog   : ports: []
+07-01 08:26:26.900  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:27.901  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:28.901  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:29.154  9140  9197 I GoLog   : ports: []
+07-01 08:26:29.680  9140  9197 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_factory_info","ReqData":""}      
+07-01 08:26:29.681  9140  9197 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 82 101 113 34 58 34 103 101 116 95 102 97 99 116 111 114 121 95 105 110 102 111 34 44 34 82 101 113 68 97 116 97 34 58 34 34 125] scaleId:[1]] 
+07-01 08:26:29.681  9140  9197 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"Req":"get_factory_info","ReqData":""} 
+07-01 08:26:29.681  9140  9197 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:269 tmaxsrv/svc.(*Scale).GetFactoryInfo() get factory info                             
+07-01 08:26:29.682  9140  9197 E GoLog   : 5aa5000b05f600ced92924a55a
+07-01 08:26:29.682  9140  9191 E GoLog   : [36mINFO[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:29.682  9140  9194 I GoLog   : 5a a5 00 0b 05 f6 00 ce d9 29 24 a5 5a ================wait: resp_get_factory_info
+07-01 08:26:29.683  9140  9191 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:29.902  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:29.980  9140  9191 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_factory_info","ReqData":""}      
+07-01 08:26:29.981  9140  9191 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 82 101 113 34 58 34 103 101 116 95 102 97 99 116 111 114 121 95 105 110 102 111 34 44 34 82 101 113 68 97 116 97 34 58 34 34 125] scaleId:[1]] 
+07-01 08:26:29.981  9140  9191 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"Req":"get_factory_info","ReqData":""} 
+07-01 08:26:29.981  9140  9191 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:269 tmaxsrv/svc.(*Scale).GetFactoryInfo() get factory info                             
+07-01 08:26:29.982  9140  9191 E GoLog   : 5aa5000b05f600ced92924a55a
+07-01 08:26:29.982  9140  9194 I GoLog   : 5a a5 00 0b 05 f6 00 ce d9 29 24 a5 5a ================wait: resp_get_factory_info
+07-01 08:26:29.982  9140  9202 E GoLog   : [36mINFO[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:29.982  9140  9194 E GoLog   : [37mDEBU[0m[00:26:29]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:30.283  9140  9202 E GoLog   : [37mDEBU[0m[00:26:30]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_factory_info","ReqData":""}      
+07-01 08:26:30.284  9140  9194 E GoLog   : [37mDEBU[0m[00:26:30]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 82 101 113 34 58 34 103 101 116 95 102 97 99 116 111 114 121 95 105 110 102 111 34 44 34 82 101 113 68 97 116 97 34 58 34 34 125] scaleId:[1]] 
+07-01 08:26:30.284  9140  9194 E GoLog   : [37mDEBU[0m[00:26:30]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"Req":"get_factory_info","ReqData":""} 
+07-01 08:26:30.284  9140  9195 E GoLog   : [37mDEBU[0m[00:26:30]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:269 tmaxsrv/svc.(*Scale).GetFactoryInfo() get factory info                             
+07-01 08:26:30.284  9140  9195 E GoLog   : 5aa5000b05f600ced92924a55a
+07-01 08:26:30.285  9140  9195 E GoLog   : [36mINFO[0m[00:26:30]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:30.285  9140  9194 I GoLog   : 5a a5 00 0b 05 f6 00 ce d9 29 24 a5 5a ================wait: resp_get_factory_info
+07-01 08:26:30.285  9140  9202 E GoLog   : [37mDEBU[0m[00:26:30]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:30.904  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:31.684  9140  9194 E GoLog   : [36mINFO[0m[00:26:31]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:31.684  9140  9194 E GoLog   : [37mDEBU[0m[00:26:31]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:31.684  9140  9194 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:31.904  9140  9195 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:31.984  9140  9195 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:31.984  9140  9202 E GoLog   : [36mINFO[0m[00:26:31]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:31.984  9140  9202 E GoLog   : [37mDEBU[0m[00:26:31]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:32.156  9140  9194 I GoLog   : ports: []
+07-01 08:26:32.287  9140  9195 E GoLog   : [36mINFO[0m[00:26:32]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:32.287  9140  9188 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:32.288  9140  9195 E GoLog   : [37mDEBU[0m[00:26:32]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:32.905  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:33.692  9140  9191 E GoLog   : [36mINFO[0m[00:26:33]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:33.692  9140  9197 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:33.692  9140  9191 E GoLog   : [37mDEBU[0m[00:26:33]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:33.905  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:33.986  9140  9188 E GoLog   : [36mINFO[0m[00:26:33]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:33.986  9140  9191 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:33.986  9140  9194 E GoLog   : [37mDEBU[0m[00:26:33]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:34.289  9140  9188 E GoLog   : [36mINFO[0m[00:26:34]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:34.289  9140  9191 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:34.290  9140  9188 E GoLog   : [37mDEBU[0m[00:26:34]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:34.794  9140  9195 E GoLog   : [37mDEBU[0m[00:26:34]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"code":9999,"msg":"heartbeat","timestamp":1782865594790} 
+07-01 08:26:34.796  9140  9202 E GoLog   : [37mDEBU[0m[00:26:34]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 99 111 100 101 34 58 57 57 57 57 44 34 109 115 103 34 58 34 104 101 97 114 116 98 101 97 116 34 44 34 116 105 109 101 115 116 97 109 112 34 58 49 55 56 50 56 54 53 53 57 52 55 57 48 125] scaleId:[1]] 
+07-01 08:26:34.796  9140  9202 E GoLog   : [37mDEBU[0m[00:26:34]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"code":9999,"msg":"heartbeat","timestamp":1782865594790} 
+07-01 08:26:34.797  9140  9202 E GoLog   : [37mDEBU[0m[00:26:34]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"","MsgBody":"unknown req: ","ScaleId":1} 
+07-01 08:26:34.906  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:35.157  9140  9195 I GoLog   : ports: []
+07-01 08:26:35.416  9140  9195 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_factory_info","ReqData":""}      
+07-01 08:26:35.417  9140  9195 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 82 101 113 34 58 34 103 101 116 95 102 97 99 116 111 114 121 95 105 110 102 111 34 44 34 82 101 113 68 97 116 97 34 58 34 34 125] scaleId:[1]] 
+07-01 08:26:35.417  9140  9195 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"Req":"get_factory_info","ReqData":""} 
+07-01 08:26:35.417  9140  9195 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:269 tmaxsrv/svc.(*Scale).GetFactoryInfo() get factory info                             
+07-01 08:26:35.417  9140  9195 E GoLog   : 5aa5000b05f600ced92924a55a
+07-01 08:26:35.418  9140  9197 I GoLog   : 5a a5 00 0b 05 f6 00 ce d9 29 24 a5 5a ================wait: resp_get_factory_info
+07-01 08:26:35.418  9140  9202 E GoLog   : [36mINFO[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:35.418  9140  9202 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:35.696  9140  9195 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_get_factory_info","MsgBody":"error: no response, time out on resp_get_factory_info","ScaleId":1} 
+07-01 08:26:35.724  9140  9188 I GoLog   : 5a a5 00 0b 05 f6 00 ce d9 29 24 a5 5a ================wait: resp_get_factory_info
+07-01 08:26:35.725  9140  9191 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_factory_info","ReqData":""}      
+07-01 08:26:35.726  9140  9191 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 82 101 113 34 58 34 103 101 116 95 102 97 99 116 111 114 121 95 105 110 102 111 34 44 34 82 101 113 68 97 116 97 34 58 34 34 125] scaleId:[1]] 
+07-01 08:26:35.726  9140  9191 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"Req":"get_factory_info","ReqData":""} 
+07-01 08:26:35.726  9140  9191 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:269 tmaxsrv/svc.(*Scale).GetFactoryInfo() get factory info                             
+07-01 08:26:35.726  9140  9191 E GoLog   : 5aa5000b05f600ced92924a55a
+07-01 08:26:35.726  9140  9191 E GoLog   : [36mINFO[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:35.726  9140  9191 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:35.906  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:35.989  9140  9195 E GoLog   : [37mDEBU[0m[00:26:35]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_get_factory_info","MsgBody":"error: no response, time out on resp_get_factory_info","ScaleId":1} 
+07-01 08:26:36.024  9140  9202 E GoLog   : [37mDEBU[0m[00:26:36]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"Req":"get_factory_info","ReqData":""}      
+07-01 08:26:36.025  9140  9188 E GoLog   : [37mDEBU[0m[00:26:36]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 82 101 113 34 58 34 103 101 116 95 102 97 99 116 111 114 121 95 105 110 102 111 34 44 34 82 101 113 68 97 116 97 34 58 34 34 125] scaleId:[1]] 
+07-01 08:26:36.025  9140  9188 E GoLog   : [37mDEBU[0m[00:26:36]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"Req":"get_factory_info","ReqData":""} 
+07-01 08:26:36.026  9140  9188 E GoLog   : [37mDEBU[0m[00:26:36]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:269 tmaxsrv/svc.(*Scale).GetFactoryInfo() get factory info                             
+07-01 08:26:36.026  9140  9188 E GoLog   : 5aa5000b05f600ced92924a55a
+07-01 08:26:36.026  9140  9188 E GoLog   : [36mINFO[0m[00:26:36]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:36.026  9140  9195 I GoLog   : 5a a5 00 0b 05 f6 00 ce d9 29 24 a5 5a ================wait: resp_get_factory_info
+07-01 08:26:36.026  9140  9202 E GoLog   : [37mDEBU[0m[00:26:36]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:36.291  9140  9195 E GoLog   : [37mDEBU[0m[00:26:36]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_get_factory_info","MsgBody":"error: no response, time out on resp_get_factory_info","ScaleId":1} 
+07-01 08:26:36.908  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:37.421  9140  9191 E GoLog   : [36mINFO[0m[00:26:37]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:37.422  9140  9197 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:37.422  9140  9191 E GoLog   : [37mDEBU[0m[00:26:37]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:37.725  9140  9195 E GoLog   : [36mINFO[0m[00:26:37]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:37.726  9140  9202 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:37.726  9140  9197 E GoLog   : [37mDEBU[0m[00:26:37]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:37.910  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:38.028  9140  9194 E GoLog   : [36mINFO[0m[00:26:38]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:38.028  9140  9197 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:38.029  9140  9194 E GoLog   : [37mDEBU[0m[00:26:38]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:38.159  9140  9202 I GoLog   : ports: []
+07-01 08:26:38.910  9140  9195 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:39.423  9140  9194 E GoLog   : [36mINFO[0m[00:26:39]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:39.423  9140  9191 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:39.424  9140  9188 E GoLog   : [37mDEBU[0m[00:26:39]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:39.727  9140  9202 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:39.727  9140  9188 E GoLog   : [36mINFO[0m[00:26:39]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:39.728  9140  9188 E GoLog   : [37mDEBU[0m[00:26:39]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:39.912  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:40.032  9140  9197 E GoLog   : [36mINFO[0m[00:26:40]D:/AndroidPhone/tmaxBack/Backend/svc/scale_cmd.go:920 tmaxsrv/svc.perfCmdNwaitResult() ================wait: resp_get_factory_info  
+07-01 08:26:40.032  9140  9202 I GoLog   : ================wait: resp_get_factory_info
+07-01 08:26:40.033  9140  9197 E GoLog   : [37mDEBU[0m[00:26:40]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_virtual_serial_write","MsgBody":"WqUACwX2AM7ZKSSlWg==","ScaleId":1} 
+07-01 08:26:40.913  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:41.160  9140  9197 I GoLog   : ports: []
+07-01 08:26:41.426  9140  9202 E GoLog   : [37mDEBU[0m[00:26:41]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_get_factory_info","MsgBody":"error: no response, time out on resp_get_factory_info","ScaleId":1} 
+07-01 08:26:41.731  9140  9191 E GoLog   : [37mDEBU[0m[00:26:41]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_get_factory_info","MsgBody":"error: no response, time out on resp_get_factory_info","ScaleId":1} 
+07-01 08:26:41.913  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:42.036  9140  9197 E GoLog   : [37mDEBU[0m[00:26:42]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"resp_get_factory_info","MsgBody":"error: no response, time out on resp_get_factory_info","ScaleId":1} 
+07-01 08:26:42.915  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:43.916  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:44.161  9140  9196 I GoLog   : ports: []
+07-01 08:26:44.917  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:45.917  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:46.918  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:47.162  9140  9202 I GoLog   : ports: []
+07-01 08:26:47.920  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:48.920  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:49.921  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:50.163  9140  9196 I GoLog   : ports: []
+07-01 08:26:50.923  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:51.016  9140  9202 E GoLog   : [37mDEBU[0m[00:26:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"code":9999,"msg":"heartbeat","timestamp":1782865611010} 
+07-01 08:26:51.017  9140  9197 E GoLog   : [36mINFO[0m[00:26:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"code":9999,"msg":"heartbeat","timestamp":1782865611010} 
+07-01 08:26:51.923  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:52.924  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:53.164  9140  9196 I GoLog   : ports: []
+07-01 08:26:53.925  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:54.925  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:55.926  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:56.166  9140  9194 I GoLog   : ports: []
+07-01 08:26:56.927  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:57.929  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:58.930  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:26:59.167  9140  9196 I GoLog   : ports: []
+07-01 08:26:59.931  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:00.933  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:01.933  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:02.171  9140  9191 I GoLog   : ports: []
+07-01 08:27:02.934  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:03.935  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:04.796  9140  9196 E GoLog   : [37mDEBU[0m[00:27:04]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"code":9999,"msg":"heartbeat","timestamp":1782865624791} 
+07-01 08:27:04.798  9140  9196 E GoLog   : [37mDEBU[0m[00:27:04]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 99 111 100 101 34 58 57 57 57 57 44 34 109 115 103 34 58 34 104 101 97 114 116 98 101 97 116 34 44 34 116 105 109 101 115 116 97 109 112 34 58 49 55 56 50 56 54 53 54 50 52 55 57 49 125] scaleId:[1]] 
+07-01 08:27:04.798  9140  9196 E GoLog   : [37mDEBU[0m[00:27:04]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"code":9999,"msg":"heartbeat","timestamp":1782865624791} 
+07-01 08:27:04.800  9140  9194 E GoLog   : [37mDEBU[0m[00:27:04]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"","MsgBody":"unknown req: ","ScaleId":1} 
+07-01 08:27:04.935  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:05.171  9140  9197 I GoLog   : ports: []
+07-01 08:27:05.936  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:06.937  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:07.938  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:08.171  9140  9188 I GoLog   : ports: []
+07-01 08:27:08.938  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:09.940  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:10.941  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:11.173  9140  9197 I GoLog   : ports: []
+07-01 08:27:11.941  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:12.942  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:13.943  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:14.175  9140  9202 I GoLog   : ports: []
+07-01 08:27:14.944  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:15.944  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:16.946  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:17.176  9140  9202 I GoLog   : ports: []
+07-01 08:27:17.946  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:18.947  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:19.948  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:20.177  9140  9191 I GoLog   : ports: []
+07-01 08:27:20.949  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:21.017  9140  9188 E GoLog   : [37mDEBU[0m[00:27:21]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"code":9999,"msg":"heartbeat","timestamp":1782865641010} 
+07-01 08:27:21.019  9140  9188 E GoLog   : [36mINFO[0m[00:27:21]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"code":9999,"msg":"heartbeat","timestamp":1782865641010} 
+07-01 08:27:21.950  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:22.951  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:23.178  9140  9194 I GoLog   : ports: []
+07-01 08:27:23.952  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:24.952  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:25.953  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:26.179  9140  9194 I GoLog   : ports: []
+07-01 08:27:26.954  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:27.955  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:28.955  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:29.180  9140  9188 I GoLog   : ports: []
+07-01 08:27:29.956  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:30.957  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:31.958  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:32.181  9140  9202 I GoLog   : ports: []
+07-01 08:27:32.958  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:33.959  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:34.796  9140  9191 E GoLog   : [37mDEBU[0m[00:27:34]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"code":9999,"msg":"heartbeat","timestamp":1782865654791} 
+07-01 08:27:34.798  9140  9191 E GoLog   : [37mDEBU[0m[00:27:34]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:713 tmaxsrv/svc.(*Scale).procToScaleMsg() userMessage: map[id:[53 101 51 51 54 97 53 101 45 54 56 51 50 45 52 97 98 97 45 57 100 52 98 45 97 51 57 55 52 54 100 98 101 56 101 57] message:[123 34 99 111 100 101 34 58 57 57 57 57 44 34 109 115 103 34 58 34 104 101 97 114 116 98 101 97 116 34 44 34 116 105 109 101 115 116 97 109 112 34 58 49 55 56 50 56 54 53 54 53 52 55 57 49 125] scaleId:[1]] 
+07-01 08:27:34.798  9140  9191 E GoLog   : [37mDEBU[0m[00:27:34]D:/AndroidPhone/tmaxBack/Backend/svc/scale.go:722 tmaxsrv/svc.(*Scale).procToScaleMsg() From wsclient: {"code":9999,"msg":"heartbeat","timestamp":1782865654791} 
+07-01 08:27:34.800  9140  9188 E GoLog   : [37mDEBU[0m[00:27:34]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:143 tmaxsrv/svc.(*Client).writePump() To client: {"MsgType":"","MsgBody":"unknown req: ","ScaleId":1} 
+07-01 08:27:34.960  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:35.183  9140  9202 I GoLog   : ports: []
+07-01 08:27:35.960  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:36.961  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:37.961  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:38.184  9140  9191 I GoLog   : ports: []
+07-01 08:27:38.962  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:39.963  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:40.964  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:41.185  9140  9197 I GoLog   : ports: []
+07-01 08:27:41.965  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:42.966  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:43.966  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:44.186  9140  9196 I GoLog   : ports: []
+07-01 08:27:44.967  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:45.968  9140  9191 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:46.968  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:47.187  9140  9202 I GoLog   : ports: []
+07-01 08:27:47.969  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:48.969  9140  9194 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:49.970  9140  9196 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:50.187  9140  9194 I GoLog   : ports: []
+07-01 08:27:50.971  9140  9197 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:51.013  9140  9202 E GoLog   : [37mDEBU[0m[00:27:51]D:/AndroidPhone/tmaxBack/Backend/svc/client.go:94 tmaxsrv/svc.(*Client).readPump() {"code":9999,"msg":"heartbeat","timestamp":1782865671010} 
+07-01 08:27:51.014  9140  9202 E GoLog   : [36mINFO[0m[00:27:51]D:/AndroidPhone/tmaxBack/Backend/svc/srvmgr.go:399 tmaxsrv/svc.(*SrvMgr).Run() Got request from common channel {"code":9999,"msg":"heartbeat","timestamp":1782865671010} 
+07-01 08:27:51.972  9140  9202 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:52.973  9140  9188 I GoLog   : 写入串口失败: serial port is not open
+07-01 08:27:53.188  9140  9197 I GoLog   : ports: []

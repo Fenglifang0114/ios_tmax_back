@@ -587,6 +587,11 @@ func (s *Scale) procScaleRespMsg() {
 				// l.Log.Debugf("From net: %v", inPack)
 
 				if s.ScaleCat == m.SCALE_C51 {
+					msg, err := retreiveRespMsgC51(s.Id, inPack.Payload)
+					if err != nil {
+						continue
+					}
+					sendMsgIntoChsOrWeightToClient(s, msg)
 				} else if s.ScaleCat == m.SCALE_T2200 {
 					msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
 					if err != nil {
@@ -644,6 +649,11 @@ func (s *Scale) procScaleRespMsg() {
 				l.Log.Debugf("BT: 鏀跺埌瑙ｆ瀽鍚庣殑鎸囦护鍖?- ID: %v, SubID: %v, 闀垮害: %d", inPack.CmdID, inPack.CmdSubId, inPack.PayloadLen)
 
 				if s.ScaleCat == m.SCALE_C51 {
+					msg, err := retreiveRespMsgC51(s.Id, inPack.Payload)
+					if err != nil {
+						continue
+					}
+					sendMsgIntoChsOrWeightToClient(s, msg)
 				} else if s.ScaleCat == m.SCALE_T2200 {
 					msg, err := retreiveRespMsgT2200(s.Id, inPack.Payload)
 					if err != nil {
