@@ -528,18 +528,29 @@ func (bt *TBluetooth) setupDevice(device bluetooth.Device) error {
 	bt.device = &device
 	bt.mu.Unlock()
 
-	// 发现服务
-	serviceUUID, err := bluetooth.ParseUUID(bt.serviceUUID)
-	if err != nil {
-		return fmt.Errorf("无效的服务UUID: %v", err)
-	}
+	// 发现服务 (支持 A002 和 FFE0 两种模块)
+	serviceUUID1, _ := bluetooth.ParseUUID("A002")
+	serviceUUID2, _ := bluetooth.ParseUUID("FFE0")
 
-	services, err := device.DiscoverServices([]bluetooth.UUID{serviceUUID})
+	services, err := device.DiscoverServices([]bluetooth.UUID{serviceUUID1, serviceUUID2})
 	if err != nil || len(services) == 0 {
-		return fmt.Errorf("未找到服务 %s: %v", bt.serviceUUID, err)
+		return fmt.Errorf("未找到支持的蓝牙服务 (A002 或 FFE0): %v", err)
 	}
+	
 	targetService := services[0]
-	log.Log.Infof("找到服务: %s", bt.serviceUUID)
+	foundUUIDStr := strings.ToUpper(targetService.UUID().String())
+	log.Log.Infof("找到服务: %s", foundUUIDStr)
+
+	// 根据找到的服务，动态设置对应的读写特征 UUID
+	if strings.Contains(foundUUIDStr, "A002") {
+		bt.serviceUUID = "A002"
+		bt.charReadUUID = "C305"
+		bt.charWriteUUID = "C304"
+	} else if strings.Contains(foundUUIDStr, "FFE0") {
+		bt.serviceUUID = "FFE0"
+		bt.charReadUUID = "FFE4"
+		bt.charWriteUUID = "FFE9"
+	}
 
 	// 发现读取特征并订阅通知
 	charReadUUID, err := bluetooth.ParseUUID(bt.charReadUUID)
@@ -564,7 +575,7 @@ func (bt *TBluetooth) setupDevice(device bluetooth.Device) error {
 			}
 			select {
 			case bt.notificationChan <- data:
-				log.Log.Debugf("收到蓝牙数据: %s", hex.EncodeToString(data))
+				log.Log.Infof("📥 [蓝牙接收] 收到原始包(HEX): %s", hex.EncodeToString(data))
 			case <-bt.quitChan:
 				return
 			}
@@ -876,7 +887,7 @@ func (bt *TBluetooth) write() {
 		select {
 		case message := <-bt.sendCh:
 			if bt.isAlive.Load() && bt.writeChar != nil {
-				log.Log.Debugf("发送数据到蓝牙: %s", hex.EncodeToString(message))
+				log.Log.Infof("🚀 [蓝牙发送] 准备发送原始包(HEX): %s", hex.EncodeToString(message))
 
 				// 分包发送数据，防止接收端BLE模块UART缓存溢出
 				chunkSize := 20
