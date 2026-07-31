@@ -773,10 +773,11 @@ type ReqDelWgtRecById struct {
 }
 
 type ReqExportAllRecs struct {
-	Mode        uint
-	Path        string
-	Translation map[string]string
-	FieldName   []string
+	Mode           uint
+	Path           string
+	Translation    map[string]string
+	FieldName      []string
+	TimezoneOffset int `json:"TimezoneOffset"`
 }
 
 // ********** Response of scale manager **********

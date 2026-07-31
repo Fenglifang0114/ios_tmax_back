@@ -254,7 +254,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 			return
 		}
 		defer conn.Close()
-		
+
 		l.Log.Infof("Started UDP listener for serial proxy on 0.0.0.0:8081")
 		buf := make([]byte, 2048)
 		for {
@@ -268,7 +268,7 @@ func NewSrvMgr(scaleMgr *ScaleMgr, quitch chan bool) *SrvMgr {
 				data := make([]byte, n)
 				copy(data, buf[:n])
 				l.Log.Debugf("Go UDP [RECV] <- Flutter USB from %v: %d bytes (Hex: %x)", remoteAddr, n, data)
-				
+
 				// 将数据直接推送到配置为 USB 的所有秤的接收队列中
 				for _, scale := range sm.scales {
 					if scale != nil && scale.Pcnf.DevPath == "USB" && scale.MySerial != nil {
@@ -381,7 +381,7 @@ func (h *SrvMgr) Run() {
 				// 尝试停止连续发送 (如果还连接着)
 				excuteSimpCmd(scale, comm.CMD_DIS_CONTINUE_MODE, comm.UNREG_WEIGHT_RESP)
 				time.Sleep(200 * time.Millisecond)
-				
+
 				scale.Close()
 				h.scales[scale.Id] = nil
 			} else {
@@ -694,7 +694,7 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 		modeInt, _ := strconv.Atoi(req.ReqData)
 		modeUint := uint(modeInt)
 		config, _ := mSrvMgr.modeSetting.GetModeSetting(modeUint)
-		
+
 		var configStr string
 		if len(config) > 0 {
 			configStr, _ = json.MarshalToString(config[0])
@@ -702,7 +702,7 @@ func parseMsgAndTrigEvt(scaleMgr *ScaleMgr, reqJson string) {
 			configStr = "{}"
 			l.Log.Warnf("No UI config found in srvmgr for mode: %d", modeUint)
 		}
-		
+
 		mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_GET_UI_CONFIG, MsgBody: configStr}
 	case REQ_UPDATE_UI_CONF:
 		l.Log.Info("Got update UI Config request")
@@ -3594,7 +3594,7 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 			headers = append(headers, getTranslation(translation, "Scale Name"))
 		case "PLU":
 			headers = append(headers, getTranslation(translation, "PLU"))
-		case "PLU Name":
+		case "PLU Name", "Product Name":
 			headers = append(headers, getTranslation(translation, "PLU Name"))
 		case "Price":
 			headers = append(headers, getTranslation(translation, "Price"))
@@ -3604,19 +3604,19 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 			headers = append(headers, getTranslation(translation, "Item Code"))
 		case "Category":
 			headers = append(headers, getTranslation(translation, "Category"))
-		case "GeneralUnit":
+		case "GeneralUnit", "Unit":
 			headers = append(headers, getTranslation(translation, "GeneralUnit"))
-		case "TaxType":
+		case "TaxType", "Tax Type":
 			headers = append(headers, getTranslation(translation, "TaxType"))
-		case "UnitWeight":
+		case "UnitWeight", "Unit Weight":
 			headers = append(headers, getTranslation(translation, "UnitWeight"))
 		case "Pretare":
 			headers = append(headers, getTranslation(translation, "Pretare"))
-		case "LimitHigh":
+		case "LimitHigh", "Limit High":
 			headers = append(headers, getTranslation(translation, "LimitHigh"))
-		case "LimitLow":
+		case "LimitLow", "Limit Low":
 			headers = append(headers, getTranslation(translation, "LimitLow"))
-		case "User Name":
+		case "User Name", "Operator":
 			headers = append(headers, getTranslation(translation, "User Name"))
 		case "Date Time":
 			headers = append(headers, getTranslation(translation, "Date Time"))
@@ -3629,9 +3629,17 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 		return
 	}
 
-	//日期和分隔符的格式来源于config[0].DateFormat 和 config[0].Delimiter
-	dateFormat := config[0].DateFormat
-	delimiter := config[0].DateSeparator
+	//日期和分隔符的格式来源于config[0].DateFormat 和 config[0].DateSeparator
+	dateFormat := "1"
+	delimiter := "/"
+	if len(config) > 0 {
+		if config[0].DateFormat != "" {
+			dateFormat = config[0].DateFormat
+		}
+		if config[0].DateSeparator != "" {
+			delimiter = config[0].DateSeparator
+		}
+	}
 
 	// 定义日期格式模板
 	var formatTemplate string
@@ -3647,10 +3655,13 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 		formatTemplate = "2006" + delimiter + "01" + delimiter + "02 15:04:05"
 	}
 
+	// 根据前端动态传入的时区偏移量（分钟）转换时区，无硬编码，全球通用
+	loc := time.FixedZone("UserLocal", payload.TimezoneOffset*60)
+
 	// 遍历每个 ScaleRecInfo
 	for _, info := range recs {
 		// 提取表头数据，需要根据 ScaleRec 结构体实际字段调整
-		createdAtFormatted := info.Header.CreatedAt.Format(formatTemplate)
+		createdAtFormatted := info.Header.CreatedAt.In(loc).Format(formatTemplate)
 
 		headerData := []string{}
 		for _, field := range selFields {
@@ -3665,7 +3676,7 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 				headerData = append(headerData, fmt.Sprint(info.Header.ScaleName))
 			case "PLU":
 				headerData = append(headerData, fmt.Sprint(info.Header.Plu))
-			case "PLU Name":
+			case "PLU Name", "Product Name":
 				headerData = append(headerData, fmt.Sprint(info.Header.ProductName))
 			case "Price":
 				headerData = append(headerData, fmt.Sprint(info.Header.Price))
@@ -3675,29 +3686,29 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 				headerData = append(headerData, fmt.Sprint(info.Header.ItemCode))
 			case "Category":
 				headerData = append(headerData, fmt.Sprint(info.Header.Category))
-			case "GeneralUnit":
+			case "GeneralUnit", "Unit":
 				unitMap := map[string]string{"0": "kg", "1": "100g", "2": "pcs", "3": "lb", "4": "g", "5": "oz", "6": "lboz", "7": "tj", "8": "hj", "9": "t"}
 				if unit, ok := unitMap[info.Header.GeneralUnit]; ok {
 					headerData = append(headerData, unit)
 				} else {
 					headerData = append(headerData, fmt.Sprint(info.Header.GeneralUnit))
 				}
-			case "TaxType":
+			case "TaxType", "Tax Type":
 				taxMap := map[string]string{"0": "tax1", "1": "tax2", "2": "tax3"}
 				if tax, ok := taxMap[info.Header.TaxType]; ok {
 					headerData = append(headerData, tax)
 				} else {
 					headerData = append(headerData, fmt.Sprint(info.Header.TaxType))
 				}
-			case "UnitWeight":
+			case "UnitWeight", "Unit Weight":
 				headerData = append(headerData, fmt.Sprint(info.Header.UnitWeight))
 			case "Pretare":
 				headerData = append(headerData, fmt.Sprint(info.Header.Pretare))
-			case "LimitHigh":
+			case "LimitHigh", "Limit High":
 				headerData = append(headerData, fmt.Sprint(info.Header.LimitHigh))
-			case "LimitLow":
+			case "LimitLow", "Limit Low":
 				headerData = append(headerData, fmt.Sprint(info.Header.LimitLow))
-			case "User Name":
+			case "User Name", "Operator":
 				headerData = append(headerData, fmt.Sprint(info.Header.UserName))
 			case "Date Time":
 				headerData = append(headerData, createdAtFormatted)
@@ -3728,7 +3739,7 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 						headerData = append(headerData, fmt.Sprint(detail.ScaleName))
 					case "PLU":
 						headerData = append(headerData, "")
-					case "PLU Name":
+					case "PLU Name", "Product Name":
 						headerData = append(headerData, "")
 					case "Price":
 						headerData = append(headerData, "")
@@ -3738,19 +3749,19 @@ func (p exportAllRecsNotifier) Handle(mgr *SrvMgr, payload ReqExportAllRecs) {
 						headerData = append(headerData, "")
 					case "Category":
 						headerData = append(headerData, "")
-					case "GeneralUnit":
+					case "GeneralUnit", "Unit":
 						headerData = append(headerData, "")
-					case "TaxType":
+					case "TaxType", "Tax Type":
 						headerData = append(headerData, "")
-					case "UnitWeight":
+					case "UnitWeight", "Unit Weight":
 						headerData = append(headerData, "")
 					case "Pretare":
 						headerData = append(headerData, "")
-					case "LimitHigh":
+					case "LimitHigh", "Limit High":
 						headerData = append(headerData, "")
-					case "LimitLow":
+					case "LimitLow", "Limit Low":
 						headerData = append(headerData, "")
-					case "User Name":
+					case "User Name", "Operator":
 						headerData = append(headerData, "")
 					case "Date Time":
 						headerData = append(headerData, createdAtFormatted)
@@ -4207,7 +4218,9 @@ func (p getAllUsersNotifier) Handle(mgr *SrvMgr) {
 		return
 	}
 	// 转换为字符串
-	if users == nil { users = make([]SysUser, 0) }
+	if users == nil {
+		users = make([]SysUser, 0)
+	}
 	usersStr, err := json.Marshal(users)
 	if err != nil {
 		l.Log.Error(err)
@@ -4884,4 +4897,3 @@ func (p updateInputPortNotifier) Handle(mgr *SrvMgr, payload []ReqUpdateInputPor
 	mSrvMgr.recvScaleMgrMsg <- &ScaleMgrRespMsg{MsgType: SCALE_MGR_RESP_UPDATE_INPUT_PORT, MsgBody: "ok"}
 	//TODO: 增加日志记录
 }
-
