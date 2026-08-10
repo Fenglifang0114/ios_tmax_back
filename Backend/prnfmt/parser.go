@@ -75,7 +75,7 @@ func ParserFmtToFile(utf8Buff string, printerModel string, fmtLen int) bool {
 		}
 
 	}
-	if printMode == "Lable" {
+	if printMode == "Lable" || printMode == "Label" {
 		//此处需要进一步判断是哪个打印机，哪种模式，上面的Lable只是初步判断是从标签格式下发的路径来的
 		buffer = ParserFmtToBuf(utf8Buff, printerName, fmtLen)
 	} else {

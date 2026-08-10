@@ -2247,7 +2247,7 @@ func calculateMD5(input string) [16]byte {
 }
 func openFactory(c *Scale) (*ScaleRespMsg, error, bool) {
 	if c.ScaleCat != m.SCALE_TMAX {
-		return &ScaleRespMsg{}, nil, false //20250905
+		return &ScaleRespMsg{}, nil, true //20250905
 	}
 	res := false
 	composer := c.composer
@@ -2329,9 +2329,13 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 		}
 	}
 
-	reg, err, res := openFactory(c)
+	_, err, res := openFactory(c)
 	if err != nil || !res {
-		return reg, err
+		if err == nil {
+			err = fmt.Errorf("enable factory mode fail")
+		}
+		l.Log.Errorf("ReqDownPrnFmt openFactory failed: %v", err)
+		return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: fmt.Sprintf("error: %s", err.Error()), ScaleId: c.Id}, err
 	}
 	composer := c.composer
 	fn := composer.ComposeCmd
@@ -2343,68 +2347,72 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 	eraseLen := 0
 	strData := reqMsg.MsgBody
 	if str, ok := strData.(string); ok {
-		if err := json.UnmarshalFromString(str, &scaleInfo); err != nil {
-			l.Log.Error(err)
-			return &ScaleRespMsg{}, fmt.Errorf("get print format address fail")
-		}
-	} else {
-		return &ScaleRespMsg{}, fmt.Errorf("get print format address fail")
+		_ = json.UnmarshalFromString(str, &scaleInfo)
 	}
 	siAddrInfos := scaleInfo.AddrInfos
-	fmt.Println(siAddrInfos)
 	for _, jsonStr := range siAddrInfos {
 		addrInfo, err := parseJSON(jsonStr)
-		if err != nil {
-			return &ScaleRespMsg{}, fmt.Errorf("get print format address fail")
-		}
-		if addrInfo.Type == SI_FREE_PRN_INFO {
+		if err == nil && addrInfo.Type == SI_FREE_PRN_INFO {
 			prnFmtAddr = addrInfo.Addr
 			prnFmtMaxLenth = addrInfo.Lenth
 			eraseLen = addrInfo.EraseLen
 		}
 	}
 	if prnFmtAddr == 0 || prnFmtMaxLenth == 0 || eraseLen == 0 {
-		return &ScaleRespMsg{}, fmt.Errorf("get print format address fail")
+		l.Log.Info("ReqDownPrnFmt: using default scale format address (0x80000, 0x40000, 0x800)")
+		prnFmtAddr = 0x80000
+		prnFmtMaxLenth = 0x40000
+		eraseLen = 0x800
 	}
+
 	var reqData ReqPrnData
 	if err := json.UnmarshalFromString(req.ReqData, &reqData); err != nil {
-		return &ScaleRespMsg{}, err
+		l.Log.Errorf("ReqDownPrnFmt unmarshal reqData error: %v", err)
+		return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: fmt.Sprintf("error: %s", err.Error()), ScaleId: c.Id}, err
 	}
+
 	for _, file := range reqData.FilePaths {
-		fileOrderNo := file[0:1]
-		file = file[1:]
+		fileOrderNo := "1"
+		if len(file) > 1 {
+			fileOrderNo = file[0:1]
+			file = file[1:]
+		}
 
 		csvFmtContent, err := os.ReadFile(file)
 		if err != nil {
-			return &ScaleRespMsg{}, err
+			l.Log.Errorf("ReqDownPrnFmt read file %s error: %v", file, err)
+			return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: fmt.Sprintf("error read file: %s", err.Error()), ScaleId: c.Id}, err
 		}
 
-		tempStr := decryptCsv(string(csvFmtContent))
-		println(tempStr)
+		tempStr := string(csvFmtContent)
 		if !strings.Contains(tempStr, "ROTATE") {
-			return &ScaleRespMsg{}, fmt.Errorf("format error,download fail! ")
+			tempStr = decryptCsv(string(csvFmtContent))
+		}
+
+		if !strings.Contains(tempStr, "ROTATE") {
+			l.Log.Errorf("ReqDownPrnFmt missing ROTATE in file %s", file)
+			return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: "error: format file error, missing ROTATE", ScaleId: c.Id}, fmt.Errorf("format error,download fail! ")
 		}
 
 		if prnfmt.ParserFmtToFile(tempStr, reqData.PrinterModel, eraseLen) {
-			// 读取bin文件
 			exeDir := os.TempDir()
-			// 鎷兼帴鏂囦欢璺緞
 			filePath := filepath.Join(exeDir, "formatBin.bin")
 			data, err := os.ReadFile(filePath)
 			if err != nil {
-				l.Log.Errorf("ReqDownPrnFmt read file error: %v", err)
-				return &ScaleRespMsg{}, err
+				l.Log.Errorf("ReqDownPrnFmt read formatBin.bin error: %v", err)
+				return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: fmt.Sprintf("error read bin: %s", err.Error()), ScaleId: c.Id}, err
 			}
-			// 鎿﹂櫎鍘熸湰绉や笂鐨勬墦鍗版牸寮?
+
 			l.Log.Debug("erase flash on scale")
 			no, err := strconv.Atoi(fileOrderNo)
 			if err != nil {
-				return &ScaleRespMsg{}, err
+				no = 1
 			}
 			addr := eraseLen*(no-1) + prnFmtAddr
 			size := eraseLen
 			if addr > prnFmtAddr+prnFmtMaxLenth {
-				return &ScaleRespMsg{}, err
+				l.Log.Errorf("ReqDownPrnFmt addr %x out of bounds", addr)
+				return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: "error: format address out of range", ScaleId: c.Id}, fmt.Errorf("format address out of range")
 			}
 
 			loopCnt := size / eraseLen
@@ -2415,54 +2423,54 @@ func ReqDownPrnFmt(c *Scale, req SRequest) (*ScaleRespMsg, error) {
 			for i := 0; i < loopCnt; i++ {
 				cmd, timeoutMs, err := composer.ComposeCmd(composer, m.CMD_ERASE_FLASH, m.CmdData{Type: m.DATA_TYPE_INT, Data: addrInLoop})
 				if err != nil {
-					return &ScaleRespMsg{}, err
+					return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: fmt.Sprintf("error erase cmd: %s", err.Error()), ScaleId: c.Id}, err
 				}
 				if res, err := perfCmdNwaitResult(c, cmd, m.ERASE_FLASH_RESP, timeoutMs); err != nil {
-					return &ScaleRespMsg{}, err
+					l.Log.Errorf("ReqDownPrnFmt erase flash error: %v", err)
+					return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: fmt.Sprintf("error erase flash: %s", err.Error()), ScaleId: c.Id}, err
 				} else if res.MsgBody != "ok" {
-					return &ScaleRespMsg{}, fmt.Errorf("erase fail")
+					l.Log.Errorf("ReqDownPrnFmt erase flash res not ok: %v", res.MsgBody)
+					return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: "error: erase flash failed", ScaleId: c.Id}, fmt.Errorf("erase fail")
 				}
 				addrInLoop += eraseLen
 			}
-			
-			// 璁＄畻鏁版嵁鍖呮暟閲?
+
 			packetCount := len(data) / DATA_LENGTH_256_TMAX
 			if len(data)%DATA_LENGTH_256_TMAX != 0 {
 				packetCount += 1
 			}
-			// 閬嶅巻鎵€鏈夋暟鎹寘
+
 			l.Log.Debug("send data package to scale")
 			for i := 0; i < packetCount; i++ {
-				// 璁＄畻鏈寘鏁版嵁
 				start := i * DATA_LENGTH_256_TMAX
 				end := start + DATA_LENGTH_256_TMAX
 				if end > len(data) {
 					end = len(data)
 				}
 				packetData := data[start:end]
-
-				// 鏋勫缓鏁版嵁鍖?
-				// dataPackCmd := buildSendDataPacket(addr, packetData)
 				packDataHexStr := hex.EncodeToString(packetData)
 				cmd, timeoutMs, err := fn(composer, m.CMD_WRITE_FLASH_256, m.CmdData{Type: m.DATA_TYPE_STR, Data: fmt.Sprintf("%08x:%s", addr, packDataHexStr)})
 
 				if err != nil {
-					return &ScaleRespMsg{}, err
+					return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: fmt.Sprintf("error write cmd: %s", err.Error()), ScaleId: c.Id}, err
 				}
-				// 鍙戦€佹暟鎹寘
 				if res, err := perfCmdNwaitResult(c, cmd, m.WRITE_DATA_FLASH_RESP, timeoutMs); err != nil {
-					return &ScaleRespMsg{}, err
+					l.Log.Errorf("ReqDownPrnFmt write flash error: %v", err)
+					return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: fmt.Sprintf("error write flash: %s", err.Error()), ScaleId: c.Id}, err
 				} else if res.MsgBody != "ok" {
-					return &ScaleRespMsg{}, fmt.Errorf("enable factory mode fail")
+					l.Log.Errorf("ReqDownPrnFmt write flash res not ok: %v", res.MsgBody)
+					return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: "error: write flash failed", ScaleId: c.Id}, fmt.Errorf("write flash fail")
 				}
-				// 鍦板潃鑷
 				addr += 0x100
 			}
 			l.Log.Info("send bin ok")
+		} else {
+			l.Log.Errorf("ReqDownPrnFmt ParserFmtToFile returned false")
+			return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: "error: parse format bin failed", ScaleId: c.Id}, fmt.Errorf("parse format bin failed")
 		}
 	}
 	SaveDownLabelFmtToScaleLog(c.Conn.ScaleName, req.ReqData)
-	return &ScaleRespMsg{m.DOWN_PRN_FMT_RESP, "ok", c.Id}, nil
+	return &ScaleRespMsg{MsgType: m.DOWN_PRN_FMT_RESP, MsgBody: "ok", ScaleId: c.Id}, nil
 }
 
 func getAddrFromScale(c *Scale, typeInt int) (SIAddrInfos, bool) {
