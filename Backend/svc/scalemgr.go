@@ -1245,7 +1245,12 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 		var conf MediaConf = MediaConf{}
 		conf.Type = MEDIA_COM
 		conf.MediaInfoJson, _ = json.MarshalToString(comInfo)
-		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: scaleCat, ScaleId: nextScaleId, ScaleModel: "T-Max", ScaleSn: getSn(), TMedia: MEDIA_COM, MediaConf: conf, IsDefault: true, ScaleName: scaleName}
+		modelName := req.ScaleModel
+		if modelName == "" {
+			modelName = "T-Max"
+		}
+		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: scaleCat, ScaleId: nextScaleId, ScaleModel: modelName, ScaleSn: getSn(), TMedia: MEDIA_COM, MediaConf: conf, IsDefault: true, ScaleName: scaleName}
+
 		s.connPb.connPb.InsertScaleConn(*scaleConn)
 		s.AddMediaList(scaleConn.ScaleId, *scaleConn)
 
@@ -1298,12 +1303,17 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 			scaleCat = comm.SCALE_C51
 		}
 		scaleName := "Scale" + strconv.FormatInt(nextScaleId, 10)
-
+		modelName := req.ScaleModel
+		if modelName == "" {
+			modelName = "T-Max"
+		}
 		var btInfo BtInfo = BtInfo{Mac: reqBtInfo.Mac, Name: reqBtInfo.Name}
 		var conf MediaConf = MediaConf{}
 		conf.Type = MEDIA_BT
 		conf.MediaInfoJson, _ = json.MarshalToString(btInfo)
-		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: scaleCat, ScaleId: nextScaleId, ScaleModel: "T-Max", ScaleSn: getSn(), TMedia: MEDIA_BT, MediaConf: conf, IsDefault: true, ScaleName: scaleName}
+		scaleConn := &ScaleConnMedia{IsOnline: false, ScaleCat: scaleCat, ScaleId: nextScaleId, ScaleModel: modelName, ScaleSn: getSn(), TMedia: MEDIA_BT, MediaConf: conf, IsDefault: true, ScaleName: scaleName}
+
+
 		s.connPb.connPb.InsertScaleConn(*scaleConn)
 		s.AddMediaList(scaleConn.ScaleId, *scaleConn)
 
@@ -1356,8 +1366,13 @@ func (s *ScaleMgr) AddScale(req ReqAddScale) error {
 		nextScaleId = maxScaleID + 1
 	}
 
-	conn := &ScaleConnMedia{ScaleModel: req.ScaleModel, ScaleSn: getSn(), TMedia: req.MediaConf.Type, MediaConf: req.MediaConf}
-	conn.ScaleModel = "TMax"
+	connModel := req.ScaleModel
+	if connModel == "" {
+		connModel = "TMax"
+	}
+	conn := &ScaleConnMedia{ScaleModel: connModel, ScaleSn: getSn(), TMedia: req.MediaConf.Type, MediaConf: req.MediaConf}
+	conn.ScaleModel = connModel
+
 	conn.ScaleId = nextScaleId
 	conn.IsDefault = true
 	conn.IsOnline = true

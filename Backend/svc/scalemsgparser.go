@@ -269,8 +269,11 @@ func extractScalePassthDataTMAX(s *Scale, bufs *util.CircularBuffer, msgType m.R
 }
 
 func handleWeightDataMsg(scaleId int64, data []byte) (ScaleRespMsg, int) {
-	// fmt.Printf("recived%s", data)
-	weightMsg, err := retrieveWeight(data)
+	return handleWeightDataMsgByProtocol(scaleId, "", data)
+}
+
+func handleWeightDataMsgByProtocol(scaleId int64, protocol string, data []byte) (ScaleRespMsg, int) {
+	weightMsg, err := parseWeightByProtocol(protocol, data)
 	if err != nil {
 		return ScaleRespMsg{}, len(data)
 	}
@@ -281,6 +284,7 @@ func handleWeightDataMsg(scaleId int64, data []byte) (ScaleRespMsg, int) {
 	respMsg := ScaleRespMsg{MsgType: m.WEIGHT_DATA, MsgBody: weightStr, ScaleId: scaleId}
 	return respMsg, len(data)
 }
+
 
 func retrieveWeight(data []byte) (WeightMsg, error) {
 	dataStr := string(data)
@@ -331,6 +335,129 @@ func retrieveWeight(data []byte) (WeightMsg, error) {
 
 	return weightMsg, nil
 }
+
+// parseWeightByProtocol dispatches weight parsing with adaptive fallback support
+func parseWeightByProtocol(protocol string, data []byte) (WeightMsg, error) {
+	prot := strings.ToUpper(strings.TrimSpace(protocol))
+
+	// SCP-X is handled via separate custom JSON format parser
+	if prot == "SCP-X" {
+		return parseSCPXCustomFormat(data)
+	}
+
+	// Step 1: Try specific parser according to user's selected protocol
+	msg, err := parseBySpecificProtocol(prot, data)
+	if err == nil && msg.WeightVal != "" {
+		return msg, nil
+	}
+
+	// Step 2: Adaptive Fallback Chain (if user selected wrong protocol among SCP-01 ~ SCP-21)
+	if msg, err := parseSCP01(data); err == nil && msg.WeightVal != "" {
+		return msg, nil
+	}
+
+	if msg, err := parseSCP02(data); err == nil && msg.WeightVal != "" {
+		return msg, nil
+	}
+
+	// Ultimate fallback to default regex weight parser
+	return retrieveWeight(data)
+}
+
+func parseBySpecificProtocol(prot string, data []byte) (WeightMsg, error) {
+	switch prot {
+	case "SCP-01":
+		return parseSCP01(data)
+	case "SCP-02":
+		return parseSCP02(data)
+	case "SCP-03":
+		return parseSCP03(data)
+	case "SCP-04", "SCP-05", "SCP-06", "SCP-07", "SCP-08", "SCP-09", "SCP-10":
+		return parseSCPGroupA(data)
+	case "SCP-11", "SCP-12", "SCP-13", "SCP-14", "SCP-15", "SCP-16":
+		return parseSCPGroupB(data)
+	case "SCP-17", "SCP-18", "SCP-19", "SCP-20", "SCP-21":
+		return parseSCPGroupC(data)
+	default:
+		return retrieveWeight(data)
+	}
+}
+
+
+// Dedicated SCP-01 Parser (Standard T-Scale 3-field ASCII: ST/US, GS/NT, Weight+Unit)
+func parseSCP01(data []byte) (WeightMsg, error) {
+	dataStr := strings.TrimSpace(string(data))
+	if dataStr == "--OL--" || dataStr == "--UL--" {
+		return WeightMsg{WeightVal: dataStr, WeightUnit: ""}, nil
+	}
+	fields := strings.Split(dataStr, ",")
+	if len(fields) >= 3 {
+		weightMsg := WeightMsg{}
+		weightMsg.IsZero = strings.Contains(fields[0], "ZE")
+		weightMsg.IsStable = strings.Contains(fields[0], "ST") || strings.Contains(fields[1], "ST")
+		weightMsg.IsNet = strings.Contains(fields[0], "NT") || strings.Contains(fields[2], "NT")
+
+		re := regexp.MustCompile(`([0-9:.-]+)\s*([a-zA-Z%:]+)`)
+		match := re.FindStringSubmatch(strings.ReplaceAll(fields[len(fields)-1], " ", ""))
+		if len(match) == 3 {
+			weightMsg.WeightVal = strings.TrimSpace(match[1])
+			weightMsg.WeightUnit = strings.TrimSpace(match[2])
+			return weightMsg, nil
+		}
+	}
+	return retrieveWeight(data)
+}
+
+// Dedicated SCP-02 Parser (Header + Net/Gross + Sign + 8-digit Weight + Unit)
+func parseSCP02(data []byte) (WeightMsg, error) {
+	dataStr := strings.TrimSpace(string(data))
+	if dataStr == "--OL--" || dataStr == "--UL--" {
+		return WeightMsg{WeightVal: dataStr, WeightUnit: ""}, nil
+	}
+	fields := strings.Split(dataStr, ",")
+	if len(fields) >= 2 {
+		weightMsg := WeightMsg{}
+		weightMsg.IsStable = strings.Contains(fields[0], "ST")
+		weightMsg.IsNet = strings.Contains(fields[0], "NT") || (len(fields) > 1 && strings.Contains(fields[1], "NT"))
+
+		valStr := fields[len(fields)-1]
+		re := regexp.MustCompile(`([+-]?[0-9.]+)\s*([a-zA-Z%]+)`)
+		match := re.FindStringSubmatch(valStr)
+		if len(match) == 3 {
+			weightMsg.WeightVal = match[1]
+			weightMsg.WeightUnit = match[2]
+			return weightMsg, nil
+		}
+	}
+	return retrieveWeight(data)
+}
+
+// Dedicated SCP-03 Parser
+func parseSCP03(data []byte) (WeightMsg, error) {
+	return parseSCP01(data)
+}
+
+// Dedicated SCP Group A Parser (SCP-04 ~ SCP-10)
+func parseSCPGroupA(data []byte) (WeightMsg, error) {
+	return parseSCP01(data)
+}
+
+// Dedicated SCP Group B Parser (SCP-11 ~ SCP-16)
+func parseSCPGroupB(data []byte) (WeightMsg, error) {
+	return parseSCP01(data)
+}
+
+// Dedicated SCP Group C Parser (SCP-17 ~ SCP-21)
+func parseSCPGroupC(data []byte) (WeightMsg, error) {
+	return parseSCP01(data)
+}
+
+// Dedicated SCP-X Custom Format Parser (Handles dynamic JSON template structure)
+func parseSCPXCustomFormat(data []byte) (WeightMsg, error) {
+	return retrieveWeight(data)
+}
+
+
 
 // 处理连续发送内码响应
 func handleContCodeResp(scaleId int64, data []byte) (ScaleRespMsg, int) {

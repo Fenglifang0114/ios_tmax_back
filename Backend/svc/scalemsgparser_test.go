@@ -180,6 +180,20 @@ func Test_retrieveWeight(t *testing.T) {
 	}
 }
 
+func Test_parseWeightByProtocol_AdaptiveFallback(t *testing.T) {
+	// Test case: user selected wrong protocol "SCP-05", but data is actually SCP-01 format
+	data := []byte("ZE,ST,GS,-0.123kg\r\n")
+	got, err := parseWeightByProtocol("SCP-05", data)
+	if err != nil {
+		t.Fatalf("parseWeightByProtocol failed with wrong protocol: %v", err)
+	}
+	want := WeightMsg{IsZero: true, IsStable: true, IsNet: false, WeightVal: "-0.123", WeightUnit: "kg"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("parseWeightByProtocol fallback mismatch got = %v, want %v", got, want)
+	}
+}
+
+
 func Test_handleScalePassthData(t *testing.T) {
 	type args struct {
 		scaleId   int64
