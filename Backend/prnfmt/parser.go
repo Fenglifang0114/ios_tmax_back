@@ -227,6 +227,8 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 		formatbuf = ParseLP50Lines(buff, dataCamp, lastVarPos)
 	} else if printerModel == "ZEBRA" {
 		formatbuf = ParseRptZebraLines(buff, dataCamp, lastVarPos)
+	} else if printerModel == "TPUP" {
+		formatbuf = ParseTpupLines(buff, dataCamp, lastVarPos)
 	} else {
 		formatbuf = ParseEscLines(buff, dataCamp, lastVarPos)
 	}
@@ -253,6 +255,8 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 		printerModel = "LP50*31"
 	} else if printerModel == "ZEBRA" {
 		printerModel = "ZEBRA*44"
+	} else if printerModel == "TPUP" {
+		printerModel = "TPUP*31"
 	}
 	if len(printerModel) > 22 {
 		tmpNameStr = printerModel[:22]
