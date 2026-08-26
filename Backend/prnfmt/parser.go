@@ -79,6 +79,13 @@ func ParserFmtToFile(utf8Buff string, printerModel string, fmtLen int) bool {
 		//此处需要进一步判断是哪个打印机，哪种模式，上面的Lable只是初步判断是从标签格式下发的路径来的
 		buffer = ParserFmtToBuf(utf8Buff, printerName, fmtLen)
 	} else {
+		if printerName == "" || printerName == "Receipt" {
+			if printerModel != "" && printerModel != "Receipt" && printerModel != "Lable" && printerModel != "Label" {
+				printerName = printerModel
+			} else {
+				printerName = "TPUP"
+			}
+		}
 		buffer = ParserRptFmtToBuf(utf8Buff, printerName, fmtLen)
 	}
 	// 7.创建bin文件
@@ -220,6 +227,9 @@ func ParserRptFmtToBuf(utf8Buff string, printerModel string, fmtLen int) *bytes.
 	// buff, _ := Utf8ToGb2312(utf8Buff)
 	buff := utf8Buff //用UTF8 做
 	var formatbuf *bytes.Buffer
+	if printerModel == "" || printerModel == "Receipt" {
+		printerModel = "TPUP"
+	}
 	if printerModel == "EPM205" {
 		dataCamp.Write(ESC_CHANGE_ESC_205)
 	}

@@ -106,8 +106,21 @@ func ComposeCmdTMAX(composer *m.CmdComposer, cmd m.CmdType, cmdData m.CmdData) (
 		addr, data := parseReadFlashTMAX(cmdData.Data.(string))
 		return readFlashCmdTMAX(uint32(addr), data), CMD_TIMEOUT_SHORT_1500_MS, nil
 	case m.CMD_ERASE_FLASH:
-		addr := cmdData.Data.(int)
-		return eraseCmdTMAX(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+		switch v := cmdData.Data.(type) {
+		case int:
+			return eraseCmdTMAX(uint32(v), 0x1000), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+		case string:
+			parts := strings.Split(v, ":")
+			addr, _ := strconv.ParseInt(parts[0], 0, 64)
+			eraseLen := 0x1000
+			if len(parts) > 1 {
+				if l, err := strconv.ParseInt(parts[1], 0, 64); err == nil && l > 0 {
+					eraseLen = int(l)
+				}
+			}
+			return eraseCmdTMAX(uint32(addr), uint16(eraseLen)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
+		}
+		return eraseCmdTMAX(0, 0x1000), CMD_TIMEOUT_MEDIUM_2000_MS, nil
 	case m.CMD_ERASE_FLASH_512:
 		addr := cmdData.Data.(int)
 		return eraseCmdTMAX_512(uint32(addr)), CMD_TIMEOUT_MEDIUM_2000_MS, nil
@@ -646,7 +659,10 @@ func readFlashCmdTMAX(addr uint32, data []byte) []byte { // erase size will 2K
 
 // CMD:  5a a5 00 11 f1 03 00 08 01 e0 00 08 00 75 E8 A3 E3 a5 5a   //FLF
 // 擦除原本秤上的打印格式
-func eraseCmdTMAX(addr uint32) []byte { // erase size will 2K
+func eraseCmdTMAX(addr uint32, eraseLen uint16) []byte {
+	if eraseLen == 0 {
+		eraseLen = ERASE_SIZE_TMAX
+	}
 	// 构建包头
 	packet := make([]byte, EARSE_CHUNK_SIZE_TMAX)
 	binary.BigEndian.PutUint16(packet[0:2], PACKET_HEAD_TMAX)
@@ -659,7 +675,7 @@ func eraseCmdTMAX(addr uint32) []byte { // erase size will 2K
 	// 构建地址
 	binary.BigEndian.PutUint32(packet[7:11], addr)
 	// 擦除长度
-	binary.BigEndian.PutUint16(packet[11:13], ERASE_SIZE_TMAX)
+	binary.BigEndian.PutUint16(packet[11:13], eraseLen)
 
 	// 计算与添加校验码
 	checksum := util.Crc32MPEG2(packet[2 : EARSE_CHUNK_SIZE_TMAX-6])
