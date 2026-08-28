@@ -1547,16 +1547,23 @@ func (s *ScaleMgr) UpdateScaleSn(req ReqModifyScaleSn) error {
 		return fmt.Errorf("can't find scale with id: %v", id)
 	}
 
-	if scale.Model == req.ScaleModel && scale.Sn == req.Sn {
+	targetModel := scale.Model
+	if req.ScaleModel != "" {
+		targetModel = req.ScaleModel
+	}
+
+	if scale.Model == targetModel && scale.Sn == req.Sn {
 		return nil
 	}
-	scale.Model = req.ScaleModel
+	scale.Model = targetModel
 	scale.Sn = req.Sn
 	conn := scale.Conn
-	conn.ScaleModel = scale.Model
-	conn.ScaleSn = scale.Sn
-	s.srvMgr.scaleMgr.ModifyScaleInfo(id, req.ScaleModel, req.Sn)
-	s.connPb.connPb.UpdateScaleSn(*conn)
+	if conn != nil {
+		conn.ScaleModel = scale.Model
+		conn.ScaleSn = scale.Sn
+		s.connPb.connPb.UpdateScaleSn(*conn)
+	}
+	s.srvMgr.scaleMgr.ModifyScaleInfo(id, targetModel, req.Sn)
 	return nil
 }
 

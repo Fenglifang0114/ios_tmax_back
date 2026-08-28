@@ -215,7 +215,7 @@ func (c *Scale) CheckSerialPort() (*ScaleRespMsg, error) {
 	if err == nil {
 		req := ReqModifyScaleSn{
 			ScaleId:    c.Id,
-			ScaleModel: dataStruct.ModelName,
+			ScaleModel: c.Conn.ScaleModel,
 			Sn:         dataStruct.ScaleSn,
 		}
 		c.scaleMgr.UpdateScaleSn(req)
@@ -276,7 +276,7 @@ func (c *Scale) GetFactoryInfo() (*ScaleRespMsg, error) {
 			if errJson == nil {
 				req := ReqModifyScaleSn{
 					ScaleId:    c.Id,
-					ScaleModel: dataStruct.ModelName,
+					ScaleModel: c.Conn.ScaleModel,
 					Sn:         dataStruct.ScaleSn,
 				}
 				c.scaleMgr.UpdateScaleSn(req)
