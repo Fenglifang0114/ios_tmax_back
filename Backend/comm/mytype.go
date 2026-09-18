@@ -351,7 +351,7 @@ func GetSrvDataPath() string {
 }
 
 func GetExePath() string {
-	if runtime.GOOS == "android" {
+	if AndroidDataDir != "" || runtime.GOOS == "android" || runtime.GOOS == "darwin" {
 		homePath := "/data/user/0/com.example.t_max/files"
 		if AndroidDataDir != "" {
 			homePath = AndroidDataDir
@@ -364,7 +364,7 @@ func GetExePath() string {
 }
 
 func getParentPath() (string, error) {
-	if runtime.GOOS == "android" {
+	if AndroidDataDir != "" || runtime.GOOS == "android" || runtime.GOOS == "darwin" {
 		homePath := "/data/user/0/com.example.t_max/files"
 		if AndroidDataDir != "" {
 			homePath = AndroidDataDir
@@ -409,7 +409,7 @@ func GetCommDataBasePath() string {
 }
 
 func getCurrentPath() (string, error) {
-	if runtime.GOOS == "android" {
+	if AndroidDataDir != "" || runtime.GOOS == "android" || runtime.GOOS == "darwin" {
 		homePath := "/data/user/0/com.example.t_max/files"
 		if AndroidDataDir != "" {
 			homePath = AndroidDataDir
