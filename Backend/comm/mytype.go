@@ -351,25 +351,41 @@ func GetSrvDataPath() string {
 }
 
 func GetExePath() string {
-	if AndroidDataDir != "" || runtime.GOOS == "android" || runtime.GOOS == "darwin" {
+	if AndroidDataDir != "" {
+		os.MkdirAll(AndroidDataDir, 0777)
+		return AndroidDataDir
+	}
+	if runtime.GOOS == "android" {
 		homePath := "/data/user/0/com.example.t_max/files"
-		if AndroidDataDir != "" {
-			homePath = AndroidDataDir
-		}
 		os.MkdirAll(homePath, 0777)
 		return homePath
+	}
+	if runtime.GOOS == "darwin" {
+		homeDir, err := os.UserHomeDir()
+		if err == nil && homeDir != "" {
+			docPath := filepath.Join(homeDir, "Documents")
+			os.MkdirAll(docPath, 0777)
+			return docPath
+		}
+		return os.TempDir()
 	}
 	myPath, _ := getCurrentPath()
 	return myPath
 }
 
 func getParentPath() (string, error) {
-	if AndroidDataDir != "" || runtime.GOOS == "android" || runtime.GOOS == "darwin" {
-		homePath := "/data/user/0/com.example.t_max/files"
-		if AndroidDataDir != "" {
-			homePath = AndroidDataDir
+	if AndroidDataDir != "" {
+		return AndroidDataDir, nil
+	}
+	if runtime.GOOS == "android" {
+		return "/data/user/0/com.example.t_max/files", nil
+	}
+	if runtime.GOOS == "darwin" {
+		homeDir, err := os.UserHomeDir()
+		if err == nil && homeDir != "" {
+			return filepath.Join(homeDir, "Documents"), nil
 		}
-		return homePath, nil
+		return os.TempDir(), nil
 	}
 	if len(os.Args) > 0 {
 		file, err := exec.LookPath(os.Args[0])
@@ -409,12 +425,18 @@ func GetCommDataBasePath() string {
 }
 
 func getCurrentPath() (string, error) {
-	if AndroidDataDir != "" || runtime.GOOS == "android" || runtime.GOOS == "darwin" {
-		homePath := "/data/user/0/com.example.t_max/files"
-		if AndroidDataDir != "" {
-			homePath = AndroidDataDir
+	if AndroidDataDir != "" {
+		return AndroidDataDir, nil
+	}
+	if runtime.GOOS == "android" {
+		return "/data/user/0/com.example.t_max/files", nil
+	}
+	if runtime.GOOS == "darwin" {
+		homeDir, err := os.UserHomeDir()
+		if err == nil && homeDir != "" {
+			return filepath.Join(homeDir, "Documents"), nil
 		}
-		return homePath, nil
+		return os.TempDir(), nil
 	}
 	if len(os.Args) > 0 {
 		file, err := exec.LookPath(os.Args[0])
