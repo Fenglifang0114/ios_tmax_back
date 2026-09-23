@@ -31,15 +31,9 @@ type ScaleRecTakeOutProvider struct {
 	recPb *DbScaleRec
 }
 
-var (
-	SCALE_REC_DB_FILE          = filepath.Join(comm.GetSrvDataPath(), "scalerec.db")
-	SCALE_REC_DB_CHECK_FILE    = filepath.Join(comm.GetSrvDataPath(), "scalereccheck.db")
-	SCALE_REC_DB_TAKE_IN_FILE  = filepath.Join(comm.GetSrvDataPath(), "scalerectakein.db")
-	SCALE_REC_DB_TAKE_OUT_FILE = filepath.Join(comm.GetSrvDataPath(), "scalerectakeout.db")
-)
-
 func NewScaleRecProvider() *ScaleRecProvider {
-	recPb, _ := NewDbScaleRec(SCALE_REC_DB_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "scalerec.db")
+	recPb, _ := NewDbScaleRec(dbFile)
 	return &ScaleRecProvider{myId: "ScaleRecProvider", recPb: recPb}
 }
 
@@ -108,7 +102,8 @@ func (p *ScaleRecProvider) GetAllScaleRecInfos() ([]ScaleRecInfo, error) {
 }
 
 func NewScaleRecCheckWeigherProvider() *ScaleRecCheckWeigherProvider {
-	recPb, _ := NewDbScaleRec(SCALE_REC_DB_CHECK_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "scalereccheck.db")
+	recPb, _ := NewDbScaleRec(dbFile)
 	return &ScaleRecCheckWeigherProvider{myId: "ScaleRecCheckWeigherProvider", recPb: recPb}
 }
 
@@ -178,7 +173,8 @@ func (p *ScaleRecCheckWeigherProvider) GetAllScaleRecInfos() ([]ScaleRecInfo, er
 }
 
 func NewScaleRecTakeInProvider() *ScaleRecTakeInProvider {
-	recPb, _ := NewDbScaleRec(SCALE_REC_DB_TAKE_IN_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "scalerectakein.db")
+	recPb, _ := NewDbScaleRec(dbFile)
 	return &ScaleRecTakeInProvider{myId: "ScaleRecTakeInProvider", recPb: recPb}
 }
 
@@ -248,7 +244,8 @@ func (p *ScaleRecTakeInProvider) GetAllScaleRecInfos() ([]ScaleRecInfo, error) {
 }
 
 func NewScaleRecTakeOutProvider() *ScaleRecTakeOutProvider {
-	recPb, _ := NewDbScaleRec(SCALE_REC_DB_TAKE_OUT_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "scalerectakeout.db")
+	recPb, _ := NewDbScaleRec(dbFile)
 	return &ScaleRecTakeOutProvider{myId: "ScaleRecTakeOutProvider", recPb: recPb}
 }
 

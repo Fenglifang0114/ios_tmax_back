@@ -12,12 +12,9 @@ type DetailRecProvider struct {
 	detailPb *DbDetailRec
 }
 
-var (
-	DETAIL_REC_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "detailrec.db")
-)
-
 func NewDetailRecProvider() *DetailRecProvider {
-	detailPb, _ := NewDbDetailRec(DETAIL_REC_DB_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "detailrec.db")
+	detailPb, _ := NewDbDetailRec(dbFile)
 	return &DetailRecProvider{myId: "DetailRecProvider", detailPb: detailPb}
 }
 

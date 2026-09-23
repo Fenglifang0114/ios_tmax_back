@@ -12,12 +12,9 @@ type ProductRecProvider struct {
 	mu    sync.Mutex
 }
 
-var (
-	PRODUCT_REC_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "productrec.db")
-)
-
 func NewProductRecProvider() *ProductRecProvider {
-	recPb, _ := NewDbProductRec(PRODUCT_REC_DB_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "productrec.db")
+	recPb, _ := NewDbProductRec(dbFile)
 	return &ProductRecProvider{myId: "ProductRecProvider", recPb: recPb}
 }
 

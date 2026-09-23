@@ -360,7 +360,7 @@ func GetExePath() string {
 		os.MkdirAll(homePath, 0777)
 		return homePath
 	}
-	if runtime.GOOS == "darwin" {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "ios" {
 		homeDir, err := os.UserHomeDir()
 		if err == nil && homeDir != "" {
 			docPath := filepath.Join(homeDir, "Documents")
@@ -380,7 +380,7 @@ func getParentPath() (string, error) {
 	if runtime.GOOS == "android" {
 		return "/data/user/0/com.example.t_max/files", nil
 	}
-	if runtime.GOOS == "darwin" {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "ios" {
 		homeDir, err := os.UserHomeDir()
 		if err == nil && homeDir != "" {
 			return filepath.Join(homeDir, "Documents"), nil
@@ -431,7 +431,7 @@ func getCurrentPath() (string, error) {
 	if runtime.GOOS == "android" {
 		return "/data/user/0/com.example.t_max/files", nil
 	}
-	if runtime.GOOS == "darwin" {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "ios" {
 		homeDir, err := os.UserHomeDir()
 		if err == nil && homeDir != "" {
 			return filepath.Join(homeDir, "Documents"), nil

@@ -13,12 +13,9 @@ type ScaleInfosProvider struct {
 	infoPb *DbScaleInfos
 }
 
-var (
-	SCALE_INFO_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "scaleinfo.db")
-)
-
 func NewScaleInfosProvider() *ScaleInfosProvider {
-	infoPb, _ := NewDbScaleInfos(SCALE_INFO_DB_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "scaleinfo.db")
+	infoPb, _ := NewDbScaleInfos(dbFile)
 	return &ScaleInfosProvider{myId: "ScaleInfosProvider", infoPb: infoPb}
 }
 

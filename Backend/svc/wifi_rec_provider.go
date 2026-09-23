@@ -10,12 +10,9 @@ type WifiRecProvider struct {
 	recPb *DbWifiRec
 }
 
-var (
-	WIFI_REC_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "wifirec.db")
-)
-
 func NewWifiRecProvider() *WifiRecProvider {
-	recPb, _ := NewDbWifiRec(WIFI_REC_DB_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "wifirec.db")
+	recPb, _ := NewDbWifiRec(dbFile)
 	return &WifiRecProvider{myId: "WifiRecProvider", recPb: recPb}
 }
 

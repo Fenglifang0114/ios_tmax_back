@@ -10,12 +10,9 @@ type UserRecProvider struct {
 	recPb *DbUserRec
 }
 
-var (
-	USER_REC_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "userrec.db")
-)
-
 func NewUserRecProvider() *UserRecProvider {
-	recPb, _ := NewDbUserRec(USER_REC_DB_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "userrec.db")
+	recPb, _ := NewDbUserRec(dbFile)
 	return &UserRecProvider{myId: "UserRecProvider", recPb: recPb}
 }
 

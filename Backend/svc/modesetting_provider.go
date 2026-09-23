@@ -10,12 +10,9 @@ type ModeSettingProvider struct {
 	settingPb *DbModeSetting
 }
 
-var (
-	MODE_SETTING_DB_FILE = filepath.Join(comm.GetSrvDataPath(), "modesetting.db")
-)
-
 func NewModeSettingProvider() *ModeSettingProvider {
-	settingPb, _ := NewDbModeSetting(MODE_SETTING_DB_FILE)
+	dbFile := filepath.Join(comm.GetSrvDataPath(), "modesetting.db")
+	settingPb, _ := NewDbModeSetting(dbFile)
 	return &ModeSettingProvider{myId: "ModeSettingProvider", settingPb: settingPb}
 }
 
