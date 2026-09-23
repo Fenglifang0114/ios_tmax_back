@@ -1698,6 +1698,9 @@ func (p addProductNotifier) Handle(mgr *SrvMgr, payload ReqAddPlu) {
 			UpdateBy:    product.CreateBy,
 			CreateUser:  product.CreateUser,
 			UpdateUser:  product.UpdateUser,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+			Enabled:     true,
 		}
 		recList = append(recList, rec)
 
@@ -1737,6 +1740,9 @@ func (p addOneProductNotifier) Handle(mgr *SrvMgr, payload AddProduct) {
 		UpdateBy:    payload.UpdateBy,
 		CreateUser:  payload.CreateUser,
 		UpdateUser:  payload.UpdateUser,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+		Enabled:     true,
 	}
 
 	if err := mgr.productPd.InsertRec(product); err != nil {
