@@ -212,7 +212,7 @@ func (d *DbProductRec) GetPluByPage(page, pageSize int, fieldName, direction str
 
 	} else {
 		// 如果没有指定排序字段，默认按plu从小到大排序
-		// query = query.Order("plu ASC")
+		query = query.Order("CAST(plu AS INTEGER) ASC")
 	}
 
 	// 读取内容
