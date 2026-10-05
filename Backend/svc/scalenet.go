@@ -464,23 +464,18 @@ func (tnet *TNet) connect() (*net.TCPConn, error) {
 }
 
 func (tnet *TNet) dialTCP() (*net.TCPConn, error) {
-
-	tcpAddr, err := net.ResolveTCPAddr("tcp", tnet.ip+":"+strconv.Itoa(tnet.port))
-	if err != nil {
-		log.Log.Printf("ResolveTCPAddr error: %v", err)
-	}
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
-
-	// conn, err := net.Dial("tcp", tnet.ip+":"+strconv.Itoa(tnet.port))
-
+	addr := net.JoinHostPort(tnet.ip, strconv.Itoa(tnet.port))
+	c, err := net.DialTimeout("tcp", addr, 3*time.Second)
 	if err != nil {
 		return nil, err
 	}
-	// 采用系统默认的 KeepAlive 设置，不进行高频探测。
+	conn, ok := c.(*net.TCPConn)
+	if !ok {
+		c.Close()
+		return nil, fmt.Errorf("not a tcp connection")
+	}
 	conn.SetKeepAlive(true)
-
 	return conn, nil
-
 }
 
 func (tnet *TNet) forceDisconnect() {

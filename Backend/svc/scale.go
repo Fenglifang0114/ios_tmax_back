@@ -473,8 +473,18 @@ func (s *Scale) SetClient(client *Client) error {
 		l.Log.Infof("Scale %d: Bluetooth VirtualWriteHandler established", s.Id)
 	}
 
-	// 褰撳鎴风锛圵ebSocket锛夎繛鎺ユ椂锛岄€氱煡 UI 璇ョГ宸蹭笂绾?
-	sendScaleOnlineToUi(s, true, s.Conn.ScaleModel, s.Sn)
+	// 仅当是蓝牙秤时，WebSocket 建立意味着 Flutter 桥接完成，通知 UI 上线
+	if s.Conn.TMedia == MEDIA_BT {
+		sendScaleOnlineToUi(s, true, s.Conn.ScaleModel, s.Sn)
+	} else if s.MyNet != nil {
+		if s.MyNet.isAlive {
+			sendScaleOnlineToUi(s, true, s.Conn.ScaleModel, s.Sn)
+		}
+	} else if s.MySerial != nil {
+		if s.Conn.IsOnline {
+			sendScaleOnlineToUi(s, true, s.Conn.ScaleModel, s.Sn)
+		}
+	}
 	return nil
 }
 
@@ -482,8 +492,11 @@ func (s *Scale) HandleClientDisconnect() error {
 	l.Log.Warn("Client disconnected, HandleClientDisconnect called")
 
 	s.client = nil
-	// 褰撳鎴风鏂紑鏃讹紝閫氱煡 UI 璇ョГ宸蹭笅绾?
-	sendScaleOnlineToUi(s, false, s.Conn.ScaleModel, s.Sn)
+	// 仅当是蓝牙秤时，WebSocket 断开意味着 Flutter 蓝牙桥接断开，通知 UI 下线
+	// 网络秤由 keepNetState 协程依据底层 TCP 链路状态独立管理，不可被前端 WebSocket 断开所误杀
+	if s.Conn.TMedia == MEDIA_BT {
+		sendScaleOnlineToUi(s, false, s.Conn.ScaleModel, s.Sn)
+	}
 
 	return nil
 }
